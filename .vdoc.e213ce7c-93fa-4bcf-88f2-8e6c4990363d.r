@@ -1,0 +1,157 @@
+#
+#
+#
+#
+#
+#
+#
+require(sf)
+require(dplyr)
+require(rnaturalearth)
+require(ggplot2)
+require(terra)
+#
+#
+#
+#
+# get UK polygon (ISO_A3 = "GBR")
+uk <- rnaturalearth::ne_countries(scale = "large", country = c("United Kingdom","Ireland"), returnclass = "sf")
+
+# project to metric CRS appropriate for Europe
+uk_proj <- st_transform(uk, 3035)
+
+# dissolve and buffer 300 km (300000 m)
+uk_buffered <- st_buffer(st_union(uk_proj), dist = 250000, nQuadSegs = 100, allow_holes = TRUE)
+
+# get bbox in WGS84 (lon/lat)
+bbox_wgs84 <- st_bbox(st_transform(st_as_sfc(st_bbox(uk_buffered)), 4326))
+
+
+#
+#
+#
+bbox_wgs84$xmax
+uk_proj$geometry
+uk_buffered
+uk_proj$geometry
+st_crs(uk_proj)
+#
+#
+#
+ggplot() +
+  geom_sf(
+    aes(geometry = geometry),
+    data = uk_buffered |> st_transform(4326), 
+    fill = "lightblue", color = "darkblue") +
+  geom_sf(data = uk, fill = "lightgreen", color = "darkgreen") +
+  coord_sf(xlim = c(bbox_wgs84["xmin"], bbox_wgs84["xmax"]),
+           ylim = c(bbox_wgs84["ymin"], bbox_wgs84["ymax"]),
+           datum = st_crs(4326)) +
+  theme_minimal() +
+#   coord_sf(datum = st_crs(4326)) + 
+  ggtitle("UK with 250 km buffer")
+#
+#
+#
+#
+r <- terra::rast("GBR_wind-speed_10m.tif")
+varname <- names(r)[1]
+
+# metadata
+meta <- list(
+  nlyr = terra::nlyr(r),
+  crs = terra::crs(r),
+  extent = terra::ext(r),
+  res = terra::res(r)
+)
+
+# convert to data.frame for plotting (removes NA cells)
+df <- terra::as.data.frame(r, xy = TRUE, na.rm = TRUE)
+if (ncol(df) >= 3) names(df)[3] <- "value" else stop("unexpected raster structure")
+
+# map and histogram (ggplot objects)
+p_map <- df |> slice(seq(1, n(), by = 100)) |>
+  ggplot( aes(x = x, y = y, fill = value)) +
+  geom_raster() +
+  scale_fill_viridis_c(option = "magma", na.value = "transparent", name = varname) +
+  coord_quickmap() +
+  theme_minimal() +
+  labs(title = paste0(varname, " (10 m)"), x = "lon", y = "lat")
+
+p_hist <- ggplot(df, aes(x = value)) +
+  geom_histogram(bins = 60, fill = "grey30", color = "white") +
+  theme_minimal() +
+  labs(x = varname, y = "count")
+
+# example: extract raster value at UK centroid (project centroid to raster CRS first)
+uk_centroid <- st_centroid(st_union(uk))
+uk_centroid_proj <- st_transform(uk_centroid, crs = terra::crs(r))
+vals_at_centroid <- terra::extract(r, vect(uk_centroid_proj))
+
+result <- list(raster = r, df = df, stats = stats, meta = meta, map = p_map, hist = p_hist, sample = vals_at_centroid)
+result
+#
+#
+#
+# map and histogram (ggplot objects)
+p_map <- df |> slice(seq(1, n(), by = 5)) |>
+  ggplot( aes(x = x, y = y, fill = value)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "magma", na.value = "transparent", name = varname) +
+  coord_quickmap() +
+  theme_minimal() +
+  labs(title = paste0(varname, " (10 m)"), x = "lon", y = "lat")
+p_map
+#
+#
+#
+# convert buffered sf to terra vector in raster CRS
+uk_buf_vect <- terra::vect(st_transform(uk_buffered, crs = terra::crs(r)))
+
+# crop + mask to reduce compute and focus on region
+r_crop <- terra::crop(r, uk_buf_vect)
+r_mask <- terra::mask(r_crop, uk_buf_vect)
+
+# quick numeric summaries (fast)
+summary_simple <- terra::global(r_mask, fun = c("min", "mean", "sd", "max"), na.rm = TRUE)
+summary_simple <- as.data.frame(summary_simple)
+names(summary_simple) <- c("min", "mean", "sd", "max")
+
+# quantiles (25%, 50%, 75%) via terra::global with a custom function
+summary_quantiles <- terra::global(
+  r_mask,
+  fun = function(x, ...) {
+    q <- stats::quantile(x, probs = c(0.25, 0.5, 0.75), na.rm = TRUE)
+    c(q25 = q[1], median = q[2], q75 = q[3])
+  }
+)
+summary_quantiles <- as.data.frame(summary_quantiles)
+
+# aggregate (spatial downsampling) for quick plotting / map summary
+# choose a factor; try 10, 20 or larger until plotting is responsive
+agg_fact <- 20L
+r_agg <- terra::aggregate(r_mask, fact = agg_fact, fun = mean, na.rm = TRUE)
+
+# aggregated df for ggplot (small)
+df_agg <- terra::as.data.frame(r_agg, xy = TRUE, na.rm = TRUE)
+if (ncol(df_agg) >= 3) names(df_agg)[3] <- "value"
+
+# efficient random sample of cells (no full as.data.frame on full raster)
+sample_size <- 5000L
+sampled_cells <- terra::spatSample(r_mask, size = sample_size, method = "random", na.rm = TRUE, as.data.frame = TRUE)
+if (ncol(sampled_cells) >= 3) names(sampled_cells)[3] <- "value"
+
+# combine results into a single object for downstream use
+gwa_summary <- list(
+  masked_raster = r_mask,         # SpatRaster masked to UK+buffer
+  simple_stats = summary_simple,  # min, mean, sd, max
+  quantiles = summary_quantiles,  # 25%, median, 75%
+  aggregated_raster = r_agg,      # coarsened raster for plotting
+  aggregated_df = df_agg,         # small data.frame for ggplot
+  sampled = sampled_cells         # small random sample for exploration
+)
+
+gwa_summary
+#
+#
+#
