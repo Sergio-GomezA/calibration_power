@@ -199,3 +199,29 @@ ggsave("fig/ws10_agg_map.png", p_agg_map, width=5, height=4)
 df_agg
 ?terra::aggregate
 ```
+
+GWA with UK + Ireland
+
+
+```{r}
+
+r_irl <- terra::rast("~/Documents/GWA/IRL_wind-speed_10m.tif")
+agg_fact <- 20L
+r_irl_agg <- terra::aggregate(r_irl, fact = agg_fact, fun = mean, na.rm = TRUE)
+# aggregated df for ggplot (small)
+df_irl_agg <- terra::as.data.frame(r_irl_agg, xy = TRUE, na.rm = TRUE)
+```
+
+```{r}
+# plot aggregated raster
+irl_agg_map <- df_irl_agg |>
+  ggplot( aes(x = x, y = y, fill = `IRL_wind-speed_10m`)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "magma", na.value = "transparent", name = "m/s") +
+  coord_quickmap() +
+  theme_minimal()+
+  theme(legend.position = "bottom") +
+  labs(x = "lon", y = "lat", title = "Aggregated wind speed at 10m")
+  
+irl_agg_map
+```
