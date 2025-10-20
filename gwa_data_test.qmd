@@ -11,6 +11,7 @@ require(rnaturalearth)
 require(ggplot2)
 require(terra)
 require(ggthemes)
+require(fst)
 ```
 
 
@@ -30,10 +31,7 @@ bbox_wgs84 <- st_bbox(st_transform(st_as_sfc(st_bbox(uk_buffered)), 4326))
 
 ```
 
-```{r}
-ggplot(uk_buffered) +
-  geom_sf(fill = "lightblue", color = "darkblue")
-```
+
 ## UK with buffer
 ```{r}
 ggplot() +
@@ -52,7 +50,7 @@ ggplot() +
 
 ## Load GWA raster data
 ```{r}
-r <- terra::rast("data/GBR_wind-speed_10m.tif")
+r <- terra::rast("~/Documents/GWA/GBR_wind-speed_10m.tif")
 # names(r)
 ```
 
@@ -60,14 +58,6 @@ r <- terra::rast("data/GBR_wind-speed_10m.tif")
 ```{r}
 
 varname <- names(r)[1]
-
-# metadata
-meta <- list(
-  nlyr = terra::nlyr(r),
-  crs = terra::crs(r),
-  extent = terra::ext(r),
-  res = terra::res(r)
-)
 
 # convert to data.frame for plotting (removes NA cells)
 df <- terra::as.data.frame(r, xy = TRUE, na.rm = TRUE)
@@ -195,10 +185,7 @@ p_agg_map
 p_agg_map
 ggsave("fig/ws10_agg_map.png", p_agg_map, width=5, height=4)
 ```
-```{r}
-df_agg
-?terra::aggregate
-```
+
 
 GWA with UK + Ireland
 
@@ -224,4 +211,259 @@ irl_agg_map <- df_irl_agg |>
   labs(x = "lon", y = "lat", title = "Aggregated wind speed at 10m")
   
 irl_agg_map
+```
+
+##test
+```{r}
+source("aux_funct.R")
+dat0 <- get_gwa_data(
+    "GBR", var = "wind-speed", height = 10,
+    path = "~/Documents/GWA/")
+```
+### testing function to process GWA tif file
+```{r}
+agg_fact <- 5
+r_agg <- terra::aggregate(dat0, fact = agg_fact, fun = mean, na.rm = TRUE)
+
+df_agg <- terra::as.data.frame(r_agg, xy = TRUE, na.rm = TRUE)
+var_name <- names(df_agg)[3]
+meta_info <- strsplit(var_name, "_|m")[[1]]
+df_agg <- df_agg |>
+    mutate(
+        country = meta_info[1],
+        variable = meta_info[2],
+        height = meta_info[3]
+    ) |> 
+    rename( value = !!var_name)
+```
+
+```{r}
+source("aux_funct.R")
+df_agg <- process_gwa_tif(
+    dat0, agg_fact = 5
+)
+```
+```{r}
+df_agg |>
+    ggplot( aes(x = x, y = y, fill = value)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "mako", na.value = "transparent", name = "m/s") +
+  coord_quickmap() +
+  theme_minimal()+
+  theme(legend.position = "bottom") +
+  labs(x = "lon", y = "lat", title = "Aggregated wind speed at 10m")
+```
+
+```{r}
+var_name
+meta_info <- strsplit(var_name, "_|m")[[1]]
+meta_info
+```
+
+
+
+##get GWA two countries
+### 10m
+```{r}
+source("aux_funct.R")
+d_gb <- get_gwa_data(
+    "GBR", var = "wind-speed", height = 10,
+    path = "~/Documents/GWA/")
+d_ir <- get_gwa_data(
+    "IRL", var = "wind-speed", height = 10,
+    path = "~/Documents/GWA/")
+
+d_im <- get_gwa_data(
+    "IMN", var = "wind-speed", height = 10,
+    path = "~/Documents/GWA/")
+
+# d_je<- get_gwa_data(
+#     "JEY", var = "wind-speed", height = 10,
+#     path = "~/Documents/GWA/")
+
+# d_ge<- get_gwa_data(
+#     "GGY", var = "wind-speed", height = 10,
+#     path = "~/Documents/GWA/")
+
+d_combined <- merge(d_gb, d_ir, d_im)#, d_je, d_ge)
+# df_agg <- process_gwa_tif(
+#     d_combined, agg_fact = 20
+# ) 
+# rm(df_agg)
+
+```
+
+```{r}
+# df_gbr <- process_gwa_tif(
+#   data = resample(d_gb, d_combined),
+#   agg_fact = 20)
+# df_irl <- process_gwa_tif(
+#   data = resample(d_ir, d_combined),
+#   agg_fact = 20)
+
+df_all <- 
+  lapply(
+    list(d_gb, d_ir, d_im), 
+    function(x) process_gwa_tif(
+      data = resample(x, d_combined, threads = 8),
+      agg_fact = 10)
+  ) |> 
+    bind_rows()
+```
+
+
+```{r}
+df_all |>
+    ggplot( aes(x = x, y = y, fill = value)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "mako", na.value = "transparent", name = "m/s") +
+  coord_quickmap() +
+  theme_minimal()+
+  theme(legend.position = "bottom") +
+  labs(x = "lon", y = "lat", title = "Wind speed at 10m")
+
+ggsave("fig/ws_10m_uk_irl_im.png", width=5, height=7)
+```
+
+
+### 50m
+```{r}
+
+d_countries <- lapply(
+    c("GBR", "IRL", "IMN"),
+    \(x) get_gwa_data(
+        country = x,
+        var = "wind-speed", height = 50,
+        path = "~/Documents/GWA/"))
+
+d_combined_50m <- Reduce(merge, d_countries)
+
+out_path <- "~/Documents/GWA/merged_wind_speed_50m.tif"
+
+writeRaster(d_combined_50m, out_path, overwrite = TRUE)
+
+```
+
+```{r}
+
+df_50m <- 
+  lapply(
+    d_countries, 
+    function(x) process_gwa_tif(
+      data = resample(x, d_combined_50m, threads = 8),
+      agg_fact = 2)
+  ) |> 
+    bind_rows()
+
+df_50m |>
+    ggplot( aes(x = x, y = y, fill = value)) +
+  geom_tile() +
+  scale_fill_viridis_c(option = "mako", na.value = "transparent", name = "m/s") +
+  coord_quickmap() +
+  theme_minimal()+
+  theme(legend.position = "bottom") +
+  labs(x = "lon", y = "lat", title = "Wind speed at 50m")
+
+ggsave("fig/ws_50m_merged.png", width=5, height=7)
+```
+
+```{r}
+source("aux_funct.R")
+combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "wind-speed",
+    height = 50,
+    path = "~/Documents/GWA/",
+    show_fig = TRUE,
+    save_df = TRUE
+)
+```
+
+```{r}
+test <- combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "wind-speed",
+    height = 50,
+    agg_fact = 1,
+    path = "~/Documents/GWA/",
+    show_fig = FALSE,
+    save_df = TRUE
+)
+```
+### 100m
+
+```{r}
+source("aux_funct.R")
+combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "wind-speed",
+    height = 100,
+    path = "~/Documents/GWA/",
+    show_fig = TRUE,
+    save_df = TRUE
+)
+
+
+```
+
+```{r}
+combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "wind-speed",
+    height = 100,
+    agg_fact = 1,
+    path = "~/Documents/GWA/",
+    show_fig = FALSE,
+    save_df = TRUE
+)
+```
+### 150m
+
+```{r}
+combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "wind-speed",
+    height = 150,
+    path = "~/Documents/GWA/",
+    show_fig = TRUE,
+    save_df = TRUE
+)
+```
+
+```{r}
+combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "wind-speed",
+    height = 150,
+    agg_fact = 1,
+    path = "~/Documents/GWA/",
+    show_fig = FALSE,
+    save_df = TRUE
+)
+```
+### 200m
+
+
+```{r}
+combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "wind-speed",
+    height = 200,
+    path = "~/Documents/GWA/",
+    show_fig = TRUE,
+    save_df = TRUE
+)
+```
+
+
+```{r}
+combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "wind-speed",
+    height = 200,
+    agg_fact = 1,
+    path = "~/Documents/GWA/",
+    show_fig = FALSE,
+    save_df = TRUE
+)
 ```
