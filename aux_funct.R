@@ -1,3 +1,11 @@
+require(sf)
+require(dplyr)
+require(rnaturalearth)
+require(ggplot2)
+require(terra)
+require(ggthemes)
+require(fst)
+
 ## functions
 
 ## get GWA data
