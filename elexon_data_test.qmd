@@ -168,138 +168,22 @@ bmu_to_repd <- id_catalog %>%
 
 ```{r}
 # new wind farms
-manual_map <- data.frame(
-            name = "Seagreen",
-            bmu_id = paste0("T_SGRWO-",1:6),
-            rep_id = c("2540")
-        ) %>% 
-    bind_rows(
-        data.frame(
-            name = "South Kyle",
-            bmu_id = c("T_SOKYW-1"),
-            rep_id = c("4586")
-        )
-    ) %>%
-    bind_rows(
-        data.frame(
-            name = "Dogger Bank",
-            bmu_id = paste0("T_DBAWO-",1:5),
-            rep_id = c("2541")
-        )
+manual_map <- read.csv("manual_bmu_to_repd.csv") %>%
+    mutate(
+        bmu_id = as.character(bmu_id),
+        rep_id = as.character(rep_id)
     ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Gunfleet Sands",
-            bmu_id = paste0("T_GNFSW-",1:2),
-            rep_id = c("2490")
-        )
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Robin Rigg",
-            bmu_id = c("T_RRWW-1","T_RREW-1"),
-            rep_id = c("2497","2496")
-        )
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Dunmaglass",
-            bmu_id = c("T_DUNGW-1"),
-            rep_id = c("4118")
-        )
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Barrow",
-            bmu_id = c("T_BOWLW-1"),
-            rep_id = c("2546"))) %>% 
-    bind_rows(
-        data.frame(
-            name = "Gordonbush",
-            bmu_id = paste0("T_GORDW-",1:2),
-            rep_id = c("3662"))
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Viking",
-            bmu_id = paste0("T_VKNGW-",1:4),
-            rep_id = c("6828"))
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Kincardine",
-            bmu_id = c("E_KINCW-1"),
-            rep_id = c("6136"))
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Kype Muir",
-            bmu_id = c("T_KPMRW-1","T_KYPEW-1"),
-            rep_id = c("4643","4628"))
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Kennoxhead",
-            bmu_id = c("T_KENNW-1"),
-            rep_id = c("4385"))
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Braes of Doune",
-            bmu_id = c("E_BRDUW-1"),
-            rep_id = c("3119"))
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Camster",
-            bmu_id = c("2__PEDGE003"),
-            rep_id = c("4006"))) %>% 
-    bind_rows(
-        data.frame(
-            name = "Corriegarth",
-            bmu_id = c("T_CGTHW-1"),
-            rep_id = c("4664"))
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Creag Riabhach",
-            bmu_id = c("T_CREAW-1"),
-            rep_id = c("4300"))
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Kilbraur",
-            bmu_id = c("T_KILBW-1"),
-            rep_id = c("3202")) # also "2673"
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Tom na Clach",
-            bmu_id = c("C__PSTAT011"),
-            rep_id = c("4420"))
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Strathy North",
-            bmu_id = c("T_STRNW-1"),
-            rep_id = c("4625"))
-    ) %>% 
-    bind_rows(
-        data.frame(
-            name = "Millennium",
-            bmu_id = c("T_LOCLU-1"),
-            rep_id = c("4682"), #also 2723, 3598
-        )
-    )
-write.csv(manual_map, "manual_bmu_to_repd.csv", row.names = FALSE)
+    filter(!is.na(rep_id)) %>% select(-c(rep_id2, rep_id3))
+# write.csv(manual_map, "manual_bmu_to_repd.csv", row.names = FALSE)
 bmu_to_repd <- bmu_to_repd %>%
     bind_rows(manual_map)
 ```
 
 
+
 ```{r}
 bmu_to_repd %>% 
-  filter(!is.na(rep_id))
+  filter(!is.na(rep_id)) 
 # ?readxl::read_xlsx
 ```
 ```{r}
@@ -316,6 +200,12 @@ test <- bmu_25 %>%
         by = c("bmUnit" = "bmu_id"))
 ```
 
+```{r}
+test %>% 
+    filter(is.na(rep_id)) %>% 
+    select(bmUnitName,bmUnit, rep_id, generationCapacity) %>% 
+    write.csv("to_map.csv",row.names = FALSE)
+```
 ### elexon BMUs
 
 #### elexon wind catalog
@@ -352,7 +242,27 @@ bmu_25 <- bmu_df %>%
   group_by(bmUnit) %>% 
   summarise(quantity = mean(quantity, na.rm = TRUE)) %>% 
   arrange(desc(quantity))
-
+bmu_df <- fread(
+  file.path(path,"data_by_year","wind_gen_bmu_2024.csv.gz")
+)
+bmu_24 <- bmu_df %>% 
+  group_by(bmUnit) %>% 
+  summarise(quantity = mean(quantity, na.rm = TRUE)) %>% 
+  arrange(desc(quantity))
 ```
 
 
+
+```{r}
+test <- bmu_25 %>%
+    left_join(
+        wind.bmus %>% select(
+            elexonBmUnit,
+            matches("name|capacity")) %>% unique(), 
+            by = c("bmUnit" = "elexonBmUnit")) %>%
+    left_join(
+        bmu_to_repd %>% select(
+            bmu_id,
+            rep_id, name),
+        by = c("bmUnit" = "bmu_id"))
+```
