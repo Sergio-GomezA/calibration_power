@@ -154,3 +154,13 @@ combined_gwa_data <- function(
 
   invisible(list(data = df_combined, plot = plot))
 }
+
+
+clean_names <- function(name) {
+  name %>%
+    iconv(from = "", to = "UTF-8", sub = "") %>% # Fix encoding
+    tolower() %>% # Lowercase
+    str_replace_all("[^a-z0-9 ]", " ") %>% # Remove punctuation
+    str_replace_all("\\s+", " ") %>% # Remove extra spaces
+    str_trim()
+}
