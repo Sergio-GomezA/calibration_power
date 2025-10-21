@@ -1,0 +1,76 @@
+bmUnitName,bmUnit,rep_id,generationCapacity
+STAT P3 North Scotland,2__PSTAT002,NA,76
+Cumberhead wind energy limited,T_CUMHW-1,NA,52
+Hywind Generator BMU1,E_HYWDW-1,NA,30
+Sandy Knowe Wind Farm,T_SAKNW-1,NA,87
+Galawhistle Wind Farm,T_GLWSW-1,NA,55.2
+HARBURNHEADWF,E_HBHDW-1,NA,51.7
+Limekiln Wind Farm,T_LIMKW-1,NA,106
+Windy Rig Wind Farm,T_WDRGW-1,NA,42.8
+MIDDLE MUIR WIND FARM,T_MIDMW-1,NA,51
+Hill of Towie,E_HLTWW-1,NA,48
+Carraig Gheal Wind Farm,T_CRGHW-1,NA,46
+Moy Windfarm,E_MOYEW-1,NA,60
+Beinn an Tuirc III Windfarm,E_BTUIW-3,NA,52
+Twenty Shilling Wind Farm,T_TWSHW-1,NA,37.8
+Mark Hill,T_MKHLW-1,NA,53
+E_BLARW-1,E_BLARW-1,NA,35
+Farr Unit 1,T_FARR-1,NA,92
+Farr Unit 2,T_FARR-2,NA,92
+AChruach Wind Farm,T_ACHRW-1,NA,42.6
+Bad a Cheo Wind Farm,T_BDCHW-1,NA,27
+STAT P2 North Scotland,2__PSTAT001,NA,44.942
+Auchrobert Wind Farm,E_ABRTW-1,NA,36
+Dalquhandy  Wind Farm,T_DALQW-1,NA,42.846
+GLEN KYLLACHY WINDFARM,T_GLNKW-1,NA,44
+North Kyle Wind Farm-1,T_NOKYW-1,NA,106
+Solwaybank WF,E_SWBKW-1,NA,32
+Greengairs East WF-1,E_GRGRW-1,NA,36
+T-DOUGW-1,T_DOUGW-1,NA,45
+Whiteside Hill WF,T_WHIHW-1,NA,27.52
+Minsca Wind Farm,E_MINSW-1,NA,38.123
+Beinn An Tuirc 2,E_BTUIW-2,NA,43.7
+Pines Burn Wind Farm,E_PIBUW-1,NA,34
+Broken Cross WF,T_BROCW-1,NA,48
+Coire Na Cloiche WF,E_CNCLW-1,NA,30.52
+Corriemoillie,T_CRMLW-1,NA,47.512
+Glenchamber,E_GLCHW-1,NA,27.44
+Freasdail Wind Farm,T_FSDLW-1,NA,22.2
+Goole Fields Wind Farm,E_GFLDW-1,NA,32.8
+Assel Valley Wind Farm,E_ASLVW-1,NA,26
+Burn of Whilk Windfarm,E_BNWKW-1,NA,22.5
+Toddleburn,T_TDBNW-1,NA,31.6
+North Kyle Wind Farm-2,T_NOKYW-2,NA,106
+Hare Hill Extension Windfarm,E_HRHLW-1,NA,30
+Crossdykes WF-1,T_CRDEW-1,NA,24
+Minnygap Wind Farm,T_MYGPW-1,NA,25
+Glens of Foudland,E_GLOFW-1,NA,26.7
+BETHW-1,E_BETHW-1,NA,29.75
+Glen App Windfarm,T_GNAPW-1,NA,22
+Crossdykes WF-2,T_CRDEW-2,NA,24
+T_TRLGW-1,T_TRLGW-1,NA,18.742
+Tullo Extension,E_TULWW-2,NA,25
+2__PEDGE004,2__PEDGE004,NA,24.7
+Halsary Windfarm,T_HALSW-1,NA,30
+Tullo Windfarm,E_TULWW-1,NA,17
+Tullymurdoch Wind Farm,E_TLYMW-1,NA,13.841
+Gordonstown,E_GDSTW-1,NA,13.289
+Pogbie WF,T_PGBIW-1,NA,10
+Clachan Flats,E_CLFLW-1,NA,15
+Craig 2 Wind Farm,E_CRGTW-1,NA,4.7
+KEITH HILL WINDFARM,T_KTHLW-1,NA,4.54
+Hagshaw Repower 1,T_HAHAW-1,NA,28.5
+2__NNATP001,2__NNATP001,NA,50
+Rothes Windfarm,2__PENEC001,NA,52.801
+Pauls Hill Windfarm,2__PENEC002,NA,70.167
+2__PSMAE001,2__PSMAE001,NA,0
+2__PSMAR001,2__PSMAR001,NA,50
+GyM Onshore est Dem 2,T_GYMRD-2,NA,0
+GyM OSPW non est Dem 10,T_GYMRD-W10,NA,0
+GyM OSPE non est Dem 10,T_GYMRD-E10,NA,0
+GyM Onshore non est Dem 16,T_GYMRD-16,NA,0
+GyM OSPE est Dem 11,T_GYMRD-E11,NA,0
+GyM OSPW est Dem 11,T_GYMRD-W11,NA,0
+Carraig Gheal Wind Farm,T_CRGHD-1,NA,0
+Griffin Windfarm Demand BMU,T_GRIFWD-1,NA,0
+Fallago Rig Demand,T_FALGD-1,NA,0
