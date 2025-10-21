@@ -164,3 +164,608 @@ clean_names <- function(name) {
     str_replace_all("\\s+", " ") %>% # Remove extra spaces
     str_trim()
 }
+
+
+get_agpt <- function(
+  year = 2024,
+  path,
+  file_name = sprintf("aggregated_gen_type_%d.csv.gz", year),
+  end_time = NULL
+) {
+  if (is.null(end_time)) {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(sprintf("%d-12-31", year)),
+      by = "4 days"
+    )
+    time_seq <- c(time_seq, as.Date(sprintf("%d-01-01", year + 1)))
+  } else {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(end_time),
+      by = "4 days"
+    )
+    if (time_seq[length(time_seq)] < end_time) time_seq <- c(time_seq, end_time)
+  }
+
+  # browser()
+  extraction <- lapply(
+    seq_along(time_seq[-1]),
+
+    \(i) {
+      t0 <- as.character(time_seq[i])
+      t1 <- as.character(time_seq[i + 1])
+      dt0 <- paste(t0, "01:00")
+      dt1 <- paste(t1, "01:00")
+      dt0_enc <- URLencode(dt0, reserved = TRUE)
+      dt1_enc <- URLencode(dt1, reserved = TRUE)
+
+      base_url <- "https://data.elexon.co.uk/bmrs/api/v1/datasets/AGPT/stream?"
+
+      url <- sprintf(
+        "%spublishDateTimeFrom=%s&publishDateTimeTo=%s&format=json",
+        base_url,
+        dt0_enc,
+        dt1_enc
+      )
+
+      response <- GET(url, accept("text/plain"))
+      json_data <- content(response, "text", encoding = "UTF-8")
+      # browser()
+      agpt0 <- json_data %>%
+        fromJSON(flatten = T) %>%
+        mutate(across(
+          matches("Time"),
+          ~ as.POSIXct(., format = "%Y-%m-%dT%H:%M:%OS")
+        ))
+      agpt0
+    }
+  )
+
+  agptyear <- extraction %>% bind_rows()
+
+  agptyear %>%
+    write.csv(
+      gzfile(file.path(path, file_name))
+    )
+
+  invisible(agptyear)
+}
+
+
+get_dwgs <- function(
+  year = 2024,
+  path,
+  file_name = sprintf("dayahead_generation_windsolar_%d.csv.gz", year)
+) {
+  time_seq <- dates <- seq.Date(
+    from = as.Date(sprintf("%d-01-01", year)),
+    to = as.Date(sprintf("%d-12-31", year)),
+    by = "4 days"
+  )
+
+  # if(day(time_seq[length(time_seq)])!=31)
+
+  time_seq <- c(time_seq, as.Date(sprintf("%d-01-01", year + 1)))
+
+  # browser()
+  extraction <- lapply(
+    seq_along(time_seq[-1]),
+
+    \(i) {
+      t0 <- as.character(time_seq[i])
+      t1 <- as.character(time_seq[i + 1])
+      dt0 <- paste(t0, "01:00")
+      dt1 <- paste(t1, "01:00")
+      dt0_enc <- URLencode(dt0, reserved = TRUE)
+      dt1_enc <- URLencode(dt1, reserved = TRUE)
+
+      base_url <- "https://data.elexon.co.uk/bmrs/api/v1/datasets/DGWS/stream?"
+
+      url <- sprintf(
+        "%spublishDateTimeFrom=%s&publishDateTimeTo=%s&format=json",
+        base_url,
+        dt0_enc,
+        dt1_enc
+      )
+
+      response <- GET(url, accept("text/plain"))
+      json_data <- content(response, "text", encoding = "UTF-8")
+      # browser()
+      dwgs0 <- tryCatch(
+        json_data %>%
+          fromJSON(flatten = T), #%>%
+        # mutate(across(matches("Time"), ~ as.POSIXct(., format = "%Y-%m-%dT%H:%M:%OS")))
+        error = function(e) {
+          warning(sprintf(
+            "Data extraction for day %s failed. Response: %s\n",
+            t0,
+            response$status_code
+          ))
+          return(NULL)
+        }
+      )
+      dwgs0
+    }
+  )
+
+  dwgsyear <- extraction %>% bind_rows()
+
+  dwgsyear %>%
+    write.csv(
+      gzfile(file.path(path, file_name))
+    )
+
+  invisible(dwgsyear)
+}
+
+get_bmugen <- function(
+  year = 2024,
+  path,
+  file_name = sprintf("wind_gen_bmu_%d.csv.gz", year),
+  end_time = NULL
+) {
+  if (is.null(end_time)) {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(sprintf("%d-12-31", year)),
+      by = "4 days"
+    )
+    time_seq <- c(time_seq, as.Date(sprintf("%d-01-01", year + 1)))
+  } else {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(end_time),
+      by = "4 days"
+    )
+    if (time_seq[length(time_seq)] < end_time) time_seq <- c(time_seq, end_time)
+  }
+
+  # browser()
+  extraction <- lapply(
+    seq_along(time_seq[-1]),
+
+    \(i) {
+      t0 <- as.character(time_seq[i])
+      t1 <- as.character(time_seq[i + 1])
+      dt0 <- paste(t0, "01:00")
+      dt1 <- paste(t1, "01:00")
+      dt0_enc <- URLencode(dt0, reserved = TRUE)
+      dt1_enc <- URLencode(dt1, reserved = TRUE)
+
+      base_url <- "https://data.elexon.co.uk/bmrs/api/v1/datasets/B1610/stream?"
+
+      url <- sprintf(
+        "%sfrom=%s&to=%s&bmUnit=",
+        base_url,
+        dt0_enc,
+        dt1_enc
+      )
+
+      fragments <- 3
+      n_bmu <- nrow(wind.bmus)
+      parts_vec <- seq(1, n_bmu, length.out = fragments + 1) %>% trunc()
+
+      # list strings in fragments
+      bmu_strings <- mapply(
+        \(left, right) {
+          bmu.string <- wind.bmus %>%
+            slice(left:right) %>%
+            pull(elexonBmUnit) %>%
+            paste(., collapse = "&bmUnit=")
+
+          # print(bmu.string)
+        },
+        left = parts_vec[1:fragments] + c(0, rep(1, fragments - 1)),
+        right = parts_vec[-1]
+      )
+
+      # query data by fragment
+      bmu_df <- lapply(
+        bmu_strings,
+        \(string) {
+          url <- paste0(url, string)
+          response <- GET(url, accept("text/plain"))
+          json_data <- content(response, "text", encoding = "UTF-8")
+          generation.bmu <- tryCatch(
+            fromJSON(json_data) %>%
+              mutate(across(
+                matches("Time"),
+                ~ as.POSIXct(., format = "%Y-%m-%dT%H:%M:%OS")
+              )),
+            error = function(e) {
+              warning(sprintf(
+                "Data extraction for day %s failed. Response: %s\n",
+                t0,
+                response$status_code
+              ))
+              return(NULL)
+            }
+          )
+        }
+      ) %>%
+        bind_rows()
+
+      bmu_df
+    }
+  )
+
+  bmugenyear <- extraction %>% bind_rows()
+
+  bmugenyear %>%
+    write.csv(
+      gzfile(file.path(path, file_name))
+    )
+
+  invisible(bmugenyear)
+}
+
+get_bod <- function(
+  year = 2024,
+  path,
+  file_name = sprintf("bid_offer_data_%d.csv.gz", year),
+  end_time = NULL
+) {
+  if (is.null(end_time)) {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(sprintf("%d-12-31", year)),
+      by = "4 days"
+    )
+    time_seq <- c(time_seq, as.Date(sprintf("%d-01-01", year + 1)))
+  } else {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(end_time),
+      by = "4 days"
+    )
+    if (time_seq[length(time_seq)] < end_time) time_seq <- c(time_seq, end_time)
+  }
+
+  # browser()
+  extraction <- lapply(
+    seq_along(time_seq[-1]),
+
+    \(i) {
+      t0 <- as.character(time_seq[i])
+      t1 <- as.character(time_seq[i + 1])
+      dt0 <- paste(t0, "01:00")
+      dt1 <- paste(t1, "01:00")
+      dt0_enc <- URLencode(dt0, reserved = TRUE)
+      dt1_enc <- URLencode(dt1, reserved = TRUE)
+
+      base_url <- "https://data.elexon.co.uk/bmrs/api/v1/datasets/BOD/stream?"
+
+      url <- sprintf(
+        "%sfrom=%s&to=%s&bmUnit=",
+        base_url,
+        dt0_enc,
+        dt1_enc
+      )
+
+      fragments <- 3
+      n_bmu <- nrow(wind.bmus)
+      parts_vec <- seq(1, n_bmu, length.out = fragments + 1) %>% trunc()
+
+      # list strings in fragments
+      bmu_strings <- mapply(
+        \(left, right) {
+          bmu.string <- wind.bmus %>%
+            slice(left:right) %>%
+            pull(elexonBmUnit) %>%
+            paste(., collapse = "&bmUnit=")
+
+          # print(bmu.string)
+        },
+        left = parts_vec[1:fragments] + c(0, rep(1, fragments - 1)),
+        right = parts_vec[-1]
+      )
+
+      # query data by fragment
+      bmu_df <- lapply(
+        bmu_strings,
+        \(string) {
+          url <- paste0(url, string)
+          response <- GET(url, accept("text/plain"))
+          json_data <- content(response, "text", encoding = "UTF-8")
+          generation.bmu <- tryCatch(
+            fromJSON(json_data) %>%
+              mutate(across(
+                matches("Time"),
+                ~ as.POSIXct(., format = "%Y-%m-%dT%H:%M:%OS")
+              )),
+            error = function(e) {
+              warning(sprintf(
+                "Data extraction for day %s failed. Response: %s\n",
+                t0,
+                response$status_code
+              ))
+              return(NULL)
+            }
+          )
+        }
+      ) %>%
+        bind_rows()
+
+      bmu_df
+    }
+  )
+
+  bmugenyear <- extraction %>% bind_rows()
+
+  bmugenyear %>%
+    write.csv(
+      gzfile(file.path(path, file_name))
+    )
+
+  invisible(bmugenyear)
+}
+
+get_boa <- function(
+  year = 2024,
+  path,
+  file_name = sprintf("bid_offer_accept_%d.csv.gz", year),
+  end_time = NULL
+) {
+  if (is.null(end_time)) {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(sprintf("%d-12-31", year)),
+      by = "4 days"
+    )
+    time_seq <- c(time_seq, as.Date(sprintf("%d-01-01", year + 1)))
+  } else {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(end_time),
+      by = "4 days"
+    )
+    if (time_seq[length(time_seq)] < end_time) time_seq <- c(time_seq, end_time)
+  }
+
+  # browser()
+  extraction <- lapply(
+    seq_along(time_seq[-1]),
+
+    \(i) {
+      t0 <- as.character(time_seq[i])
+      t1 <- as.character(time_seq[i + 1])
+      dt0 <- paste(t0, "01:00")
+      dt1 <- paste(t1, "01:00")
+      dt0_enc <- URLencode(dt0, reserved = TRUE)
+      dt1_enc <- URLencode(dt1, reserved = TRUE)
+
+      base_url <- "https://data.elexon.co.uk/bmrs/api/v1/datasets/BOALF/stream?"
+
+      url <- sprintf(
+        "%sfrom=%s&to=%s&bmUnit=",
+        base_url,
+        dt0_enc,
+        dt1_enc
+      )
+
+      fragments <- 3
+      n_bmu <- nrow(wind.bmus)
+      parts_vec <- seq(1, n_bmu, length.out = fragments + 1) %>% trunc()
+
+      # list strings in fragments
+      bmu_strings <- mapply(
+        \(left, right) {
+          bmu.string <- wind.bmus %>%
+            slice(left:right) %>%
+            pull(elexonBmUnit) %>%
+            paste(., collapse = "&bmUnit=")
+
+          # print(bmu.string)
+        },
+        left = parts_vec[1:fragments] + c(0, rep(1, fragments - 1)),
+        right = parts_vec[-1]
+      )
+
+      # query data by fragment
+      bmu_df <- lapply(
+        bmu_strings,
+        \(string) {
+          url <- paste0(url, string)
+          response <- GET(url, accept("text/plain"))
+          json_data <- content(response, "text", encoding = "UTF-8")
+          generation.bmu <- tryCatch(
+            fromJSON(json_data) %>%
+              mutate(across(
+                matches("Time"),
+                ~ as.POSIXct(., format = "%Y-%m-%dT%H:%M:%OS")
+              )),
+            error = function(e) {
+              warning(sprintf(
+                "Data extraction for day %s failed. Response: %s\n",
+                t0,
+                response$status_code
+              ))
+              return(NULL)
+            }
+          )
+        }
+      ) %>%
+        bind_rows()
+
+      bmu_df
+    }
+  )
+
+  bmugenyear <- extraction %>% bind_rows()
+
+  bmugenyear %>%
+    write.csv(
+      gzfile(file.path(path, file_name))
+    )
+
+  invisible(bmugenyear)
+}
+
+get_pn <- function(
+  year = 2024,
+  path,
+  file_name = sprintf("phys_notif_%d.csv.gz", year),
+  end_time = NULL
+) {
+  if (is.null(end_time)) {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(sprintf("%d-12-31", year)),
+      by = "4 days"
+    )
+    time_seq <- c(time_seq, as.Date(sprintf("%d-01-01", year + 1)))
+  } else {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(end_time),
+      by = "4 days"
+    )
+    if (time_seq[length(time_seq)] < end_time) time_seq <- c(time_seq, end_time)
+  }
+
+  # browser()
+  extraction <- lapply(
+    seq_along(time_seq[-1]),
+
+    \(i) {
+      t0 <- as.character(time_seq[i])
+      t1 <- as.character(time_seq[i + 1])
+      dt0 <- paste(t0, "01:00")
+      dt1 <- paste(t1, "01:00")
+      dt0_enc <- URLencode(dt0, reserved = TRUE)
+      dt1_enc <- URLencode(dt1, reserved = TRUE)
+
+      base_url <- "https://data.elexon.co.uk/bmrs/api/v1/datasets/PN/stream?"
+
+      url <- sprintf(
+        "%sfrom=%s&to=%s&bmUnit=",
+        base_url,
+        dt0_enc,
+        dt1_enc
+      )
+
+      fragments <- 3
+      n_bmu <- nrow(wind.bmus)
+      parts_vec <- seq(1, n_bmu, length.out = fragments + 1) %>% trunc()
+
+      # list strings in fragments
+      bmu_strings <- mapply(
+        \(left, right) {
+          bmu.string <- wind.bmus %>%
+            slice(left:right) %>%
+            pull(elexonBmUnit) %>%
+            paste(., collapse = "&bmUnit=")
+
+          # print(bmu.string)
+        },
+        left = parts_vec[1:fragments] + c(0, rep(1, fragments - 1)),
+        right = parts_vec[-1]
+      )
+
+      # query data by fragment
+      bmu_df <- lapply(
+        bmu_strings,
+        \(string) {
+          url <- paste0(url, string)
+          response <- GET(url, accept("text/plain"))
+          json_data <- content(response, "text", encoding = "UTF-8")
+          generation.bmu <- tryCatch(
+            fromJSON(json_data) %>%
+              mutate(across(
+                matches("Time"),
+                ~ as.POSIXct(., format = "%Y-%m-%dT%H:%M:%OS")
+              )),
+            error = function(e) {
+              warning(sprintf(
+                "Data extraction for day %s failed. Response: %s\n",
+                t0,
+                response$status_code
+              ))
+              return(NULL)
+            }
+          )
+        }
+      ) %>%
+        bind_rows()
+
+      bmu_df
+    }
+  )
+
+  bmugenyear <- extraction %>% bind_rows()
+
+  bmugenyear %>%
+    write.csv(
+      gzfile(file.path(path, file_name))
+    )
+
+  invisible(bmugenyear)
+}
+
+get_outturn <- function(
+  year = 2024,
+  path,
+  file_name = sprintf("outturn_gen_type_%d.csv.gz", year),
+  end_time = NULL
+) {
+  if (is.null(end_time)) {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(sprintf("%d-12-31", year)),
+      by = "4 days"
+    )
+    time_seq <- c(time_seq, as.Date(sprintf("%d-01-01", year + 1)))
+  } else {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(end_time),
+      by = "4 days"
+    )
+    if (time_seq[length(time_seq)] < end_time) time_seq <- c(time_seq, end_time)
+  }
+
+  # browser()
+  extraction <- lapply(
+    seq_along(time_seq[-1]),
+
+    \(i) {
+      t0 <- as.character(time_seq[i])
+      t1 <- as.character(time_seq[i + 1])
+      dt0 <- paste(t0, "01:00")
+      dt1 <- paste(t1, "01:00")
+      dt0_enc <- URLencode(dt0, reserved = TRUE)
+      dt1_enc <- URLencode(dt1, reserved = TRUE)
+
+      base_url <- "https://data.elexon.co.uk/bmrs/api/v1/generation/outturn/summary?"
+
+      url <- sprintf(
+        "%sstartTime=%s&endTimeTo=%s&includeNegativeGeneration=true&format=json",
+        base_url,
+        dt0_enc,
+        dt1_enc
+      )
+
+      response <- GET(url, accept("text/plain"))
+      json_data <- content(response, "text", encoding = "UTF-8")
+      browser()
+      blockdf <- json_data %>%
+        fromJSON(flatten = T) %>%
+        unnest(data) %>%
+        mutate(across(
+          matches("Time"),
+          ~ as.POSIXct(., format = "%Y-%m-%dT%H:%M:%OS")
+        ))
+      blockdf
+    }
+  )
+
+  df <- extraction %>% bind_rows()
+
+  df %>%
+    write.csv(
+      gzfile(file.path(path, file_name))
+    )
+
+  invisible(df)
+}
