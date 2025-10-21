@@ -22,6 +22,7 @@ library(rnaturalearth)
 library(rnaturalearthdata)
 
 require(plotly)
+require(ggthemes)
 ```
 ## Data paths
 
@@ -76,7 +77,7 @@ uk_ie <- ne_countries(scale = "medium", returnclass = "sf") %>%
   st_transform(crs = 4326)
 
 repd_p <- repd_wind %>% 
-  filter(!is.na(x_coord)) %>% 
+  filter(!is.na(x_coord), x_coord != "") %>% 
   st_as_sf(coords = c("x_coord","y_coord"), crs = 27700) %>% 
    st_transform(4326) %>% 
   ggplot()+
@@ -92,6 +93,7 @@ repd_p <- repd_wind %>%
   labs(col = "")+ theme(legend.position = "bottom")
 
 plotly::ggplotly(repd_p, tooltip = "text")
+
 ```
 
 ## add catalog with BMU codes
@@ -119,6 +121,8 @@ bmu_to_repd <- id_catalog %>%
 
 ```{r}
 bmu_to_repd <- id_catalog %>% 
+    # fix aikengall
+    mutate(rep_id = ifelse(rep_id == "7015","4332, 4591", rep_id)) %>%
     # fix clyde wind farm: combine central and south / north: extension
     mutate(rep_id = ifelse(rep_id == "4011, 4178", "4011, 4178, 4011",rep_id ) ) %>% 
     # fix london array, all bmus to 2511, 2507 was abandoned
@@ -304,11 +308,137 @@ test %>%
         total_cap = sum(generationCapacity, na.rm = TRUE)
     )
 ```
-### extra BMU downloads
+
+
+## extra BMU downloads
 ```{r}
 source("aux_funct.R")
 bmugen0 <- get_bmugen(
   year = 2019,
   path = file.path(path,"data_by_year")
   )
+```
+
+### Extra maps
+
+```{r}
+# on shore off shore distribution
+ref_catalog_2025 %>% 
+    group_by(tech_typ) %>%
+    summarise(
+        total_gen = sum(quantity, na.rm = TRUE)/1000,
+        total_cap = sum(generationCapacity, na.rm = TRUE),
+        n = n()
+    ) %>% 
+    janitor::adorn_totals("row") %>%
+    mutate(
+        cap_factor = total_gen / (total_cap * 8760)*1000
+    ) %>% 
+    kable(
+        col.names = c("Type", "Generation (GWh)", "Capacity (MW)", "Number of BMUs", "Capacity Factor"),
+        digits = c(1,1,0,1,2),
+        format.args = list(big.mark = ",")) %>%
+    kable_styling(full_width = FALSE)
+```
+
+```{r}
+?kable
+```
+```{r}
+uk_ie <- ne_countries(scale = "medium", returnclass = "sf") %>%
+  filter(admin %in% c("United Kingdom", "Ireland")) %>%
+  st_transform(crs = 4326)
+
+p1 <- ref_catalog_2025 %>% 
+  filter(!is.na(x_coord)) %>% 
+  st_as_sf(coords = c("x_coord","y_coord"), crs = 27700) %>% 
+   st_transform(4326) %>% 
+  ggplot()+
+  geom_sf(data = uk_ie, fill = "gray95", color = "gray70") +  # map background
+  geom_sf(aes(
+    geometry = geometry, 
+    col = tech_typ, 
+    text = paste("Site:", site_name, "<br>Tech:", tech_typ)),
+    # size = 1
+    )+
+#   coord_sf(datum = 4326, crs = 4326)+
+  scale_color_manual(values = pal_aaas()(3))+
+  labs(col = "")+
+#   x = "Longitude (\u00B0E)", y = "Latitude (\u00B0N)")+
+  theme(legend.position = "bottom")
+
+p1
+ggsave(
+    filename = "fig/wind_farms_elexon_2025.eps",
+    plot = p1,
+    width = 4,
+    height = 6,
+    units = "in",
+    dpi = 300
+)
+```
+
+
+```{r}
+p1 <- ref_catalog_2025 %>% 
+  filter(!is.na(x_coord)) %>% 
+  st_as_sf(coords = c("x_coord","y_coord"), crs = 27700) %>% 
+   st_transform(4326) %>% 
+  ggplot()+
+  geom_sf(data = uk_ie, fill = "gray95", color = "gray70") +  # map background
+  geom_sf(aes(
+    geometry = geometry, 
+    col = tech_typ, 
+    size = generationCapacity,
+    text = paste("Site:", site_name, "<br>Tech:", tech_typ)),
+    # size = 1
+    )+
+#   coord_sf(datum = 4326, crs = 4326)+
+  scale_color_manual(values = pal_aaas()(3))+
+  labs(col = "", size = "capacity")+
+#   x = "Longitude (\u00B0E)", y = "Latitude (\u00B0N)")+
+  theme(legend.position = "bottom")
+
+p1
+ggsave(
+    filename = "fig/wind_farms_elexon_size_2025.eps",
+    plot = p1,
+    width = 4,
+    height = 6,
+    units = "in",
+    dpi = 300
+)
+```
+
+```{r}
+p1 <- ref_catalog_2025 %>% 
+  filter(!is.na(x_coord)) %>% 
+  st_as_sf(coords = c("x_coord","y_coord"), crs = 27700) %>% 
+   st_transform(4326) %>% 
+  ggplot()+
+  geom_sf(data = uk_ie, fill = "gray95", color = "gray70") +  # map background
+  geom_sf(aes(
+    geometry = geometry, 
+    col = tech_typ, 
+    size = quantity/1000,
+    text = paste("Site:", site_name, "<br>Tech:", tech_typ)),
+    # size = 1
+    alpha = 0.2
+    )+
+#   coord_sf(datum = 4326, crs = 4326)+
+  scale_color_manual(values = pal_aaas()(3))+
+  labs(col = "", size = "generation")+
+#   x = "Longitude (\u00B0E)", y = "Latitude (\u00B0N)")+
+  theme_map()+
+  theme(legend.position = "left")
+
+p1
+ggsave(
+    filename = "fig/wind_farms_elexon_gen_2025.jpeg",
+    plot = p1,
+    width = 4,
+    height = 6,
+    units = "in",
+    dpi = 300
+)
 ```
