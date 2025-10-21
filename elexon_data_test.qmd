@@ -174,13 +174,13 @@ bmu_to_repd <- id_catalog %>%
     )
 
   # new wind farms
-manual_map <- read.csv("manual_bmu_to_repd.csv") %>%
+manual_map <- read.csv("data/manual_bmu_to_repd.csv") %>%
     mutate(
         bmu_id = as.character(bmu_id),
         rep_id = as.character(rep_id)
     ) %>% 
     filter(!is.na(rep_id)) %>% select(-c(rep_id2, rep_id3))
-# write.csv(manual_map, "manual_bmu_to_repd.csv", row.names = FALSE)
+# write.csv(manual_map, "data/manual_bmu_to_repd.csv", row.names = FALSE)
 bmu_to_repd <- bmu_to_repd %>%
     bind_rows(manual_map)
 ```
@@ -210,7 +210,7 @@ test <- bmu_25 %>%
 test %>% 
     filter(is.na(rep_id)) %>% 
     select(bmUnitName,bmUnit, rep_id, generationCapacity) %>% 
-    write.csv("to_map.csv",row.names = FALSE)
+    write.csv("data/to_map.csv",row.names = FALSE)
 ```
 ### elexon BMUs
 
@@ -270,20 +270,29 @@ bmu_y <- bmu_df %>%
 ```{r}
 repd_vars <- c("ref_id", "site_name", "tech_typ", "capacity_repd", "capacity_turb", "n_turb", "height_turb","devel_stat","x_coord","y_coord","operational")
 
-test <- bmu_y %>%
+ref_catalog_2025 <- bmu_y %>%
     left_join(
+    # wind bmus from elexon
         wind.bmus %>% select(
             elexonBmUnit,
             matches("name|capacity")) %>% unique(), 
             by = c("bmUnit" = "elexonBmUnit")) %>%
     left_join(
+    # mapping elexon to repd
         bmu_to_repd %>% 
             select(bmu_id, rep_id, name),
         by = c("bmUnit" = "bmu_id")) %>% 
     left_join(
+    # repd
         repd_wind %>% 
             select(any_of(repd_vars)),
         by = c("rep_id" = "ref_id"))
+
+write.csv(
+    ref_catalog_2025,
+    gzfile(file.path("data/ref_catalog_wind_2025.csv.gz")),
+    row.names = FALSE
+)
 
 ```
 
