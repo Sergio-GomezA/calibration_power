@@ -1,0 +1,358 @@
+---
+title: "Elexon Data test"
+format: html
+---
+
+## packages
+
+```{r include=FALSE}
+require(tidyverse)
+require(kableExtra)
+require(parallel)
+require(dplyr)
+require(scales)
+require(ggsci)
+
+require(jsonlite)
+require(httr)
+
+require(data.table)
+require(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+require(plotly)
+```
+## Data paths
+
+```{r}
+path <- "~/Documents/elexon"
+elexon_path <- "/home/s2441782/Documents/elexon/"
+```
+
+
+## Catalog REPD
+
+
+```{r}
+list.files(file.path(path,"renew_energ_plan_db"), pattern = "repd")
+repd0 <- fread(file.path(path,"renew_energ_plan_db", "repd-q2-jul-2025.csv")) %>% 
+    rename(
+    tech_typ = `Technology Type`,
+    devel_stat = `Development Status (short)`,
+    x_coord = `X-coordinate`,
+    y_coord = `Y-coordinate`)
+names(repd0) <- tolower(gsub(" ", "_", names(repd0)))
+
+```
+
+```{r}
+# filter wind only
+# repd0$tech_typ |> unique()
+
+repd_wind <- repd0 %>% 
+  filter(
+    tech_typ %in% c("Wind Onshore", "Wind Offshore"),
+    devel_stat %in% c("Operational")) %>% 
+#   mutate(
+#     site_name = stringi::stri_enc_toutf8(as.character(site_name)),
+#     tech_typ  = stringi::stri_enc_toutf8(as.character(tech_typ))
+#   )
+    mutate(
+    site_name = iconv(site_name, from = "latin1", to = "UTF-8"),
+    site_name = gsub("[^[:print:]]", "", site_name)
+  )
+```
+
+### plot wind farms
+
+```{r}
+uk_ie <- ne_countries(scale = "medium", returnclass = "sf") %>%
+  filter(admin %in% c("United Kingdom", "Ireland")) %>%
+  st_transform(crs = 4326)
+
+repd_p <- repd_wind %>% 
+  filter(!is.na(x_coord)) %>% 
+  st_as_sf(coords = c("x_coord","y_coord"), crs = 27700) %>% 
+   st_transform(4326) %>% 
+  ggplot()+
+  geom_sf(data = uk_ie, fill = "gray95", color = "gray70") +  # map background
+  geom_sf(aes(
+    geometry = geometry, 
+    col = tech_typ, 
+    text = paste("Site:", site_name, "<br>Tech:", tech_typ)),
+    # size = 1
+    )+
+  coord_sf(datum = 4326, crs = 4326)+
+  scale_color_manual(values = pal_aaas()(3))+
+  labs(col = "")+ theme(legend.position = "bottom")
+
+plotly::ggplotly(repd_p, tooltip = "text")
+```
+
+## add catalog with BMU codes
+```{r}
+id_catalog <- readxl::read_xlsx(
+  path = file.path(path,"osuked","id_dictionary.xlsx"),
+  na = c("NA", "n/a", "-","")
+) %>% 
+   rename(
+    rep_id = `REPD ID (New)`,
+    bmu_id = `Settlement BMU ID`,
+    dict_id = `Dictionary ID`,
+    name = `Common Name`
+    ) %>%
+    filter(!is.na(rep_id)) %>% 
+    mutate(dict_id = as.character(dict_id))
+names(id_catalog) <- tolower(gsub(" ", "_", names(id_catalog)))
+bmu_to_repd <- id_catalog %>% 
+  separate_rows(bmu_id, sep = ",\\s*") %>%
+  separate_rows(rep_id, sep = ",\\s*") %>%
+  select(dict_id, name, bmu_id, rep_id) %>% 
+  unique()
+# bmu_to_dict %>% head()
+```
+
+```{r}
+bmu_to_repd <- id_catalog %>% 
+    # fix clyde wind farm: combine central and south / north: extension
+    mutate(rep_id = ifelse(rep_id == "4011, 4178", "4011, 4178, 4011",rep_id ) ) %>% 
+    # fix london array, all bmus to 2511, 2507 was abandoned
+    mutate(rep_id = ifelse(rep_id == "2511, 2507", paste0(rep("2511",4), collapse = ", "), rep_id)) %>% 
+    # fix thanet. only THNTO are active
+    mutate(rep_id = ifelse(rep_id == "6299, 2499", "2499, 2499, 6299, 6299", rep_id)) %>% 
+    # fix walney: last id covers 2 BMUs  2500, 2506, 2533, 2533
+    mutate(
+        rep_id = ifelse(rep_id == "2533, 2500, 2506", "2500, 2506, 2533, 2533", rep_id),
+        bmu_id = ifelse(
+            bmu_id == "T_WLNYW-1, E_WLNYW-2, T_WLNYO-3, T_WLNYO-4, T_WLNYO-2",
+            "T_WLNYW-1, T_WLNYO-2, T_WLNYO-3, T_WLNYO-4",
+            bmu_id)
+            ) %>%
+    # fix east anglia: EA1 and EA2 share BMUs
+    mutate(rep_id = ifelse(rep_id == "2484, 6483, 2525, 2470", "2524, 2524", rep_id)) %>% 
+    # fix hornsea 1
+    mutate(rep_id = ifelse(rep_id == "2502, 2472, 2525", "2525, 2525, 2525", rep_id)) %>%
+    # add hornsea 2
+    bind_rows(
+        data.frame(
+            dict_id = "HORSEA2",
+            name = "Hornsea 2",
+            bmu_id = c("T_HOWBO-1","T_HOWBO-2","T_HOWBO-3"),
+            rep_id = c("2502","2502","2502")
+        )
+    ) %>% 
+    # fix moray east
+    mutate(rep_id = ifelse(rep_id == "2537", "2534", rep_id)) %>%
+    # add moray west 
+    bind_rows(
+        data.frame(
+            dict_id = "MORAYWEST",
+            name = "Moray West",
+            bmu_id = c("T_MOWWO-1","T_MOWWO-2","T_MOWWO-3","T_MOWWO-4"),
+            rep_id = c("6158")
+        )
+    ) %>% 
+    bind_rows(
+        data.frame(
+            dict_id = "Neart na Gaoithe",
+            name = "Neart na Gaoithe",
+            bmu_id = c("T_NNGAO-1","T_NNGAO-2"),
+            rep_id = c("2522")
+        )
+    ) %>% 
+    mutate(across(c(bmu_id, rep_id),
+                ~ str_split(.x, ",\\s*"))) %>%
+  unnest(c(bmu_id, rep_id))
+```
+
+```{r}
+# new wind farms
+manual_map <- data.frame(
+            name = "Seagreen",
+            bmu_id = paste0("T_SGRWO-",1:6),
+            rep_id = c("2540")
+        ) %>% 
+    bind_rows(
+        data.frame(
+            name = "South Kyle",
+            bmu_id = c("T_SOKYW-1"),
+            rep_id = c("4586")
+        )
+    ) %>%
+    bind_rows(
+        data.frame(
+            name = "Dogger Bank",
+            bmu_id = paste0("T_DBAWO-",1:5),
+            rep_id = c("2541")
+        )
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Gunfleet Sands",
+            bmu_id = paste0("T_GNFSW-",1:2),
+            rep_id = c("2490")
+        )
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Robin Rigg",
+            bmu_id = c("T_RRWW-1","T_RREW-1"),
+            rep_id = c("2497","2496")
+        )
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Dunmaglass",
+            bmu_id = c("T_DUNGW-1"),
+            rep_id = c("4118")
+        )
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Barrow",
+            bmu_id = c("T_BOWLW-1"),
+            rep_id = c("2546"))) %>% 
+    bind_rows(
+        data.frame(
+            name = "Gordonbush",
+            bmu_id = paste0("T_GORDW-",1:2),
+            rep_id = c("3662"))
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Viking",
+            bmu_id = paste0("T_VKNGW-",1:4),
+            rep_id = c("6828"))
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Kincardine",
+            bmu_id = c("E_KINCW-1"),
+            rep_id = c("6136"))
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Kype Muir",
+            bmu_id = c("T_KPMRW-1","T_KYPEW-1"),
+            rep_id = c("4643","4628"))
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Kennoxhead",
+            bmu_id = c("T_KENNW-1"),
+            rep_id = c("4385"))
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Braes of Doune",
+            bmu_id = c("E_BRDUW-1"),
+            rep_id = c("3119"))
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Camster",
+            bmu_id = c("2__PEDGE003"),
+            rep_id = c("4006"))) %>% 
+    bind_rows(
+        data.frame(
+            name = "Corriegarth",
+            bmu_id = c("T_CGTHW-1"),
+            rep_id = c("4664"))
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Creag Riabhach",
+            bmu_id = c("T_CREAW-1"),
+            rep_id = c("4300"))
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Kilbraur",
+            bmu_id = c("T_KILBW-1"),
+            rep_id = c("3202")) # also "2673"
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Tom na Clach",
+            bmu_id = c("C__PSTAT011"),
+            rep_id = c("4420"))
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Strathy North",
+            bmu_id = c("T_STRNW-1"),
+            rep_id = c("4625"))
+    ) %>% 
+    bind_rows(
+        data.frame(
+            name = "Millennium",
+            bmu_id = c("T_LOCLU-1"),
+            rep_id = c("4682"), #also 2723, 3598
+        )
+    )
+write.csv(manual_map, "manual_bmu_to_repd.csv", row.names = FALSE)
+bmu_to_repd <- bmu_to_repd %>%
+    bind_rows(manual_map)
+```
+
+
+```{r}
+bmu_to_repd %>% 
+  filter(!is.na(rep_id))
+# ?readxl::read_xlsx
+```
+```{r}
+test <- bmu_25 %>%
+    left_join(
+        wind.bmus %>% select(
+            elexonBmUnit,
+            matches("name|capacity")) %>% unique(), 
+            by = c("bmUnit" = "elexonBmUnit")) %>%
+    left_join(
+        bmu_to_repd %>% select(
+            bmu_id,
+            rep_id, name),
+        by = c("bmUnit" = "bmu_id"))
+```
+
+### elexon BMUs
+
+#### elexon wind catalog
+```{r}
+# wind.bmus <- bmus %>% 
+#   filter(grepl("WIND",fuelType), fpnFlag) %>% 
+#   filter(productionOrConsumptionFlag %in% c("P"))
+url <- "https://data.elexon.co.uk/bmrs/api/v1/reference/bmunits/all"
+response <- GET(url, accept("text/plain"))
+json_data <- content(response, "text", encoding = "UTF-8")
+bmus <- fromJSON(json_data) 
+wind.bmus <- bmus %>% 
+  filter(
+    grepl("WIND",fuelType) | 
+      grepl("wind|offshore", leadPartyName, ignore.case = TRUE )|
+      grepl("wind farm|windfarm", bmUnitName, ignore.case = TRUE )) %>% 
+  filter(!is.na(elexonBmUnit))
+# wind.bmus
+```
+
+```{r}
+wind.bmus %>% 
+  write.csv(
+    .,gzfile(file.path(path, "wind_bmu.csv.gz"))
+  )
+```
+
+#### BMUS with data 2025
+```{r}
+bmu_df <- fread(
+  file.path(path,"data_by_year","wind_gen_bmu_2025.csv.gz")
+)
+bmu_25 <- bmu_df %>% 
+  group_by(bmUnit) %>% 
+  summarise(quantity = mean(quantity, na.rm = TRUE)) %>% 
+  arrange(desc(quantity))
+
+```
+
+
