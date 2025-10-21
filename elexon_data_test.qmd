@@ -35,34 +35,38 @@ elexon_path <- "/home/s2441782/Documents/elexon/"
 
 
 ```{r}
-list.files(file.path(path,"renew_energ_plan_db"), pattern = "repd")
+# list.files(file.path(path,"renew_energ_plan_db"), pattern = "repd")
 repd0 <- fread(file.path(path,"renew_energ_plan_db", "repd-q2-jul-2025.csv")) %>% 
     rename(
     tech_typ = `Technology Type`,
     devel_stat = `Development Status (short)`,
+    capacity_repd = `Installed Capacity (MWelec)`,
+    capacity_turb = `Turbine Capacity`,
+    n_turb = `No. of Turbines`,
+    height_turb = `Height of Turbines (m)`,
     x_coord = `X-coordinate`,
     y_coord = `Y-coordinate`)
 names(repd0) <- tolower(gsub(" ", "_", names(repd0)))
-
-```
-
-```{r}
 # filter wind only
 # repd0$tech_typ |> unique()
 
 repd_wind <- repd0 %>% 
   filter(
     tech_typ %in% c("Wind Onshore", "Wind Offshore"),
-    devel_stat %in% c("Operational")) %>% 
+    # devel_stat %in% c("Operational")
+    ) %>% 
 #   mutate(
 #     site_name = stringi::stri_enc_toutf8(as.character(site_name)),
 #     tech_typ  = stringi::stri_enc_toutf8(as.character(tech_typ))
 #   )
     mutate(
     site_name = iconv(site_name, from = "latin1", to = "UTF-8"),
-    site_name = gsub("[^[:print:]]", "", site_name)
+    site_name = gsub("[^[:print:]]", "", site_name),
+    ref_id = as.character(ref_id)
   )
 ```
+
+
 
 ### plot wind farms
 
@@ -163,11 +167,13 @@ bmu_to_repd <- id_catalog %>%
     ) %>% 
     mutate(across(c(bmu_id, rep_id),
                 ~ str_split(.x, ",\\s*"))) %>%
-  unnest(c(bmu_id, rep_id))
-```
+  unnest(c(bmu_id, rep_id)) %>% 
+  filter(
+    rep_id != "6797",#fix berry burn
+    rep_id != "3619" # fix beinneun
+    )
 
-```{r}
-# new wind farms
+  # new wind farms
 manual_map <- read.csv("manual_bmu_to_repd.csv") %>%
     mutate(
         bmu_id = as.character(bmu_id),
@@ -222,14 +228,15 @@ wind.bmus <- bmus %>%
     grepl("WIND",fuelType) | 
       grepl("wind|offshore", leadPartyName, ignore.case = TRUE )|
       grepl("wind farm|windfarm", bmUnitName, ignore.case = TRUE )) %>% 
-  filter(!is.na(elexonBmUnit))
+  filter(!is.na(elexonBmUnit)) %>% 
+  mutate(generationCapacity = as.numeric(generationCapacity))
 # wind.bmus
 ```
 
 ```{r}
 wind.bmus %>% 
   write.csv(
-    .,gzfile(file.path(path, "wind_bmu.csv.gz"))
+    .,gzfile(file.path(path, "wind_bmu_2.csv.gz"))
   )
 ```
 
@@ -242,27 +249,57 @@ bmu_25 <- bmu_df %>%
   group_by(bmUnit) %>% 
   summarise(quantity = mean(quantity, na.rm = TRUE)) %>% 
   arrange(desc(quantity))
+
+```
+
+```{r}
 bmu_df <- fread(
-  file.path(path,"data_by_year","wind_gen_bmu_2024.csv.gz")
+  file.path(path,"data_by_year","wind_gen_bmu_2025.csv.gz")
 )
-bmu_24 <- bmu_df %>% 
+bmu_y <- bmu_df %>% 
+  group_by(bmUnit) %>% arrange(halfHourEndTime) %>% 
+  mutate(quantity = quantity + lag(quantity)) %>% 
+  filter(quantity>0) %>% 
+  filter(minute(halfHourEndTime) == 0) %>% 
   group_by(bmUnit) %>% 
-  summarise(quantity = mean(quantity, na.rm = TRUE)) %>% 
+  summarise(quantity = sum(quantity, na.rm = TRUE)) %>% 
   arrange(desc(quantity))
 ```
 
 
-
 ```{r}
-test <- bmu_25 %>%
+repd_vars <- c("ref_id", "site_name", "tech_typ", "capacity_repd", "capacity_turb", "n_turb", "height_turb","devel_stat","x_coord","y_coord","operational")
+
+test <- bmu_y %>%
     left_join(
         wind.bmus %>% select(
             elexonBmUnit,
             matches("name|capacity")) %>% unique(), 
             by = c("bmUnit" = "elexonBmUnit")) %>%
     left_join(
-        bmu_to_repd %>% select(
-            bmu_id,
-            rep_id, name),
-        by = c("bmUnit" = "bmu_id"))
+        bmu_to_repd %>% 
+            select(bmu_id, rep_id, name),
+        by = c("bmUnit" = "bmu_id")) %>% 
+    left_join(
+        repd_wind %>% 
+            select(any_of(repd_vars)),
+        by = c("rep_id" = "ref_id"))
+
+```
+
+
+```{r}
+test %>% 
+    summarise(
+        total_gen = sum(quantity, na.rm = TRUE),
+        total_cap = sum(generationCapacity, na.rm = TRUE)
+    )
+```
+### extra BMU downloads
+```{r}
+source("aux_funct.R")
+bmugen0 <- get_bmugen(
+  year = 2019,
+  path = file.path(path,"data_by_year")
+  )
 ```
