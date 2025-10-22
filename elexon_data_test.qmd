@@ -297,7 +297,8 @@ ref_catalog_2025 <- bmu_y %>%
     # repd
         repd_wind %>% 
             select(any_of(repd_vars)),
-        by = c("rep_id" = "ref_id"))
+        by = c("rep_id" = "ref_id")) %>% 
+    mutate(operational_date = as.Date(operational, format = "%d/%m/%Y"))
 
 write.csv(
     ref_catalog_2025,
@@ -452,4 +453,77 @@ ggsave(
     units = "in",
     dpi = 300
 )
+```
+
+
+```{r}
+ref_catalog_2025 %>% 
+    pull(generationCapacity) %>% 
+    summary()
+
+ref_catalog_2025 %>% 
+    ggplot()+
+    geom_boxplot(aes(
+        x= tech_typ,y = generationCapacity
+    ))
+```
+
+## Turbine exploratory analysis
+
+```{r}
+ref_catalog_2025 %>% 
+    pull(height_turb) %>% 
+    summary()
+```
+
+
+```{r}
+ref_catalog_2025 %>%
+    mutate(operational_date = as.Date(operational, format = "%d/%m/%Y")) %>%
+    pull(operational_date) %>% 
+    summary()
+
+# Compute cumulative capacity over time
+capacity_time <- ref_catalog_2025 %>%
+  mutate(operational_date = as.Date(operational, format = "%d/%m/%Y")) %>%
+  arrange(operational_date) %>%
+  mutate(cum_capacity = cumsum(generationCapacity))
+
+# Plot
+ggplot(capacity_time, aes(x = operational_date, y = cum_capacity)) +
+  geom_line(color = "#0072B2", linewidth = 1) +
+  labs(
+    title = "Cumulative Installed Capacity Over Time",
+    x = "Operational Date",
+    y = "Cumulative Capacity (MW)"
+  ) +
+  theme_minimal(base_size = 14)
+```
+
+
+```{r}
+# Aggregate capacity by date and type
+capacity_time <- ref_catalog_2025 %>%
+  mutate(operational_date = as.Date(operational, format = "%d/%m/%Y")) %>%
+  group_by(operational_date, tech_typ) %>%
+  summarise(total_capacity = sum(generationCapacity, na.rm = TRUE), .groups = "drop") %>%
+  arrange(operational_date) %>%
+  group_by(tech_typ) %>%
+  mutate(cum_capacity = cumsum(total_capacity)) %>%
+  ungroup()
+
+ggplot(capacity_time, aes(x = operational_date, y = cum_capacity, fill = tech_typ)) +
+  geom_area(alpha = 0.8, color = "white", linewidth = 0.3) +
+  scale_fill_manual(values = c("Wind Onshore" = "#66c2a5", "Wind Offshore" = "#fc8d62")) +
+  labs(
+    title = "Cumulative Wind Power Capacity in the UK",
+    x = "Operational Date",
+    y = "Cumulative Capacity (MW)",
+    fill = "Type"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "top",
+    panel.grid.minor = element_blank()
+  )
 ```
