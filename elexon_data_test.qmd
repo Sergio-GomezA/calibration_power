@@ -325,8 +325,9 @@ test %>%
 ```{r}
 source("aux_funct.R")
 bmugen0 <- get_bmugen(
-  year = 2019,
-  path = file.path(path,"data_by_year")
+  year = 2025,
+  path = file.path(path,"data_by_year"),
+  end_time = "2025-09-30"
   )
 ```
 
