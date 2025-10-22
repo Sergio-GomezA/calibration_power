@@ -78,6 +78,7 @@ uk_ie <- ne_countries(scale = "medium", returnclass = "sf") %>%
 
 repd_p <- repd_wind %>% 
   filter(!is.na(x_coord), x_coord != "") %>% 
+  filter(devel_stat == "Operational") %>% 
   st_as_sf(coords = c("x_coord","y_coord"), crs = 27700) %>% 
    st_transform(4326) %>% 
   ggplot()+
@@ -87,9 +88,11 @@ repd_p <- repd_wind %>%
     col = tech_typ, 
     text = paste("Site:", site_name, "<br>Tech:", tech_typ)),
     # size = 1
+    alpha = 0.2
     )+
   coord_sf(datum = 4326, crs = 4326)+
   scale_color_manual(values = pal_aaas()(3))+
+  theme_map()+
   labs(col = "")+ theme(legend.position = "bottom")
 
 plotly::ggplotly(repd_p, tooltip = "text")
@@ -150,8 +153,12 @@ bmu_to_repd <- id_catalog %>%
             rep_id = c("2502","2502","2502")
         )
     ) %>% 
+    # fix clashindarroch
+    mutate(rep_id = ifelse(rep_id == "3104", "4623", rep_id)) %>%
     # fix moray east
     mutate(rep_id = ifelse(rep_id == "2537", "2534", rep_id)) %>%
+    # fix dorenell
+    mutate(rep_id = ifelse(rep_id == "4244, 5051", "4244, 4244", rep_id)) %>%
     # add moray west 
     bind_rows(
         data.frame(
@@ -392,16 +399,18 @@ p1 <- ref_catalog_2025 %>%
     size = generationCapacity,
     text = paste("Site:", site_name, "<br>Tech:", tech_typ)),
     # size = 1
+    alpha = 0.2
     )+
 #   coord_sf(datum = 4326, crs = 4326)+
   scale_color_manual(values = pal_aaas()(3))+
   labs(col = "", size = "capacity")+
 #   x = "Longitude (\u00B0E)", y = "Latitude (\u00B0N)")+
-  theme(legend.position = "bottom")
+theme_map()+
+  theme(legend.position = "left")
 
 p1
 ggsave(
-    filename = "fig/wind_farms_elexon_size_2025.eps",
+    filename = "fig/wind_farms_elexon_size_2025.jpeg",
     plot = p1,
     width = 4,
     height = 6,
