@@ -169,6 +169,8 @@ bmu_to_repd <- id_catalog %>%
             rep_id = c("6158")
         )
     ) %>% 
+    # update sanquhar
+    mutate(rep_id = ifelse(rep_id == "6629", "4441", rep_id)) %>%
     bind_rows(
         data.frame(
             dict_id = "Neart na Gaoithe",
@@ -485,6 +487,14 @@ ggsave(
 ```{r}
 ref_catalog_2025 %>% 
     pull(height_turb) %>% 
+    summary()
+
+ref_catalog_2025 %>% 
+    pull(n_turb) %>% 
+    summary()
+
+ref_catalog_2025 %>% 
+    pull(capacity_turb) %>% 
     summary()
 ```
 
