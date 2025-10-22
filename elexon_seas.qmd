@@ -1,0 +1,54 @@
+---
+title: "Elexon data patterns"
+format: html
+---
+
+## packages
+
+```{r include=FALSE}
+require(tidyverse)
+require(kableExtra)
+require(parallel)
+require(dplyr)
+require(scales)
+require(ggsci)
+
+require(jsonlite)
+require(httr)
+
+require(data.table)
+require(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+require(plotly)
+require(ggthemes)
+require(ggsci)
+```
+## Data paths
+
+```{r}
+path <- "~/Documents/elexon"
+elexon_path <- "/home/s2441782/Documents/elexon/"
+```
+
+
+## Load data
+
+```{r}
+# reading years
+year_seq <- seq(2019,2025,1)
+
+
+bmu_df <- lapply(year_seq, function(x){
+  file_path <- file.path(elexon_path, "data_by_year", paste0("wind_gen_bmu_", x, ".csv.gz"))
+  fread(file_path)
+}) %>% bind_rows()
+
+```
+
+
+## aggregation
+```{r}
+bmu_df$halfHourEndTime %>% range()
+```

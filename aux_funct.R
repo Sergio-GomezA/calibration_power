@@ -6,6 +6,8 @@ require(terra)
 require(ggthemes)
 require(fst)
 
+
+wind.bmus <- fread(file.path(path, "wind_bmu_2.csv.gz"))
 ## functions
 
 ## get GWA data
@@ -367,6 +369,7 @@ get_bmugen <- function(
           url <- paste0(url, string)
           response <- GET(url, accept("text/plain"))
           json_data <- content(response, "text", encoding = "UTF-8")
+          # browser() sf
           generation.bmu <- tryCatch(
             fromJSON(json_data) %>%
               mutate(across(
