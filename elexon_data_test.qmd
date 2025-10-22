@@ -23,6 +23,7 @@ library(rnaturalearthdata)
 
 require(plotly)
 require(ggthemes)
+require(ggsci)
 ```
 ## Data paths
 
@@ -405,7 +406,7 @@ p1 <- ref_catalog_2025 %>%
     alpha = 0.2
     )+
 #   coord_sf(datum = 4326, crs = 4326)+
-  scale_color_manual(values = pal_aaas()(3))+
+  scale_color_manual(values = pal_aaas()(2) %>% rev())+
   labs(col = "", size = "capacity")+
 #   x = "Longitude (\u00B0E)", y = "Latitude (\u00B0N)")+
 theme_map()+
@@ -438,7 +439,7 @@ p1 <- ref_catalog_2025 %>%
     alpha = 0.2
     )+
 #   coord_sf(datum = 4326, crs = 4326)+
-  scale_color_manual(values = pal_aaas()(3))+
+  scale_color_manual(values = pal_aaas()(2) %>% rev())+
   labs(col = "", size = "generation")+
 #   x = "Longitude (\u00B0E)", y = "Latitude (\u00B0N)")+
   theme_map()+
@@ -464,8 +465,19 @@ ref_catalog_2025 %>%
 ref_catalog_2025 %>% 
     ggplot()+
     geom_boxplot(aes(
-        x= tech_typ,y = generationCapacity
-    ))
+        x= tech_typ,y = generationCapacity, fill = tech_typ
+    ))+
+    scale_fill_manual(values = pal_aaas()(2) %>% rev())+
+    labs(
+        x = "", y = "Capacity (MW)"
+    )+
+    theme_minimal(base_size = 14)+
+    theme(legend.position = "none")
+
+ggsave(
+    filename = "fig/wind_capacity_box_2025.eps",
+    width = 4,
+    height = 4)
 ```
 
 ## Turbine exploratory analysis
@@ -498,13 +510,22 @@ ggplot(capacity_time, aes(x = operational_date, y = cum_capacity)) +
     y = "Cumulative Capacity (MW)"
   ) +
   theme_minimal(base_size = 14)
+
+
+ggsave(
+    filename = "fig/wind_capacity_2025.eps",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
 ```
 
 
 ```{r}
-# Aggregate capacity by date and type
+
+# Aggregate cumulative capacity by date and type
 capacity_time <- ref_catalog_2025 %>%
-  mutate(operational_date = as.Date(operational, format = "%d/%m/%Y")) %>%
   group_by(operational_date, tech_typ) %>%
   summarise(total_capacity = sum(generationCapacity, na.rm = TRUE), .groups = "drop") %>%
   arrange(operational_date) %>%
@@ -512,18 +533,36 @@ capacity_time <- ref_catalog_2025 %>%
   mutate(cum_capacity = cumsum(total_capacity)) %>%
   ungroup()
 
-ggplot(capacity_time, aes(x = operational_date, y = cum_capacity, fill = tech_typ)) +
-  geom_area(alpha = 0.8, color = "white", linewidth = 0.3) +
-  scale_fill_manual(values = c("Wind Onshore" = "#66c2a5", "Wind Offshore" = "#fc8d62")) +
+# 🔧 Create a complete grid of all dates and types
+capacity_time_full <- capacity_time %>%
+  complete(
+    tech_typ,
+    operational_date = seq(min(operational_date, na.rm =T), max(operational_date, na.rm =T), by = "day")
+  ) %>%
+  group_by(tech_typ) %>%
+  fill(cum_capacity, .direction = "down") %>%  # carry last known value forward
+  replace_na(list(cum_capacity = 0)) %>%       # fill before first commissioning
+  ungroup()
+
+ggplot(capacity_time_full, aes(x = operational_date, y = cum_capacity, fill = tech_typ)) +
+  geom_area( color = "white", linewidth = 0.3) +
+#   scale_fill_manual(values = c("Wind Onshore" = "#66c2a5", "Wind Offshore" = "#fc8d62")) +
+  scale_fill_manual(values = pal_aaas()(2) %>% rev() ) +
   labs(
-    title = "Cumulative Wind Power Capacity in the UK",
+    title = "Cumulative Wind Power Capacity",
     x = "Operational Date",
     y = "Cumulative Capacity (MW)",
     fill = "Type"
   ) +
   theme_minimal(base_size = 14) +
-  theme(
-    legend.position = "top",
-    panel.grid.minor = element_blank()
-  )
+  theme(legend.position = "top")
+
+
+ggsave(
+    filename = "fig/wind_capacity_type_2025.eps",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
 ```
