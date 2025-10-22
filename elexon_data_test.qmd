@@ -351,6 +351,8 @@ ref_catalog_2025 %>%
 ```{r}
 ?kable
 ```
+
+#### wind farm locations
 ```{r}
 uk_ie <- ne_countries(scale = "medium", returnclass = "sf") %>%
   filter(admin %in% c("United Kingdom", "Ireland")) %>%
@@ -385,7 +387,7 @@ ggsave(
 )
 ```
 
-
+#### wind farm locations by capacity
 ```{r}
 p1 <- ref_catalog_2025 %>% 
   filter(!is.na(x_coord)) %>% 
@@ -418,7 +420,7 @@ ggsave(
     dpi = 300
 )
 ```
-
+#### wind farm locations by generation
 ```{r}
 p1 <- ref_catalog_2025 %>% 
   filter(!is.na(x_coord)) %>% 
