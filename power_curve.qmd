@@ -5,7 +5,7 @@ format: html
 
 
 ```{r}
-generic_pc_fname <- list.files("data",pattern = "generic", full.names = TRUE)
+generic_pc_fname <- list.files("data",pattern = "^generic.*\\.json$", full.names = TRUE)
 generic_pc <- lapply(
     generic_pc_fname,
     \(file) {
@@ -21,6 +21,12 @@ generic_pc <- lapply(
     }
 ) %>% bind_rows() %>% 
     mutate(class = gsub(".* - ", "", title))
+
+write.csv(
+    generic_pc,
+    gzfile("data/generic_powerCurves.csv.gz"),
+    row.names = FALSE
+)
 ```
 
 
