@@ -5,7 +5,8 @@ require(ggplot2)
 require(terra)
 require(ggthemes)
 require(fst)
-
+require(data.table)
+require(stringr)
 
 wind.bmus <- fread(file.path(path, "wind_bmu_2.csv.gz"))
 ## functions
