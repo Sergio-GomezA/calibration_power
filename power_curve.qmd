@@ -49,3 +49,74 @@ ggsave(
     dpi = 300
 )
 ```
+
+
+## extract wind speed from GWA
+```{r}
+ref_catalog_2025 <- fread(
+  file.path("data/ref_catalog_wind_2025.csv.gz")
+)
+
+ref_catalog_2025 %>% 
+    mutate(heightNA = is.na(height_turb)) %>% 
+    group_by(tech_typ, heightNA) %>% 
+    summarise(
+        height = mean(height_turb, na.rm = TRUE),
+        n = n()
+    )
+
+```
+
+
+```{r}
+ref_catalog_2025$x_coord[1]
+ref_catalog_2025$y_coord[1]
+
+wf_loc <- ref_catalog_2025 %>% 
+    st_as_sf(coords = c("x_coord","y_coord"), crs = 27700) %>% 
+    st_transform(crs = 4326) %>% 
+    st_coordinates() 
+    
+wf_loc %>% 
+    head()
+```
+
+
+```{r}
+height <- 100
+raster_fname <- sprintf("merged_wind-speed_%dm.tif",height)
+path <- "~/Documents/GWA/"
+
+r <- rast(
+    file.path(path,raster_fname)
+)
+wind_values <- terra::extract(r, wf_loc) 
+```
+
+```{r}
+gen_p <- ref_catalog_2025 %>% 
+    mutate(gwa_ws = wind_values[[1]],
+    tooltip_text = paste0(
+      "Site: ", site_name,
+      "<br>Wind Speed: ", round(wind_values[[1]], 2), " m/s",
+      "<br>Generation: ", round(quantity / 1000, 2), " GWh",
+      "<br>Capacity: ", generationCapacity, " MW",
+      "<br>Type: ", tech_typ
+    )) %>% 
+    ggplot(
+        aes(
+            gwa_ws,
+            quantity/1000, 
+            col = tech_typ,
+            size = generationCapacity,
+            text = tooltip_text)
+    )+
+    geom_point(alpha = 0.5)+
+    scale_color_manual(values = pal_aaas()(2) %>% rev())+
+    scale_size_continuous(name = "Capacity (MW)", guide = "legend") +
+    labs(x = "GWA wind speed m/s", y = "generation GWh",
+    col = "Type", size = "Capacity")+
+    theme(legend.position = "bottom")
+
+plotly::ggplotly(gen_p, tooltip = "text")
+```
