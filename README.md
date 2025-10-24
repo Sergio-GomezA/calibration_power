@@ -4,11 +4,11 @@ Global Wind Atlas calibration to UK power
 ## Next Steps
 
 - **Figures**
-  - Turbine distribution [x]
+  - [x] Turbine distribution 
     - height
     - capacity
     - number of turbines per site
-  - power density
+  - [x] power density
 
 - **Inputs and EDA**
   - Turbine characteristics 
