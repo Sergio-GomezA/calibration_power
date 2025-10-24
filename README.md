@@ -1,9 +1,6 @@
 # GWAcalibration
 Global Wind Atlas calibration to UK power
 
-
-
-
 ## Next Steps
 
 - **Figures**
@@ -17,6 +14,7 @@ Global Wind Atlas calibration to UK power
   - Turbine characteristics  
   - Wind speed vertical interpolation  
   - Get elevation  
+  - Get curtailment
 
 - **Power curve fitting**
   - Using turbine characteristics  
