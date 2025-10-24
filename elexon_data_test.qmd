@@ -32,7 +32,9 @@ path <- "~/Documents/elexon"
 elexon_path <- "/home/s2441782/Documents/elexon/"
 ```
 
-
+```{r}
+source("aux_funct.R")
+```
 ## Catalog REPD
 
 
@@ -334,6 +336,11 @@ bmugen0 <- get_bmugen(
 ### Extra maps
 
 ```{r}
+ref_catalog_2025 <- fread(
+  file.path("data/ref_catalog_wind_2025.csv.gz")
+)
+```
+```{r}
 # on shore off shore distribution
 ref_catalog_2025 %>% 
     group_by(tech_typ) %>%
@@ -459,7 +466,9 @@ ggsave(
 )
 ```
 
+```{r}
 
+```
 ```{r}
 ref_catalog_2025 %>% 
     pull(generationCapacity) %>% 
@@ -499,6 +508,36 @@ ref_catalog_2025 %>%
     summary()
 ```
 
+```{r}
+ref_catalog_2025 %>% 
+    ggplot()+
+    geom_histogram(aes(capacity_turb), fill = "darkblue")+
+    facet_wrap(~tech_typ)+
+    labs(x = "Turbine capacity")
+ggsave(
+    filename = "fig/hist_turb_capacity_2025.eps",
+    width = 5,
+    height = 4)
+ref_catalog_2025 %>% 
+    ggplot()+
+    geom_histogram(aes(n_turb), fill = "darkblue")+
+    facet_wrap(~tech_typ)+
+    labs(x = "Number of turbines")
+ggsave(
+    filename = "fig/hist_n_turb_2025.eps",
+    width = 5,
+    height = 4)
+
+ref_catalog_2025 %>% 
+    ggplot()+
+    geom_histogram(aes(height_turb), fill = "darkblue")+
+    facet_wrap(~tech_typ)+
+    labs(x = "Turbine height")
+ggsave(
+    filename = "fig/hist_turb_height_2025.eps",
+    width = 5,
+    height = 4)
+```
 
 ```{r}
 ref_catalog_2025 %>%
@@ -534,7 +573,6 @@ ggsave(
 
 
 ```{r}
-
 # Aggregate cumulative capacity by date and type
 capacity_time <- ref_catalog_2025 %>%
   group_by(operational_date, tech_typ) %>%
