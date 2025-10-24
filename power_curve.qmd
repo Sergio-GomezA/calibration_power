@@ -1,0 +1,45 @@
+---
+title: "power curve"
+format: html
+---
+
+
+```{r}
+generic_pc_fname <- list.files("data",pattern = "generic", full.names = TRUE)
+generic_pc <- lapply(
+    generic_pc_fname,
+    \(file) {
+        dat <- fromJSON(file)
+        # val_names <- names(dat)
+        result <- as.data.frame(dat) %>% 
+            rename(
+                wind_speed = powerCurveData.1,
+                power_kw = powerCurveData.2,
+            ) %>% 
+            mutate(across(airDensity, as.numeric))
+        result
+    }
+) %>% bind_rows() %>% 
+    mutate(class = gsub(".* - ", "", title))
+```
+
+
+```{r}
+generic_pc %>% 
+    ggplot(aes(wind_speed,power_kw, col = class))+
+    geom_line()+
+    labs(x = "wind speed m/s", y = "power kW", col = "turbine class")+
+    scale_color_aaas()+
+    theme(
+        legend.position = "inside",
+        legend.position.inside = c(0.8,0.7)
+    )
+
+ggsave(
+    filename = "fig/generic_power_curves.eps",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
+```
