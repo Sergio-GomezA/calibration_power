@@ -8,14 +8,14 @@ Global Wind Atlas calibration to UK power
     - height
     - capacity
     - number of turbines per site
-  - [x] power density
+  - [ ] power density
 
 - **Inputs and EDA**
-  - Turbine characteristics 
-  - Get generic power curves
-  - Wind speed vertical interpolation 
-  - Get elevation  
-  - Get curtailment
+  - [ ] Turbine characteristics 
+  - [x] Get generic power curves
+  - [ ] Wind speed vertical interpolation 
+  - [ ] Get elevation  
+  - [ ] Get curtailment
 
 - **Power curve fitting**
   - Using turbine characteristics  

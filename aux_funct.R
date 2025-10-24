@@ -7,6 +7,8 @@ require(ggthemes)
 require(fst)
 require(data.table)
 require(stringr)
+
+require(jsonlite)
 theme_set(theme_bw())
 
 wind.bmus <- fread(file.path(path, "wind_bmu_2.csv.gz"))
