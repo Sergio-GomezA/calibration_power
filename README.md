@@ -16,7 +16,7 @@ Global Wind Atlas calibration to UK power
   - [ ] Wind speed vertical interpolation 
   - [ ] function to extract GWA wind speed
   - [ ] Get elevation  
-  - [ ] Get curtailment
+  - [ ] Get curtailment *
 
 - **Power curve fitting**
   - Using turbine characteristics  
