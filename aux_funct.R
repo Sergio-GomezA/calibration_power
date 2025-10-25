@@ -11,7 +11,7 @@ require(stringr)
 require(jsonlite)
 theme_set(theme_bw())
 
-wind.bmus <- fread(file.path(path, "wind_bmu_2.csv.gz"))
+wind.bmus <- fread(file.path("data", "wind_bmu_2.csv.gz"))
 ## functions
 
 ## get GWA data
@@ -145,7 +145,8 @@ combined_gwa_data <- function(
     scale_fill_viridis_c(
       option = "mako",
       na.value = "transparent",
-      name = "m/s"
+      name = "m/s",
+      ...
     ) +
     coord_quickmap() +
     theme_minimal() +

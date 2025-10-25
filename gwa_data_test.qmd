@@ -54,15 +54,13 @@ r <- terra::rast("~/Documents/GWA/GBR_wind-speed_10m.tif")
 # names(r)
 ```
 
-## extractin data frame
+## extracting data frame
 ```{r}
-
 varname <- names(r)[1]
 
-# convert to data.frame for plotting (removes NA cells)
+# conver  to data.frame for plotting (removes NA cells)
 df <- terra::as.data.frame(r, xy = TRUE, na.rm = TRUE)
 if (ncol(df) >= 3) names(df)[3] <- "value" else stop("unexpected raster structure")
-
 
 ```
 ## visualize GWA data
@@ -407,6 +405,7 @@ combined_gwa_data(
 ```
 
 ```{r}
+source("aux_funct.R")
 combined_gwa_data(
     countries = c("GBR", "IRL", "IMN"),
     var = "wind-speed",
@@ -414,7 +413,8 @@ combined_gwa_data(
     agg_fact = 1,
     path = "~/Documents/GWA/",
     show_fig = FALSE,
-    save_df = TRUE
+    save_df = TRUE,
+    limits = c(4,12)
 )
 ```
 ### 150m
