@@ -324,6 +324,32 @@ ggsave("fig/ws_10m_uk_irl_im.png", width=5, height=7)
 ```
 
 
+```{r}
+source("aux_funct.R")
+combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "wind-speed",
+    height = 10,
+    path = "~/Documents/GWA/",
+    show_fig = TRUE,
+    save_df = TRUE,
+    limits = c(0,10)
+)
+```
+
+```{r}
+combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "wind-speed",
+    height = 10,
+    agg_fact = 1,
+    path = "~/Documents/GWA/",
+    show_fig = FALSE,
+    save_df = TRUE,
+    limits = c(0,10)
+)
+```
+
 ### 50m
 ```{r}
 
@@ -373,19 +399,21 @@ combined_gwa_data(
     height = 50,
     path = "~/Documents/GWA/",
     show_fig = TRUE,
-    save_df = TRUE
+    save_df = TRUE,
+    limits = c(4,12)
 )
 ```
 
 ```{r}
-test <- combined_gwa_data(
+combined_gwa_data(
     countries = c("GBR", "IRL", "IMN"),
     var = "wind-speed",
     height = 50,
     agg_fact = 1,
     path = "~/Documents/GWA/",
     show_fig = FALSE,
-    save_df = TRUE
+    save_df = TRUE,
+    limits = c(4,12)
 )
 ```
 ### 100m
@@ -398,7 +426,8 @@ combined_gwa_data(
     height = 100,
     path = "~/Documents/GWA/",
     show_fig = TRUE,
-    save_df = TRUE
+    save_df = TRUE,
+    limits = c(5.5,12)
 )
 
 
@@ -414,7 +443,7 @@ combined_gwa_data(
     path = "~/Documents/GWA/",
     show_fig = FALSE,
     save_df = TRUE,
-    limits = c(4,12)
+    limits = c(5.5,12)
 )
 ```
 ### 150m
@@ -426,7 +455,8 @@ combined_gwa_data(
     height = 150,
     path = "~/Documents/GWA/",
     show_fig = TRUE,
-    save_df = TRUE
+    save_df = TRUE,
+    limits = c(6.5,12.5)
 )
 ```
 
@@ -438,7 +468,8 @@ combined_gwa_data(
     agg_fact = 1,
     path = "~/Documents/GWA/",
     show_fig = FALSE,
-    save_df = TRUE
+    save_df = TRUE,
+    limits = c(6.5,12.5)
 )
 ```
 ### 200m
@@ -451,7 +482,8 @@ combined_gwa_data(
     height = 200,
     path = "~/Documents/GWA/",
     show_fig = TRUE,
-    save_df = TRUE
+    save_df = TRUE,
+    limits = c(7,13.5)
 )
 ```
 
@@ -464,11 +496,8 @@ combined_gwa_data(
     agg_fact = 1,
     path = "~/Documents/GWA/",
     show_fig = FALSE,
-    save_df = TRUE
+    save_df = TRUE,
+    limits = c(6.5,14)
 )
 ```
 
-
-```{r}
-
-```
