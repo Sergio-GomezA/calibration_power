@@ -252,7 +252,7 @@ wind.bmus <- bmus %>%
 ```{r}
 wind.bmus %>% 
   write.csv(
-    .,gzfile(file.path(path, "wind_bmu_2.csv.gz"))
+    .,gzfile(file.path("data", "wind_bmu_2.csv.gz"))
   )
 ```
 
@@ -389,14 +389,14 @@ p1 <- ref_catalog_2025 %>%
   theme(legend.position = "bottom")
 
 p1
-ggsave(
-    filename = "fig/wind_farms_elexon_2025.eps",
-    plot = p1,
-    width = 4,
-    height = 6,
-    units = "in",
-    dpi = 300
-)
+# ggsave(
+#     filename = "fig/wind_farms_elexon_2025.eps",
+#     plot = p1,
+#     width = 4,
+#     height = 6,
+#     units = "in",
+#     dpi = 300
+# )
 ```
 
 #### wind farm locations by capacity
