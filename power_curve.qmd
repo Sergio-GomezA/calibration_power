@@ -118,5 +118,170 @@ gen_p <- ref_catalog_2025 %>%
     col = "Type", size = "Capacity")+
     theme(legend.position = "bottom")
 
+ggsave(
+    gen_p,
+    filename = "fig/GWAsw_generation.eps",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
 plotly::ggplotly(gen_p, tooltip = "text")
+```
+
+
+```{r}
+gen_p2 <- ref_catalog_2025 %>% 
+    mutate(gwa_ws = wind_values[[1]],
+    tooltip_text = paste0(
+      "Site: ", site_name,
+      "<br>Wind Speed: ", round(wind_values[[1]], 2), " m/s",
+      "<br>Generation: ", round(quantity / 1000, 2), " GWh",
+      "<br>Capacity: ", generationCapacity, " MW",
+      "<br>Type: ", tech_typ
+    )) %>% 
+    ggplot(
+        aes(
+            generationCapacity,
+            quantity/1000, 
+            col = tech_typ,
+            size = generationCapacity,
+            text = tooltip_text)
+    )+
+    geom_point(alpha = 0.5)+
+    scale_color_manual(values = pal_aaas()(2) %>% rev())+
+    scale_size_continuous(name = "Capacity (MW)", guide = "legend") +
+    labs(x = "Capacity MW", y = "generation GWh",
+    col = "Type", size = "Capacity")+
+    theme(legend.position = "bottom")
+
+ggsave(
+    gen_p2,
+    filename = "fig/capacity_generation.eps",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
+plotly::ggplotly(gen_p2, tooltip = "text")
+ 
+
+```
+
+
+```{r}
+library(dplyr)
+library(plotly)
+library(sf)
+
+# --- 1. Transform coordinates to lon/lat
+ref_catalog_2025_ll <- ref_catalog_2025 %>%
+    mutate(
+    gwa_ws = wind_values[[1]],
+    tooltip_text = paste0(
+      "Site: ", site_name,
+      "<br>Wind Speed: ", round(wind_values[[1]], 2), " m/s",
+      "<br>Generation: ", round(quantity / 1000, 2), " GWh",
+      "<br>Capacity: ", generationCapacity, " MW",
+      "<br>Type: ", tech_typ
+    )
+  ) %>%
+  st_as_sf(coords = c("x_coord", "y_coord"), crs = 27700) %>%
+  st_transform(4326) %>%
+  mutate(
+    lon = st_coordinates(.)[, 1],
+    lat = st_coordinates(.)[, 2]
+  ) %>%
+  st_drop_geometry()
+
+# --- 2. Add the highlight key
+df_keyed <- highlight_key(ref_catalog_2025_ll, ~bmUnit)
+
+# --- 3. Scatter plot (left)
+gen_p <- df_keyed %>%
+  plot_ly(
+    x = ~gwa_ws,
+    y = ~quantity / 1000,
+    color = ~tech_typ,
+    size = ~generationCapacity,
+    text = ~tooltip_text,
+    hoverinfo = "text",
+    type = "scatter",
+    mode = "markers"
+  ) %>%
+  layout(
+    xaxis = list(title = "GWA wind speed (m/s)"),
+    yaxis = list(title = "Generation (GWh)"),
+    legend = list(orientation = "h", y = -0.2)
+  )
+
+# --- 4. Map (right)
+map_p <- df_keyed %>%
+  plot_ly(
+    lon = ~lon,
+    lat = ~lat,
+    type = 'scattergeo',
+    mode = 'markers',
+    marker = list(size = 8, opacity = 0.8),
+    text = ~paste0(site_name, "<br>", bmUnit),
+    hoverinfo = "text"
+  ) %>%
+  layout(
+    geo = list(
+      scope = "europe",
+      projection = list(type = 'mercator'),
+      lataxis = list(range = c(49, 61)),   # tweak to UK lat range
+      lonaxis = list(range = c(-8, 2)),    # tweak to UK lon range
+      showland = TRUE,
+      landcolor = toRGB("gray95")
+    ),
+    margin = list(l = 0, r = 0, t = 0, b = 0)
+  )
+
+# --- 5. Combine & link
+library(plotly)
+
+# assuming gen_p and map_p both work individually
+
+combo <- subplot(gen_p, map_p, nrows = 1, widths = c(0.6, 0.4))
+
+combo <- combo %>%
+  layout(
+    # left scatterplot uses the left 60 % of the page
+    xaxis = list(domain = c(0, 0.6), title = "GWA wind speed (m/s)"),
+    yaxis = list(domain = c(0, 1), title = "Generation (GWh)"),
+
+    # the map (scattergeo) goes in its own domain on the right
+    geo = list(
+      domain = list(x = c(0.6, 1), y = c(0, 1)),  # restrict to right 40 %
+      scope = "europe",
+      projection = list(type = "mercator"),
+      lataxis = list(range = c(49, 61)),
+      lonaxis = list(range = c(-8, 4)),
+      showland = TRUE,
+      landcolor = toRGB("gray95"),
+      showcoastlines = TRUE,
+      coastlinecolor = toRGB("gray80"),
+      resolution = 50
+    ),
+
+    margin = list(l = 0, r = 0, t = 30, b = 0)
+  ) %>%
+  highlight(
+    on = "plotly_hover",
+    off = "plotly_doubleclick",
+    color = "rgba(55,126,184,1)",
+    opacityDim = 0.6,
+    persistent = FALSE,
+    dynamic = TRUE
+  )
+
+combo
+
+
+```
+
+
+```{r}
+combo <- subplot(gen_p, gen_p2) 
 ```
