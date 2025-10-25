@@ -121,17 +121,17 @@ write.csv(
 
 ```{r}
 gen_p <- ref_catalog_2025 %>% 
-    mutate(gwa_ws = wind_values[[1]],
+    mutate(
     tooltip_text = paste0(
       "Site: ", site_name,
-      "<br>Wind Speed: ", round(wind_values[[1]], 2), " m/s",
+      "<br>Wind Speed: ", round(gwa100, 2), " m/s",
       "<br>Generation: ", round(quantity / 1000, 2), " GWh",
       "<br>Capacity: ", generationCapacity, " MW",
       "<br>Type: ", tech_typ
     )) %>% 
     ggplot(
         aes(
-            gwa_ws,
+            gwa100,
             quantity/1000, 
             col = tech_typ,
             size = generationCapacity,
@@ -158,10 +158,10 @@ plotly::ggplotly(gen_p, tooltip = "text")
 
 ```{r}
 gen_p2 <- ref_catalog_2025 %>% 
-    mutate(gwa_ws = wind_values[[1]],
+    mutate(
     tooltip_text = paste0(
       "Site: ", site_name,
-      "<br>Wind Speed: ", round(wind_values[[1]], 2), " m/s",
+      "<br>Wind Speed: ", round(gwa100, 2), " m/s",
       "<br>Generation: ", round(quantity / 1000, 2), " GWh",
       "<br>Capacity: ", generationCapacity, " MW",
       "<br>Type: ", tech_typ
@@ -203,10 +203,9 @@ library(sf)
 # --- 1. Transform coordinates to lon/lat
 ref_catalog_2025_ll <- ref_catalog_2025 %>%
     mutate(
-    gwa_ws = wind_values[[1]],
     tooltip_text = paste0(
       "Site: ", site_name,
-      "<br>Wind Speed: ", round(wind_values[[1]], 2), " m/s",
+      "<br>Wind Speed: ", round(gwa100, 2), " m/s",
       "<br>Generation: ", round(quantity / 1000, 2), " GWh",
       "<br>Capacity: ", generationCapacity, " MW",
       "<br>Type: ", tech_typ
@@ -226,7 +225,7 @@ df_keyed <- highlight_key(ref_catalog_2025_ll, ~bmUnit)
 # --- 3. Scatter plot (left)
 gen_p <- df_keyed %>%
   plot_ly(
-    x = ~gwa_ws,
+    x = ~gwa100,
     y = ~quantity / 1000,
     color = ~tech_typ,
     size = ~generationCapacity,
@@ -249,7 +248,7 @@ map_p <- df_keyed %>%
     type = 'scattergeo',
     mode = 'markers',
     marker = list(size = 8, opacity = 0.8),
-    text = ~paste0(site_name, "<br>", bmUnit),
+    text = ~tooltip_text,
     hoverinfo = "text"
   ) %>%
   layout(
