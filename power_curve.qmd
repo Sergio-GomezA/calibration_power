@@ -92,14 +92,31 @@ wind_values <- terra::extract(r, wf_loc)
 ```
 
 ```{r}
-heights <- c(50,100,150,200)
-raster_fname <- sprintf("merged_wind-speed_%dm.tif",height)
-path <- "~/Documents/GWA/"
-
-r <- rast(
-    file.path(path,raster_fname)
+ref_catalog_2025 <- fread(
+  file.path("data/ref_catalog_wind_2025.csv.gz")
 )
-wind_values <- terra::extract(r, wf_loc)
+heights <- c(50,100,150,200)
+path <- "~/Documents/GWA/"
+gwa_ws <- lapply(
+    heights,
+    \(h) {
+        raster_fname <- sprintf("merged_wind-speed_%dm.tif",h)
+        r <- rast(file.path(path,raster_fname))
+        wind_values <- terra::extract(r, wf_loc)
+        wind_values
+    }
+) %>% bind_cols() %>% 
+    setNames(paste0("gwa",heights))
+
+ref_catalog_2025 <- ref_catalog_2025 %>% 
+    bind_cols(
+        gwa_ws
+    )
+write.csv(
+    ref_catalog_2025,
+    gzfile(file.path("data/ref_catalog_wind_2025.csv.gz")),
+    row.names = FALSE
+)
 ```
 
 ```{r}
