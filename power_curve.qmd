@@ -69,8 +69,6 @@ ref_catalog_2025 %>%
 
 
 ```{r}
-ref_catalog_2025$x_coord[1]
-ref_catalog_2025$y_coord[1]
 
 wf_loc <- ref_catalog_2025 %>% 
     st_as_sf(coords = c("x_coord","y_coord"), crs = 27700) %>% 
@@ -90,7 +88,18 @@ path <- "~/Documents/GWA/"
 r <- rast(
     file.path(path,raster_fname)
 )
-wind_values <- terra::extract(r, wf_loc) 
+wind_values <- terra::extract(r, wf_loc)
+```
+
+```{r}
+heights <- c(50,100,150,200)
+raster_fname <- sprintf("merged_wind-speed_%dm.tif",height)
+path <- "~/Documents/GWA/"
+
+r <- rast(
+    file.path(path,raster_fname)
+)
+wind_values <- terra::extract(r, wf_loc)
 ```
 
 ```{r}
@@ -270,7 +279,7 @@ combo <- combo %>%
   highlight(
     on = "plotly_hover",
     off = "plotly_doubleclick",
-    color = "rgba(55,126,184,1)",
+    color = "rgba(228,26,28,1)",
     opacityDim = 0.6,
     persistent = FALSE,
     dynamic = TRUE
