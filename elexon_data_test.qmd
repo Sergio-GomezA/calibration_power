@@ -181,6 +181,8 @@ bmu_to_repd <- id_catalog %>%
             rep_id = c("2522")
         )
     ) %>% 
+    # fix burbo bank
+    mutate(rep_id = ifelse(rep_id == "2539, 2487", "2487, 2539", rep_id )) %>% 
     mutate(across(c(bmu_id, rep_id),
                 ~ str_split(.x, ",\\s*"))) %>%
   unnest(c(bmu_id, rep_id)) %>% 
