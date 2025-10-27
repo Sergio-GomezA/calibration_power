@@ -284,7 +284,7 @@ bmu_y <- bmu_df %>%
   arrange(desc(quantity))
 ```
 
-
+## add repd info
 ```{r}
 repd_vars <- c("ref_id", "site_name", "tech_typ", "capacity_repd", "capacity_turb", "n_turb", "height_turb","devel_stat","x_coord","y_coord","operational")
 

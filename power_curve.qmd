@@ -366,7 +366,16 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
             ws_ht > 9.5 ~ "I",
             ws_ht > 8 ~ "II",
             TRUE ~ "III"
-        ))
+        )) %>% 
+    group_by(rep_id) %>% 
+    mutate(
+        n_bmu = n(),
+        wf_cap_sum = sum(generationCapacity),
+        capacity_diff = abs(capacity_repd - wf_cap_sum)/capacity_repd,
+        turb_bmu = n_turb * capacity_repd / sum(capacity_repd),
+        capacity_bmu = capacity_repd / n_bmu
+        ) %>% 
+    ungroup()
 
 write.csv(
     ref_catalog_2025,
@@ -374,7 +383,12 @@ write.csv(
     row.names = FALSE
 )
 ```
-
+### capacity checks
+```{r}
+ref_catalog_2025 %>% 
+  arrange(desc(abs(capacity_diff))) %>% 
+  view()
+```
 ### mapping generic curves
 
 ```{r}
