@@ -360,7 +360,13 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
         TRUE                   ~ interp_log_ws(height_turb_imp, 150, 200, gwa150, gwa200) # extrapolate slightly
         )
     ) %>%
-    ungroup()
+    ungroup() %>% 
+    mutate(
+        turb_class = case_when(
+            ws_ht > 9.5 ~ "I",
+            ws_ht > 8 ~ "II",
+            TRUE ~ "III"
+        ))
 
 write.csv(
     ref_catalog_2025,
