@@ -29,7 +29,7 @@ Global Wind Atlas calibration to UK power
     - [ ] function to rescale pc
     - map curves
       - [x] fill in capacity_turb
-      - [ ] n_turb per BMU
+      - [x] n_turb per BMU
       - [x] hub height imputation
     - convert GWA to power
     - compare with generation

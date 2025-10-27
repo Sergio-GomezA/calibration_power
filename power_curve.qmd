@@ -20,7 +20,8 @@ generic_pc <- lapply(
         result
     }
 ) %>% bind_rows() %>% 
-    mutate(class = gsub(".* - ", "", title))
+    mutate(
+        class = gsub(".* - ", "", title) %>% tolower())
 
 write.csv(
     generic_pc,
@@ -363,9 +364,10 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
     ungroup() %>% 
     mutate(
         turb_class = case_when(
-            ws_ht > 9.5 ~ "I",
-            ws_ht > 8 ~ "II",
-            TRUE ~ "III"
+            grepl("offshore",tech_typ) ~ "offshore"
+            ws_ht > 9.5 ~ "iec class 1",
+            ws_ht > 8 ~ "iec class 2",
+            TRUE ~ "iec class 3"
         )) %>% 
     group_by(rep_id) %>% 
     mutate(
