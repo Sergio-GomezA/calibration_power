@@ -26,6 +26,9 @@ Global Wind Atlas calibration to UK power
 - **Power curve fitting**
   - Using generic curves
     - 100m ws + best
+    - map curves
+    - convert GWA to power
+    - compare with generation
   - Using turbine characteristics  
   - Using historical power data  
 
