@@ -148,18 +148,25 @@ combined_gwa_data <- function(
     scale_fill_viridis_c(
       option = "mako",
       na.value = "transparent",
-      name = "m/s",
+      name = case_when(
+        grepl("Weibull", variable) ~ "",
+        TRUE ~ "m/s"
+      ),
       ...
     ) +
     coord_quickmap() +
     theme_minimal() +
     theme(legend.position = "bottom") +
-    labs(x = "lon", y = "lat", title = sprintf("Wind speed at %dm", height))
+    labs(
+      x = "lon",
+      y = "lat",
+      title = sprintf("%s at %dm", gsub("-", " ", variable), height)
+    )
 
   if (show_fig) {
     print(plot)
   }
-  fig_name <- sprintf("fig/ws_%dm_merged_agg%d.png", height, agg_fact)
+  fig_name <- sprintf("fig/%s_%dm_merged_agg%d.png", variable, height, agg_fact)
   ggsave(plot = plot, filename = fig_name, width = 5, height = 7)
 
   invisible(list(data = df_combined, plot = plot))
