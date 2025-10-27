@@ -19,17 +19,17 @@ Global Wind Atlas calibration to UK power
   - [ ] Wind speed vertical interpolation 
   - [x] function to extract GWA wind speed
   - [x] add GWA wind speed at multiple heights
-  - [ ] interpolate wind speed to hub height
-  - [ ] Get elevation 
+  - [x] interpolate wind speed to hub height
+  - [ ] Get land elevation 
   - [ ] Get curtailment *
 
 - **Power curve fitting**
   - Using generic curves
     - 100m ws + best
     - map curves
-      - fill in capacity_turb
-      - n_turb per BMU
-      - hub height imputation
+      - [x] fill in capacity_turb
+      - [ ] n_turb per BMU
+      - [ ] hub height imputation
     - convert GWA to power
     - compare with generation
   - Using turbine characteristics  
