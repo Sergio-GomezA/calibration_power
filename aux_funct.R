@@ -134,7 +134,10 @@ combined_gwa_data <- function(
   if (save_df) {
     write_fst(
       df_combined,
-      file.path(path, sprintf("df_%dm_agg%d.fst", height, agg_fact)),
+      file.path(
+        path,
+        sprintf("df_%s_%dm_agg%d.fst", variable, height, agg_fact)
+      ),
       compress = 100
     )
   }
@@ -788,20 +791,21 @@ interp_log_ws <- function(h, z1, z2, u1, u2) {
 
 generic_pow_conv <- function(
   wind_speed,
-  class = "offshore",
+  turb_class = "offshore",
   turb_capacity = 4
 ) {
+  # browser()
   class_curve <- fread("data/generic_powerCurves.csv.gz") %>%
-    filter(class == class)
+    filter(class == turb_class)
 
-  max_rated_power = max(class_curve$ratedPower)
+  # max_rated_power = max(class_curve$ratedPower)
 
   class_curve <- class_curve %>%
-    mutate(ratedPower_scaled = ratedPower * turb_capacity / max_rated_power)
+    mutate(power_scaled = power_kw * turb_capacity / ratedPower)
 
   power_est <- approx(
     x = class_curve$wind_speed,
-    y = class_curve$ratedPower_scaled,
+    y = class_curve$power_scaled,
     xout = wind_speed,
     rule = 2 # flat extrapolation
   )$y
