@@ -777,3 +777,8 @@ get_outturn <- function(
 
   invisible(df)
 }
+
+
+interp_log_ws <- function(h, z1, z2, u1, u2) {
+  u1 + (log(h / z1) / log(z2 / z1)) * (u2 - u1)
+}

@@ -325,3 +325,73 @@ combo <- subplot(gen_p, gen_p2)
 ```{r}
 ?plot
 ```
+
+## Generic power curves
+
+### fill in data for mapping
+
+```{r}
+source("aux_funct.R")
+ref_catalog_2025 <- fread(
+  file.path("data/ref_catalog_wind_2025.csv.gz")
+) 
+
+ref_catalog_2025 %>% 
+    mutate(heightNA = is.na(height_turb)) %>% 
+    group_by(tech_typ, heightNA) %>% 
+    summarise(
+        height = mean(height_turb, na.rm = TRUE),
+        n = n()
+    ) 
+# filling in turbine characteristics
+ref_catalog_2025 <- ref_catalog_2025 %>% 
+    # completing capacity per turbine
+    mutate(capacity_turb = ifelse(is.na(capacity_turb), capacity_repd/n_turb, capacity_turb)) %>%
+    # imputing mean turbine height 
+    group_by(tech_typ) %>% 
+    mutate(height_turb_imp = ifelse(is.na(height_turb), mean(height_turb, na.rm = T), height_turb)) %>% ungroup() %>% 
+    rowwise() %>% 
+    mutate(
+        # find the two nearest GWA levels
+        ws_ht = case_when(
+        height_turb_imp <= 75  ~ interp_log_ws(height_turb_imp, 50, 100, gwa50, gwa100),
+        height_turb_imp <= 125 ~ interp_log_ws(height_turb_imp, 100, 150, gwa100, gwa150),
+        height_turb_imp <= 175 ~ interp_log_ws(height_turb_imp, 150, 200, gwa150, gwa200),
+        TRUE                   ~ interp_log_ws(height_turb_imp, 150, 200, gwa150, gwa200) # extrapolate slightly
+        )
+    ) %>%
+    ungroup()
+
+write.csv(
+    ref_catalog_2025,
+    gzfile(file.path("data/ref_catalog_wind_2025.csv.gz")),
+    row.names = FALSE
+)
+```
+
+### mapping generic curves
+
+```{r}
+
+generic_pc <- fread("data/generic_powerCurves.csv.gz")
+
+ref_catalog_2025 <- fread(
+  file.path("data/ref_catalog_wind_2025.csv.gz")) 
+
+
+```
+
+```{r}
+ref_catalog_2025 %>% 
+    
+```
+
+### converting wind speed to power
+
+```{r}
+
+```
+### comparing against generation
+```{r}
+
+```
