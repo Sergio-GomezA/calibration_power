@@ -782,3 +782,29 @@ get_outturn <- function(
 interp_log_ws <- function(h, z1, z2, u1, u2) {
   u1 + (log(h / z1) / log(z2 / z1)) * (u2 - u1)
 }
+
+
+# pick generic pc and rescale
+
+generic_pow_conv <- function(
+  wind_speed,
+  class = "offshore",
+  turb_capacity = 4
+) {
+  class_curve <- fread("data/generic_powerCurves.csv.gz") %>%
+    filter(class == class)
+
+  max_rated_power = max(class_curve$ratedPower)
+
+  class_curve <- class_curve %>%
+    mutate(ratedPower_scaled = ratedPower * turb_capacity / max_rated_power)
+
+  power_est <- approx(
+    x = class_curve$wind_speed,
+    y = class_curve$ratedPower_scaled,
+    xout = wind_speed,
+    rule = 2 # flat extrapolation
+  )$y
+
+  power_est
+}
