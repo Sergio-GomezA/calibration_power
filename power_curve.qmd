@@ -91,6 +91,7 @@ r <- rast(
 wind_values <- terra::extract(r, wf_loc)
 ```
 
+## update wind farm catalog with GWA wind speed
 ```{r}
 ref_catalog_2025 <- fread(
   file.path("data/ref_catalog_wind_2025.csv.gz")
@@ -119,6 +120,14 @@ write.csv(
 )
 ```
 
+
+## figures elexon vs GWA
+
+```{r}
+# palette for offshore/onshore
+mypalette <- pal_aaas()(3)[c(1,3)]
+scales::show_col(mypalette)
+```
 ```{r}
 gen_p <- ref_catalog_2025 %>% 
     mutate(
@@ -138,7 +147,7 @@ gen_p <- ref_catalog_2025 %>%
             text = tooltip_text)
     )+
     geom_point(alpha = 0.5)+
-    scale_color_manual(values = pal_aaas()(2) %>% rev())+
+    scale_color_manual(values = mypalette)+
     scale_size_continuous(name = "Capacity (MW)", guide = "legend") +
     labs(x = "GWA wind speed m/s", y = "generation GWh",
     col = "Type", size = "Capacity")+
@@ -175,7 +184,7 @@ gen_p2 <- ref_catalog_2025 %>%
             text = tooltip_text)
     )+
     geom_point(alpha = 0.5)+
-    scale_color_manual(values = pal_aaas()(2) %>% rev())+
+    scale_color_manual(values = mypalette)+
     scale_size_continuous(name = "Capacity (MW)", guide = "legend") +
     labs(x = "Capacity MW", y = "generation GWh",
     col = "Type", size = "Capacity")+
@@ -228,6 +237,7 @@ gen_p <- df_keyed %>%
     x = ~gwa100,
     y = ~quantity / 1000,
     color = ~tech_typ,
+    colors = mypalette,
     size = ~generationCapacity,
     text = ~tooltip_text,
     hoverinfo = "text",
@@ -245,6 +255,8 @@ map_p <- df_keyed %>%
   plot_ly(
     lon = ~lon,
     lat = ~lat,
+    color = ~tech_typ,
+    colors = mypalette,
     type = 'scattergeo',
     mode = 'markers',
     marker = list(size = 8, opacity = 0.8),
@@ -309,4 +321,7 @@ combo
 
 ```{r}
 combo <- subplot(gen_p, gen_p2) 
+```
+```{r}
+?plot
 ```
