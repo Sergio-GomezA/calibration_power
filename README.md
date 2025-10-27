@@ -26,13 +26,13 @@ Global Wind Atlas calibration to UK power
 - **Power curve fitting**
   - Using generic curves
     - [x] IEC class
-    - [ ] function to rescale pc
+    - [x] function to rescale pc
     - map curves
       - [x] fill in capacity_turb
       - [x] n_turb per BMU
       - [x] hub height imputation
-    - convert GWA to power
-    - compare with generation
+    - [x] convert GWA to power
+    - [ ] compare with generation
   - Using turbine characteristics  
   - Using historical power data  
 

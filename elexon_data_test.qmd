@@ -274,14 +274,31 @@ bmu_25 <- bmu_df %>%
 bmu_df <- fread(
   file.path(path,"data_by_year","wind_gen_bmu_2025.csv.gz")
 )
+bmu_hours <- bmu_df %>% 
+  group_by(bmUnit) %>% arrange(halfHourEndTime) %>% 
+  mutate(quantity = quantity + lag(quantity)) %>% 
+  filter(minute(halfHourEndTime) == 0) %>% 
+  group_by(bmUnit) %>% 
+  summarise(
+    quantity_raw = sum(quantity, na.rm = TRUE),
+    n_hours = n_distinct(halfHourEndTime)
+    )
+
 bmu_y <- bmu_df %>% 
   group_by(bmUnit) %>% arrange(halfHourEndTime) %>% 
   mutate(quantity = quantity + lag(quantity)) %>% 
-  filter(quantity>0) %>% 
+  filter(quantity>=0) %>% 
   filter(minute(halfHourEndTime) == 0) %>% 
   group_by(bmUnit) %>% 
-  summarise(quantity = sum(quantity, na.rm = TRUE)) %>% 
-  arrange(desc(quantity))
+  summarise(
+    quantity = sum(quantity, na.rm = TRUE),
+    qpos_hours = n_distinct(halfHourEndTime)
+    ) %>% 
+  arrange(desc(quantity)) %>% 
+  left_join(
+    bmu_hours,
+    by = "bmUnit"
+  )
 ```
 
 ## add repd info
@@ -305,7 +322,8 @@ ref_catalog_2025 <- bmu_y %>%
         repd_wind %>% 
             select(any_of(repd_vars)),
         by = c("rep_id" = "ref_id")) %>% 
-    mutate(operational_date = as.Date(operational, format = "%d/%m/%Y"))
+    mutate(operational_date = as.Date(operational, format = "%d/%m/%Y")) %>% 
+    filter(!is.na(x_coord))
 
 write.csv(
     ref_catalog_2025,
