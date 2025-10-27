@@ -364,7 +364,7 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
     ungroup() %>% 
     mutate(
         turb_class = case_when(
-            grepl("offshore",tech_typ) ~ "offshore"
+            grepl("offshore",tech_typ, ignore.case = TRUE) ~ "offshore",
             ws_ht > 9.5 ~ "iec class 1",
             ws_ht > 8 ~ "iec class 2",
             TRUE ~ "iec class 3"
@@ -377,7 +377,11 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
         turb_bmu = n_turb * capacity_repd / sum(capacity_repd),
         capacity_bmu = capacity_repd / n_bmu
         ) %>% 
-    ungroup()
+    ungroup() %>% 
+    rowwise() %>% 
+    mutate(
+        power_est = generic_pow_conv(ws_ht, turb_class = turb_class, turb_capacity = capacity_turb)
+    ) %>% ungroup()
 
 write.csv(
     ref_catalog_2025,
@@ -404,8 +408,31 @@ ref_catalog_2025 <- fread(
 ```
 
 ```{r}
-ref_catalog_2025 %>% 
-    
+
+# ref_catalog_2025 %>% 
+#     ggplot(aes(ws_ht,power_est, col = tech_typ))+
+#     geom_point()+
+#     scale_color_manual(values = mypalette)+
+#     labs(x = "GWA wind speed m/s", y = "power output MW", col = "")
+
+pow_comp <- ref_catalog_2025 %>% 
+    mutate(
+    power_est2 = power_est*turb_bmu*n_hours/2,
+    tooltip_text = paste0(
+      "Site: ", site_name,
+      "<br>Wind Speed: ", round(gwa100, 2), " m/s",
+      "<br>Elexon: ", round(quantity / 1000, 2), " GWh",
+      "<br>Generic pc: ", round(power_est2 / 1000, 2), " GWh",
+      "<br>Capacity: ", generationCapacity, " MW",
+      "<br>Type: ", tech_typ
+    )) %>% 
+    ggplot(aes(power_est2/1000, quantity/1000, col = tech_typ, text = tooltip_text))+
+    geom_point()+
+    geom_abline(intercept = 0, slope = 1, col = "black", linetype = 2)+
+    scale_color_manual(values = mypalette)+
+    labs(x = "Generic power curve", y = "Elexon", col = "")
+
+ggplotly(pow_comp, tooltip = "text")
 ```
 
 ### converting wind speed to power
