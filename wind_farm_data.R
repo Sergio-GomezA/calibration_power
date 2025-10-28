@@ -333,7 +333,7 @@ write.csv(
   gzfile(file.path("data/ref_catalog_wind_2025.csv.gz")),
   row.names = FALSE
 )
-
+set.seed(0)
 ## Interpolation of GWA
 # filling in turbine characteristics
 ref_catalog_2025 <- ref_catalog_2025 %>%
@@ -410,11 +410,19 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
   ungroup() %>%
   rowwise() %>%
   mutate(
-    power_est = generic_pow_conv(
+    # power curve on mean wind speed PC(E(ws))
+    power_mws = generic_pow_conv(
       ws_ht,
       turb_class = turb_class,
       turb_capacity = capacity_turb
-    )
+    ),
+    # mean power using weibull distribution E(PC(ws))
+    mean_power = generic_pow_conv(
+      wind_speed = rweibull(1000, shape = k_ht, scale = A_ht),
+      turb_class = turb_class,
+      turb_capacity = capacity_turb
+    ) %>%
+      mean()
   ) %>%
   ungroup()
 
