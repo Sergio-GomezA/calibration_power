@@ -506,7 +506,30 @@ test %>%
 ```{r}
 pow_comp <- ref_catalog_2025 %>% 
     mutate(
-    power_est2 = power_est*turb_bmu*n_hours/2,
+    power_est2 = power_mws*turb_bmu*n_hours,
+    tooltip_text = paste0(
+      "Site: ", site_name,
+      "<br>Wind Speed: ", round(gwa100, 2), " m/s",
+      "<br>Elexon: ", round(quantity / 1000, 2), " GWh",
+      "<br>Generic pc: ", round(power_est2 / 1000, 2), " GWh",
+      "<br>Capacity: ", generationCapacity, " MW",
+      "<br>Type: ", tech_typ
+    )) %>% 
+    ggplot(aes(power_est2/1000, quantity/1000, col = tech_typ, text = tooltip_text))+
+    geom_point()+
+    coord_fixed(ratio = 1)+
+    geom_abline(intercept = 0, slope = 1, col = "black", linetype = 2)+
+    scale_color_manual(values = mypalette)+
+    labs(x = "Generic power curve", y = "Elexon", col = "")
+
+ggplotly(pow_comp, tooltip = "text")
+```
+
+
+```{r}
+pow_comp <- ref_catalog_2025 %>% 
+    mutate(
+    power_est2 = mean_power*turb_bmu*n_hours,
     tooltip_text = paste0(
       "Site: ", site_name,
       "<br>Wind Speed: ", round(gwa100, 2), " m/s",

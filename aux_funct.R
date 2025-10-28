@@ -1,6 +1,7 @@
 require(sf)
-require(tidyverse)
+require(dplyr)
 require(rnaturalearth)
+library(rnaturalearthdata)
 require(ggplot2)
 require(terra)
 require(ggthemes)
@@ -9,9 +10,22 @@ require(data.table)
 require(stringr)
 
 require(jsonlite)
+require(httr)
+
+
+require(kableExtra)
+require(parallel)
+
+require(scales)
+require(ggsci)
+require(plotly)
+require(ggthemes)
+
 theme_set(theme_bw())
 
 wind.bmus <- fread(file.path("data", "wind_bmu_2.csv.gz"))
+
+mypalette <- pal_aaas()(3)[c(1, 3)]
 ## functions
 
 ## get GWA data
