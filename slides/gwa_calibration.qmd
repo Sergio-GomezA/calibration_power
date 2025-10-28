@@ -1,0 +1,46 @@
+---
+title: "Global Wind Atlas calibration to Elexon power"
+author:
+  - "S. Gomez$^1$"
+institute:
+   - $^1$School of Mathematics, University of Edinburgh
+institute-short: "UoE"
+date: "2025-10-29"
+format: 
+  beamer:
+    theme: Rochester
+    colortheme: spruce
+    fonttheme: professionalfonts
+    fig-cap-location: top
+    toc: true
+    split-bib: true
+    output-file: "gwa_calibration_slides.pdf"
+header-includes:
+  - \usepackage{graphicx}
+fontsize: 12pt
+aspectratio: 169
+editor: source
+nocite: "@*"
+---
+
+
+# Calibration to power {#sec-intro}
+
+## Global Wind Atlas (GWA) vs Elexon generation
+Calibrate a GWA driven estimate to actual observed output
+```{=latex}
+\vspace{0.2cm}
+\begin{columns}[T, totalwidth=\textwidth]
+  \begin{column}{0.5\textwidth}
+    \centering
+    \textbf{\small Global Wind Atlas}\\[0.5em]
+    \includegraphics[width=\linewidth]{../fig_extra/gwa_screenshot.png}
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    \textbf{\small Elexon wind farms map (2025)}\\[0.5em]
+    \vspace{-0.2cm}
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_farms_elexon_size_2025.jpeg}
+  \end{column}
+\end{columns}
