@@ -85,28 +85,28 @@ Calibrate a GWA driven estimate to actual observed output
   % Column 1: 50m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/ws_50m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_50m_merged_agg20.png}\\[0.3em]
     \small 50m
   \end{column}
 
   % Column 2: 100m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/ws_100m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_100m_merged_agg20.png}\\[0.3em]
     \small 100m
   \end{column}
 
   % Column 3: 150m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/ws_150m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_150m_merged_agg20.png}\\[0.3em]
     \small 150m
   \end{column}
 
   % Column 4: 200m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-A_200m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-A_200m_merged_agg20.png}\\[0.3em]
     \small 200m
   \end{column}
 
@@ -120,28 +120,28 @@ Calibrate a GWA driven estimate to actual observed output
   % Column 1: 50m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-k_50m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-k_50m_merged_agg20.png}\\[0.3em]
     \small 50m
   \end{column}
 
   % Column 2: 100m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-k_100m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-k_100m_merged_agg20.png}\\[0.3em]
     \small 100m
   \end{column}
 
   % Column 3: 150m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-k_150m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-k_150m_merged_agg20.png}\\[0.3em]
     \small 150m
   \end{column}
 
   % Column 4: 200m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-k_200m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-k_200m_merged_agg20.png}\\[0.3em]
     \small 200m
   \end{column}
 
@@ -154,28 +154,28 @@ Calibrate a GWA driven estimate to actual observed output
   % Column 1: 50m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-A_50m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-A_50m_merged_agg20.png}\\[0.3em]
     \small 50m
   \end{column}
 
   % Column 2: 100m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-A_100m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-A_100m_merged_agg20.png}\\[0.3em]
     \small 100m
   \end{column}
 
   % Column 3: 150m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-A_150m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-A_150m_merged_agg20.png}\\[0.3em]
     \small 150m
   \end{column}
 
   % Column 4: 200m
   \begin{column}{0.25\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-A_200m_merged_agg20.png}\\[0.3em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-A_200m_merged_agg20.png}\\[0.3em]
     \small 200m
   \end{column}
 
@@ -185,6 +185,31 @@ Calibrate a GWA driven estimate to actual observed output
 # Elexon data {#sec-elexon}
 
 ## BMU data
+
+\begin{columns}[T, totalwidth=\textwidth]
+   \begin{column}{0.5\textwidth}
+    % set font size for itemize levels locally
+    {
+    \setbeamerfont{itemize/enumerate body}{size=\fontsize{9}{10}\selectfont}
+    \setbeamerfont{itemize/enumerate subbody}{size=\fontsize{8}{10}\selectfont}
+
+    \begin{itemize}
+      \item 150 wind farms split in over 216 units
+      \item Total capacity: 27 GW
+      \item Half hourly resolution
+      \item Records starting in 2019
+      \item 
+    \end{itemize}
+    } % end local font block
+  \end{column}
+
+  % Right column: figure
+  \begin{column}{0.5\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_capacity_type_2025_nt.eps}
+  \end{column}
+
+\end{columns}
 
 ## Renewable energy planning database
 
