@@ -12,6 +12,8 @@ require(ggplot2)
 require(terra)
 require(ggthemes)
 require(fst)
+
+source("aux_funct.R")
 ```
 
 
@@ -506,13 +508,50 @@ combined_gwa_data(
 ### 10m
 
 ```{r}
+source("aux_funct.R")
 combined_gwa_data(
     countries = c("GBR", "IRL", "IMN"),
     var = "combined-Weibull-A",
     height = 100,
     agg_fact = 20,
     path = "~/Documents/GWA/",
-    show_fig = FALSE,
+    show_fig = TRUE,
+    save_df = TRUE
+)
+combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "combined-Weibull-k",
+    height = 100,
+    agg_fact = 20,
+    path = "~/Documents/GWA/",
+    show_fig = TRUE,
     save_df = TRUE
 )
 ```
+
+
+```{r}
+test <- combined_gwa_data(
+    countries = c("GBR", "IRL", "IMN"),
+    var = "combined-Weibull-A",
+    height = 50,
+    agg_fact = 20,
+    path = "~/Documents/GWA/",
+    show_fig = TRUE,
+    save_df = TRUE
+)
+```
+
+```{r}
+ref_catalog_2025 <- fread(
+  file.path("data/ref_catalog_wind_2025.csv.gz")) 
+
+test$plot +
+  geom_sf(
+    data = ref_catalog_2025 %>% st_as_sf(coords = c("x_coord","y_coord"), crs = 27700) %>% 
+    st_transform(crs = 4326),
+    inherit.aes = FALSE,
+    col = "lightgray"
+  )
+```
+
