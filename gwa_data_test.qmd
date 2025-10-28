@@ -505,28 +505,41 @@ combined_gwa_data(
 
 
 ## get GWA parameters 
-### 10m
+### get weibull parameters
 
 ```{r}
 source("aux_funct.R")
-combined_gwa_data(
-    countries = c("GBR", "IRL", "IMN"),
-    var = "combined-Weibull-A",
-    height = 100,
-    agg_fact = 20,
-    path = "~/Documents/GWA/",
-    show_fig = TRUE,
-    save_df = TRUE
+heights <- c(10,50,100,150,200)
+lapply(
+  heights,
+  \(h){
+    combined_gwa_data(
+      countries = c("GBR", "IRL", "IMN"),
+      var = "combined-Weibull-A",
+      height = h,
+      agg_fact = 20,
+      path = "~/Documents/GWA/",
+      show_fig = TRUE,
+      save_df = TRUE
+    )
+  }
 )
-combined_gwa_data(
-    countries = c("GBR", "IRL", "IMN"),
-    var = "combined-Weibull-k",
-    height = 100,
-    agg_fact = 20,
-    path = "~/Documents/GWA/",
-    show_fig = TRUE,
-    save_df = TRUE
+
+lapply(
+  heights,
+  \(h){
+    combined_gwa_data(
+      countries = c("GBR", "IRL", "IMN"),
+      var = "combined-Weibull-k",
+      height = h,
+      agg_fact = 20,
+      path = "~/Documents/GWA/",
+      show_fig = TRUE,
+      save_df = TRUE
+    )
+  }
 )
+
 ```
 
 

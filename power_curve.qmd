@@ -110,9 +110,33 @@ gwa_ws <- lapply(
 ) %>% bind_cols() %>% 
     setNames(paste0("gwa",heights))
 
+gwa_A <- lapply(
+    heights,
+    \(h) {
+        raster_fname <- sprintf("merged_combined-Weibull-A_%dm.tif",h)
+        r <- rast(file.path(path,raster_fname))
+        wind_values <- terra::extract(r, wf_loc)
+        wind_values
+    }
+) %>% bind_cols() %>% 
+    setNames(paste0("gwa_A",heights))
+
+gwa_k <- lapply(
+    heights,
+    \(h) {
+        raster_fname <- sprintf("merged_combined-Weibull-k_%dm.tif",h)
+        r <- rast(file.path(path,raster_fname))
+        wind_values <- terra::extract(r, wf_loc)
+        wind_values
+    }
+) %>% bind_cols() %>% 
+    setNames(paste0("gwa_k",heights))
+
 ref_catalog_2025 <- ref_catalog_2025 %>% 
     bind_cols(
-        gwa_ws
+        gwa_ws,
+        gwa_A,
+        gwa_k
     )
 write.csv(
     ref_catalog_2025,
@@ -438,7 +462,36 @@ ggplotly(pow_comp, tooltip = "text")
 ### converting wind speed to power
 
 ```{r}
+source("aux_funct.R")
+source("wind_farm_data.R")
+```
 
+```{r}
+# wind speed 
+test <- ref_catalog_2025 %>% 
+  pivot_longer( cols = gwa50:gwa200, names_to = "h", values_to = "gwa_ws") %>% 
+  mutate(h = as.numeric(gsub("gwa","",h)))
+test %>% 
+  ggplot(aes(h, gwa_ws,col = bmUnit))+
+  geom_line()+
+  theme(legend.position = "none")
+# A parameter
+test <- ref_catalog_2025 %>% 
+  pivot_longer( cols = gwa_A50:gwa_A200, names_to = "h", values_to = "gwa_A") %>% 
+  mutate(h = as.numeric(gsub("gwa_A","",h)))
+test %>% 
+  ggplot(aes(h, gwa_A,col = bmUnit))+
+  geom_line()+
+  theme(legend.position = "none")
+
+# k parameter
+test <- ref_catalog_2025 %>% 
+  pivot_longer( cols = gwa_k50:gwa_k200, names_to = "h", values_to = "gwa_k") %>% 
+  mutate(h = as.numeric(gsub("gwa_k","",h)))
+test %>% 
+  ggplot(aes(h, gwa_k,col = bmUnit))+
+  geom_line()+
+  theme(legend.position = "none")
 ```
 ### comparing against generation
 ```{r}
