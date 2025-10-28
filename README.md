@@ -8,14 +8,14 @@ Global Wind Atlas calibration to UK power
     - height
     - capacity
     - number of turbines per site
-  - [ ] turbine height by type
+  - [x] turbine height by type
   - [ ] elexon time variability
   - [ ] elexon panel data characteristics
   - [ ] overall evolution generation
 
 - **Inputs and EDA**
   - [x] cleaning data code
-  - [ ] Turbine characteristics 
+  - [x] Turbine characteristics 
   - [x] Get generic power curves
   - [x] Wind speed vertical interpolation 
   - [x] function to extract GWA wind speed
@@ -34,8 +34,8 @@ Global Wind Atlas calibration to UK power
       - [x] n_turb per BMU
       - [x] hub height imputation
     - [x] convert GWA to power with mean
-    - [ ] convert GWA to power using weibull
-    - [ ] compare with generation
+    - [x] convert GWA to power using weibull
+    - [x] compare with generation
   - Using turbine characteristics  
   - Using historical power data  
 
