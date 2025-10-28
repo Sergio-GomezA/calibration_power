@@ -258,6 +258,17 @@ generic_pc <- lapply(
     class = gsub(".* - ", "", title) %>% tolower()
   )
 
+last_row <- generic_pc %>%
+  group_by(class) %>%
+  summarise(wind_speed = max(wind_speed) + 0.5) %>%
+  mutate(power_kw = 0)
+
+generic_pc <- bind_rows(generic_pc, last_row) %>%
+  arrange(class, wind_speed) %>%
+  group_by(class) %>%
+  fill(everything(), .direction = "down") %>%
+  ungroup()
+
 write.csv(
   generic_pc,
   gzfile("data/generic_powerCurves.csv.gz"),
