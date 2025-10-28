@@ -28,7 +28,7 @@ nocite: "@*"
 
 ## Global Wind Atlas (GWA) vs Elexon generation
 Calibrate a GWA driven estimate to actual observed output
-```{=latex}
+
 \vspace{0.2cm}
 \begin{columns}[T, totalwidth=\textwidth]
   \begin{column}{0.5\textwidth}
@@ -44,3 +44,154 @@ Calibrate a GWA driven estimate to actual observed output
     \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_farms_elexon_size_2025.jpeg}
   \end{column}
 \end{columns}
+
+
+# Global Wind Atlas {#sec-gwa}
+
+## Characteristics
+
+\begin{columns}[T, totalwidth=\textwidth]
+   \begin{column}{0.5\textwidth}
+    % set font size for itemize levels locally
+    {
+    \setbeamerfont{itemize/enumerate body}{size=\fontsize{9}{10}\selectfont}
+    \setbeamerfont{itemize/enumerate subbody}{size=\fontsize{8}{10}\selectfont}
+
+    \begin{itemize}
+      \item Using DTU's Wind WAsP methodology
+      \item Downscaled from ERA 5 to a 250m grid
+      \item Models land and 200km from shorelines
+      \item Long term average wind speed
+        \begin{itemize}
+          \item Heights: 10m, 50m, 100m, 150m, 200m
+        \end{itemize}
+      \item Scale and shape parameters Weibull
+    \end{itemize}
+    } % end local font block
+  \end{column}
+
+  % Right column: figure
+  \begin{column}{0.5\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_150m_merged_agg20.png}
+  \end{column}
+
+\end{columns}
+
+## Mean wind speed
+
+\begin{columns}[T, totalwidth=\textwidth]
+
+  % Column 1: 50m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/ws_50m_merged_agg20.png}\\[0.3em]
+    \small 50m
+  \end{column}
+
+  % Column 2: 100m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/ws_100m_merged_agg20.png}\\[0.3em]
+    \small 100m
+  \end{column}
+
+  % Column 3: 150m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/ws_150m_merged_agg20.png}\\[0.3em]
+    \small 150m
+  \end{column}
+
+  % Column 4: 200m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-A_200m_merged_agg20.png}\\[0.3em]
+    \small 200m
+  \end{column}
+
+\end{columns}
+
+## Weibull shape parameter $k$
+
+\setlength{\columnsep}{0pt} 
+\begin{columns}[T, totalwidth=\textwidth]
+
+  % Column 1: 50m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-k_50m_merged_agg20.png}\\[0.3em]
+    \small 50m
+  \end{column}
+
+  % Column 2: 100m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-k_100m_merged_agg20.png}\\[0.3em]
+    \small 100m
+  \end{column}
+
+  % Column 3: 150m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-k_150m_merged_agg20.png}\\[0.3em]
+    \small 150m
+  \end{column}
+
+  % Column 4: 200m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-k_200m_merged_agg20.png}\\[0.3em]
+    \small 200m
+  \end{column}
+
+\end{columns}
+
+## Weibull shape parameter $A$
+
+\begin{columns}[T, totalwidth=\textwidth]
+
+  % Column 1: 50m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-A_50m_merged_agg20.png}\\[0.3em]
+    \small 50m
+  \end{column}
+
+  % Column 2: 100m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-A_100m_merged_agg20.png}\\[0.3em]
+    \small 100m
+  \end{column}
+
+  % Column 3: 150m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-A_150m_merged_agg20.png}\\[0.3em]
+    \small 150m
+  \end{column}
+
+  % Column 4: 200m
+  \begin{column}{0.25\textwidth}
+    \centering
+    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/combined-Weibull-A_200m_merged_agg20.png}\\[0.3em]
+    \small 200m
+  \end{column}
+
+\end{columns}
+
+
+# Elexon data {#sec-elexon}
+
+## BMU data
+
+## Renewable energy planning database
+
+## Turbine data available
+
+# Power conversion {#sec-power_curves}
+
+## Generic power curves
+
+## Power conversion estimates vs Elexon
