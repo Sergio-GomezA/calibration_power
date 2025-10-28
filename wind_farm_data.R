@@ -382,30 +382,13 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
       ),
       TRUE ~ interp_log_ws(height_turb_imp, 150, 200, gwa150, gwa200) # extrapolate slightly
     ),
-    k_ht = case_when(
-      height_turb_imp <= 75 ~ interp_log_ws(
-        height_turb_imp,
-        50,
-        100,
-        gwa_k50,
-        gwa_k100
-      ),
-      height_turb_imp <= 125 ~ interp_log_ws(
-        height_turb_imp,
-        100,
-        150,
-        gwa_k100,
-        gwa_k150
-      ),
-      height_turb_imp <= 175 ~ interp_log_ws(
-        height_turb_imp,
-        150,
-        200,
-        gwa_k150,
-        gwa_k200
-      ),
-      TRUE ~ interp_log_ws(height_turb_imp, 150, 200, gwa_k150, gwa_k200) # extrapolate slightly
-    )
+    k_ht = approx(
+      x = c(50, 100, 150, 200),
+      y = c(gwa_k50, gwa_k100, gwa_k150, gwa_k200),
+      xout = height_turb_imp,
+      rule = 2 # extrapolate using end values if outside [50,200]
+    )$y,
+    A_ht = ws_ht / gamma(1 + 1 / k_ht)
   ) %>%
   ungroup() %>%
   mutate(
