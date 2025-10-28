@@ -17,7 +17,7 @@ Global Wind Atlas calibration to UK power
   - [x] cleaning data code
   - [ ] Turbine characteristics 
   - [x] Get generic power curves
-  - [ ] Wind speed vertical interpolation 
+  - [x] Wind speed vertical interpolation 
   - [x] function to extract GWA wind speed
   - [x] add GWA wind speed at multiple heights
   - [x] interpolate wind speed to hub height
@@ -28,7 +28,7 @@ Global Wind Atlas calibration to UK power
   - Using generic curves
     - [x] IEC class
     - [x] function to rescale pc
-    - [ ] add zeroes at the end of power curve
+    - [x] add zeroes at the end of power curve
     - map curves
       - [x] fill in capacity_turb
       - [x] n_turb per BMU
