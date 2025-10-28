@@ -23,7 +23,7 @@ library(rnaturalearthdata)
 
 require(plotly)
 require(ggthemes)
-require(ggsci)
+
 ```
 ## Data paths
 
@@ -436,7 +436,7 @@ p1 <- ref_catalog_2025 %>%
     alpha = 0.2
     )+
 #   coord_sf(datum = 4326, crs = 4326)+
-  scale_color_manual(values = pal_aaas()(2) %>% rev())+
+  scale_color_manual(values = mypalette)+
   labs(col = "", size = "capacity")+
 #   x = "Longitude (\u00B0E)", y = "Latitude (\u00B0N)")+
 theme_map()+
@@ -447,7 +447,7 @@ ggsave(
     filename = "fig/wind_farms_elexon_size_2025.jpeg",
     plot = p1,
     width = 4,
-    height = 6,
+    height = 4,
     units = "in",
     dpi = 300
 )
@@ -613,10 +613,10 @@ capacity_time_full <- capacity_time %>%
   replace_na(list(cum_capacity = 0)) %>%       # fill before first commissioning
   ungroup()
 
-ggplot(capacity_time_full, aes(x = operational_date, y = cum_capacity, fill = tech_typ)) +
+capacity_p <- ggplot(capacity_time_full, aes(x = operational_date, y = cum_capacity, fill = tech_typ)) +
   geom_area( color = "white", linewidth = 0.3) +
 #   scale_fill_manual(values = c("Wind Onshore" = "#66c2a5", "Wind Offshore" = "#fc8d62")) +
-  scale_fill_manual(values = pal_aaas()(2) %>% rev() ) +
+  scale_fill_manual(values = mypalette ) +
   labs(
     title = "Cumulative Wind Power Capacity",
     x = "Operational Date",
@@ -626,7 +626,7 @@ ggplot(capacity_time_full, aes(x = operational_date, y = cum_capacity, fill = te
   theme_minimal(base_size = 14) +
   theme(legend.position = "top")
 
-
+capacity_p
 ggsave(
     filename = "fig/wind_capacity_type_2025.eps",
     width = 6,
@@ -634,4 +634,19 @@ ggsave(
     units = "in",
     dpi = 300
 )
+
+ggsave(
+  capacity_p + labs(title = ""),
+    filename = "fig/wind_capacity_type_2025_nt.eps",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
+```
+
+
+
+```{r}
+ref_catalog_2025$site_name %>% unique() %>% length()
 ```
