@@ -70,7 +70,23 @@ repd_wind <- repd0 %>%
   )
 ```
 
-
+```{r}
+repd0 %>% filter(
+    # tech_typ %in% c("Wind Onshore", "Wind Offshore", "Solar"),
+    grepl("Wind", tech_typ),
+    devel_stat %in% c("Operational", "Under Construction")
+    ) %>% 
+    group_by(tech_typ, devel_stat) %>% 
+    summarise(
+      n = n_distinct(ref_id),
+      capacity = sum(capacity_repd, na.rm = TRUE)
+    ) %>% 
+    janitor::adorn_totals(where = "row") %>% 
+    kable(
+      col.names = c("Type", "Development Status","Count","Capacity MW"),
+      digits =0,
+      format.args = list(big.mark = ","))
+```
 
 ### plot wind farms
 
@@ -531,17 +547,21 @@ ref_catalog_2025 %>%
 ```{r}
 ref_catalog_2025 %>% 
     ggplot()+
-    geom_histogram(aes(capacity_turb), fill = "darkblue")+
+    geom_histogram(aes(capacity_turb, fill = tech_typ))+
     facet_wrap(~tech_typ)+
-    labs(x = "Turbine capacity")
+    scale_fill_manual(values = mypalette)+
+    theme(legend.position = "none")+
+    labs(x = "Turbine capacity MW")
 ggsave(
     filename = "fig/hist_turb_capacity_2025.eps",
     width = 5,
     height = 4)
 ref_catalog_2025 %>% 
     ggplot()+
-    geom_histogram(aes(n_turb), fill = "darkblue")+
+    geom_histogram(aes(n_turb, fill = tech_typ))+
     facet_wrap(~tech_typ)+
+    scale_fill_manual(values = mypalette)+
+    theme(legend.position = "none")+
     labs(x = "Number of turbines")
 ggsave(
     filename = "fig/hist_n_turb_2025.eps",
@@ -550,8 +570,10 @@ ggsave(
 
 ref_catalog_2025 %>% 
     ggplot()+
-    geom_histogram(aes(height_turb), fill = "darkblue")+
+    geom_histogram(aes(height_turb, fill = tech_typ))+
     facet_wrap(~tech_typ)+
+    scale_fill_manual(values = mypalette)+
+    theme(legend.position = "none")+
     labs(x = "Turbine height")
 ggsave(
     filename = "fig/hist_turb_height_2025.eps",
