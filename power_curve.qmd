@@ -549,14 +549,14 @@ mod0_t <- brm(
   formula = quantity ~ -1 + gen_est0,
   data = data_mod,
   family = student(),  # <-- Student-t likelihood
-  chains = 4, cores = 10, iter = 5000
+  chains = 4, cores = 4, iter = 5000
 )
 
 mod1_t <- brm(
   formula = quantity ~ -1 + gen_est,
   data = data_mod,
   family = student(),  # <-- Student-t likelihood
-  chains = 4, cores = 10, iter = 5000
+  chains = 4, cores = 4, iter = 5000
 )
 ```
 
@@ -585,16 +585,16 @@ pow_comp <- ref_catalog_2025 %>%
     geom_abline(intercept = 0, slope = fixef(mod0_t)[1], col = "darkblue", linetype = 2)+
     annotate(
       "text", 
-      x = max(ref_catalog_2025$power_mws * ref_catalog_2025$turb_bmu * ref_catalog_2025$n_hours)/1000 * 0.8, 
-      y = max(ref_catalog_2025$quantity)/1000 * 0.9,
+      x = 1000, 
+      y = 900,
       label = "y = x", color = "black", hjust = 0) +
     annotate(
       "text", 
-      x = max(ref_catalog_2025$power_mws * ref_catalog_2025$turb_bmu * ref_catalog_2025$n_hours)/1000 * 0.8,
-      y = max(ref_catalog_2025$quantity)/1000 * 0.8, 
+      x = 2500,
+      y = 850, 
       label = paste0("y = ", round(fixef(mod0_t)[1], 2), " x"), color = "darkblue", hjust = 0) +
     scale_color_manual(values = mypalette)+
-    labs(x = "Generic power curve", y = "Elexon", col = "")+
+    labs(x = "Generic power curve GWh", y = "Elexon GWh", col = "")+
     theme(legend.position = "bottom")
 
 pow_comp
@@ -626,8 +626,18 @@ pow_comp <- ref_catalog_2025 %>%
     geom_point()+
     geom_abline(intercept = 0, slope = 1, col = "black", linetype = 2)+
     geom_abline(intercept = 0, slope = fixef(mod1_t)[1], col = "darkblue", linetype = 2)+
+    annotate(
+      "text", 
+      x = 1000, 
+      y = 900,
+      label = "y = x", color = "black", hjust = 0) +
+    annotate(
+      "text", 
+      x = 1400,
+      y = 700, 
+      label = paste0("y = ", round(fixef(mod1_t)[1], 2), " x"), color = "darkblue", hjust = 0) +
     scale_color_manual(values = mypalette)+
-    labs(x = "Generic power curve", y = "Elexon", col = "")+
+    labs(x = "Generic power curve GWh", y = "Elexon GWh", col = "")+
     theme(legend.position = "bottom")
 pow_comp
 ggsave(
