@@ -252,7 +252,7 @@ ref_catalog_2025 %>%
     ) %>% 
     janitor::adorn_totals("row") %>%
     mutate(
-        cap_factor = total_gen / (total_cap * 8760)*1000
+        cap_factor = total_gen / (total_cap * 6527)*1000
     ) %>% 
     kable(
         col.names = c("Type", "Generation (GWh)", "Capacity (MW)", "Number of BMUs", "Capacity Factor"),
@@ -434,7 +434,7 @@ III & 7.5  & 52.5 & Low-wind / inland sites \\
 
 ## Power estimate based on generic power curves
 
-For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, turbine capacity $c_i$, turbine height $h_i$, and mean wind speed $\mu_i$.
+For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, turbine capacity $c_i$, turbine height $v_i$, and mean wind speed $\mu_i$.
 
 \begin{itemize}
   \item Map location to a rescaled power curve $\widetilde \text{PC}_k$
