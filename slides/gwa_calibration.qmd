@@ -23,7 +23,30 @@ editor: source
 nocite: "@*"
 ---
 
+```{r include=FALSE}
+require(tidyverse)
+require(kableExtra)
+require(parallel)
+require(dplyr)
+require(scales)
+require(ggsci)
 
+require(jsonlite)
+require(httr)
+
+require(data.table)
+require(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+require(plotly)
+require(ggthemes)
+path <- "~/Documents/elexon"
+```
+
+```{r}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FALSE)
+```
 # Calibration to power {#sec-intro}
 
 ## Global Wind Atlas (GWA) vs Elexon generation
@@ -62,9 +85,7 @@ Calibrate a GWA driven estimate to actual observed output
       \item Downscaled from ERA 5 to a 250m grid
       \item Models land and 200km from shorelines
       \item Long term average wind speed
-        \begin{itemize}
-          \item Heights: 10m, 50m, 100m, 150m, 200m
-        \end{itemize}
+      \item Heights: 10m, 50m, 100m, 150m, 200m
       \item Scale and shape parameters Weibull
     \end{itemize}
     } % end local font block
@@ -198,7 +219,8 @@ Calibrate a GWA driven estimate to actual observed output
       \item Total capacity: 27 GW
       \item Half hourly resolution
       \item Records starting in 2019
-      \item 
+      \item Curtailment (pending)
+      \item Location / turbine data unavailable
     \end{itemize}
     } % end local font block
   \end{column}
@@ -206,17 +228,218 @@ Calibrate a GWA driven estimate to actual observed output
   % Right column: figure
   \begin{column}{0.5\textwidth}
     \centering
+    \small Wind installed capacity
     \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_capacity_type_2025_nt.eps}
   \end{column}
 
 \end{columns}
 
-## Renewable energy planning database
+## Renewable energy planning database (REPD)
+
+```{r}
+repd0 <- fread(file.path(path,"renew_energ_plan_db", "repd-q2-jul-2025.csv")) %>% 
+    rename(
+    tech_typ = `Technology Type`,
+    devel_stat = `Development Status (short)`,
+    capacity_repd = `Installed Capacity (MWelec)`,
+    capacity_turb = `Turbine Capacity`,
+    n_turb = `No. of Turbines`,
+    height_turb = `Height of Turbines (m)`,
+    x_coord = `X-coordinate`,
+    y_coord = `Y-coordinate`)
+names(repd0) <- tolower(gsub(" ", "_", names(repd0)))
+
+```
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+\setbeamerfont{itemize/enumerate body}{size=\fontsize{9}{10}\selectfont}
+\setbeamerfont{itemize/enumerate subbody}{size=\fontsize{8}{10}\selectfont}
+\begin{itemize}
+      \item Official UK government renewable data
+      \item Over 800 wind farms listed as operational
+      \item Coordinates available 
+      \item Also available:
+      \begin{itemize}
+        \item Development status 
+        \item Number of turbines
+        \item Turbine capacity
+        \item Turbine height (for some only)
+      \end{itemize}
+    \end{itemize}
+:::
+
+::: {.column width="50%"}
+\centering
+\small REPD wind farms
+\vspace{0.2cm}
+```{r}
+reduced_table <- repd0 %>%
+  filter(
+    grepl("Wind", tech_typ),
+    devel_stat %in% c("Operational", "Under Construction")
+  ) %>%
+  group_by(tech_typ, devel_stat) %>%
+  summarise(
+    n = n_distinct(ref_id),
+    capacity = sum(capacity_repd, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  janitor::adorn_totals(where = "row")
+
+kable(
+  reduced_table,
+  col.names = c("Type", "Development Status","Count","Capacity MW"),
+  digits = 0,
+  format = "latex",
+  format.args = list(big.mark = ",")
+) %>% 
+    kable_styling(
+        latex_options = c("scale_down")
+    )
+```
+:::
+:::
 
 ## Turbine data available
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Turbine capacity histogram
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/hist_turb_capacity_2025.eps}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Number of turbines histogram
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/hist_n_turb_2025.eps}
+:::
+
+:::
+
+## Turbine data available
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+Turbine Height availability
+\vspace{1cm}
+```{r}
+ref_catalog_2025 <- fread(
+  file.path("../data/ref_catalog_wind_2025.csv.gz")
+)
+
+ref_catalog_2025 %>% 
+    mutate(heightNA = is.na(height_turb)) %>% 
+    group_by(tech_typ, heightNA) %>% 
+    summarise(
+        height = mean(height_turb, na.rm = TRUE),
+        n = n()
+    ) %>% 
+    kable(
+        col.names = c("Type","Height available", "Average height (m)","count"),
+        digits = 1,
+        format = "latex"
+    ) %>% 
+    kable_styling(
+        latex_options = c("scale_down")
+    )
+
+```
+
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Turbine height histogram
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/hist_turb_height_2025.eps}
+:::
+
+:::
 
 # Power conversion {#sec-power_curves}
 
 ## Generic power curves
 
-## Power conversion estimates vs Elexon
+::: {.columns}
+
+::: {.column width="50%"}
+
+\setbeamerfont{itemize/enumerate body}{size=\fontsize{9}{10}\selectfont}
+\setbeamerfont{itemize/enumerate subbody}{size=\fontsize{8}{10}\selectfont}
+\begin{itemize}
+      \item Using 3 generic power curves
+      \item Offshore plus the IEC 3 classes
+      \item Assigning class based on GWA mean wind speed at location
+      \item Rescaling rated power to turbine capacity
+\end{itemize}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Generic power curves (PC$_k$)
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/generic_power_curves_uncens.eps}
+:::
+
+:::
+
+## Power estimate based on generic power curves
+
+For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, turbine capacity $c_i$, turbine height $h_i$, and mean wind speed $\mu_i$.
+
+\begin{itemize}
+  \item Map location to a rescaled power curve $\widetilde \text{PC}_k$
+  \item Estimate wind farm power in GWh
+\end{itemize}
+
+\begin{equation*}
+    \tilde p_i = \widetilde \text{PC}_{k} (\mu_{i}) \times n_{i} \times h_i
+\end{equation*}
+
+where $h_i$ are the number of hours in the year (8,760).
+
+## Power estimate based on generic power curves
+
+GWA also offers access to the Weibull parameters at each grid point. 
+Due to the heavy tail of the Weibull distribution applying $\widetilde \text{PC}_{k}(\mu_i)$ overestimates power.
+
+\begin{equation*}
+    \hat p_i = n_{i} \times h_i \times \operatorname{E}\Big(\widetilde \text{PC}_{k} (w_{i})\Big)
+\end{equation*}
+where $w_i$ are random replicates of $W_i \sim \text{Weibull}(A_i, k_i)$, and $A_i$, $k_i$ are the scale and shape parameters, respectively.
+
+## GWA based estimates vs Elexon 2025
+\begin{columns}[T, totalwidth=\textwidth]
+
+  % Left column: Power curve
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Power curve on GWA mean wind speed}
+
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_estimate1.eps}
+  \end{column}
+
+  % Right column: Expected power
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Expected power using Weibull distribution}
+
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_estimate2.eps}
+  \end{column}
+
+\end{columns}
+
+
+## Next Steps
+
+\begin{itemize}
+   \item Compare other years
+   \item Apply loss factors based on history
+   \item Refine power curve conversion
+   \item Quantile mapping calibration
+\end{itemize}
