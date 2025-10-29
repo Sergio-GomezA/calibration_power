@@ -650,3 +650,151 @@ ggsave(
 
 # ggplotly(pow_comp, tooltip = "text")
 ```
+
+
+
+
+## Interactive plots
+
+```{r}
+library(dplyr)
+library(plotly)
+library(sf)
+
+# --- 1. Transform coordinates to lon/lat
+ref_catalog_2025_ll <- ref_catalog_2025 %>%
+    mutate(
+    tooltip_text = paste0(
+      "Site: ", site_name,
+      "<br>Wind Speed: ", round(gwa100, 2), " m/s",
+      "<br>Elexon: ", round(quantity / 1000, 2), " GWh",
+      "<br>Generic PC: ", round(gen_est / 1000, 2), " GWh",
+      "<br>Capacity: ", generationCapacity, " MW",
+      "<br>Type: ", tech_typ
+    )
+  ) %>%
+  st_as_sf(coords = c("x_coord", "y_coord"), crs = 27700) %>%
+  st_transform(4326) %>%
+  mutate(
+    lon = st_coordinates(.)[, 1],
+    lat = st_coordinates(.)[, 2]
+  ) %>%
+  st_drop_geometry()
+
+# --- 2. Add the highlight key
+df_keyed <- highlight_key(ref_catalog_2025_ll, ~bmUnit)
+
+# --- 3. Scatter plot (left)
+pow_comp_plotly <- df_keyed %>%
+  plot_ly(
+    x = ~gen_est / 1000,
+    y = ~quantity / 1000,
+    color = ~tech_typ,
+    colors = mypalette,
+    text = ~tooltip_text,
+    hoverinfo = "text",
+    type = "scatter",
+    mode = "markers"
+  ) %>%
+  add_trace(
+    x = c(0, max(ref_catalog_2025_ll$gen_est) / 1000),
+    y = c(0, max(ref_catalog_2025_ll$gen_est) / 1000),
+    type = 'scatter',
+    mode = 'lines',
+    line = list(dash = 'dash', color = 'black'),
+    showlegend = FALSE, inherit = FALSE
+  ) %>%
+  add_trace(
+    x = c(0, max(ref_catalog_2025_ll$gen_est) / 1000),
+    y = c(0, max(ref_catalog_2025_ll$gen_est) / 1000 * fixef(mod1_t)[1]),
+    type = 'scatter',
+    mode = 'lines',
+    line = list(dash = 'dash', color = 'darkblue'),
+    showlegend = FALSE, inherit = FALSE
+  ) %>%
+  layout(
+    xaxis = list(title = "Generic power curve GWh"),
+    yaxis = list(title = "Elexon GWh"),
+    legend = list(orientation = "h", y = -0.2),
+    annotations = list(
+      list(x = 1000, y = 900, text = "y = x", showarrow = FALSE, xanchor='left', font=list(color='black')),
+      list(x = 1400, y = 700, text = paste0("y = ", round(fixef(mod1_t)[1],2), " x"), showarrow = FALSE, xanchor='left', font=list(color='darkblue'))
+    )
+  )
+
+# --- 4. Map (right)
+map_p <- df_keyed %>%
+  plot_ly(
+    lon = ~lon,
+    lat = ~lat,
+    color = ~tech_typ,
+    colors = mypalette,
+    type = 'scattergeo',
+    mode = 'markers',
+    marker = list(size = 8, opacity = 0.8),
+    text = ~tooltip_text,
+    hoverinfo = "text"
+  ) %>%
+  layout(
+    geo = list(
+      scope = "europe",
+      projection = list(type = 'mercator'),
+      lataxis = list(range = c(49, 61)),   # tweak to UK lat range
+      lonaxis = list(range = c(-8, 2)),    # tweak to UK lon range
+      showland = TRUE,
+      landcolor = toRGB("gray95")
+    ),
+    margin = list(l = 0, r = 0, t = 0, b = 0)
+  )
+
+# --- 5. Combine & link
+library(plotly)
+
+# assuming gen_p and map_p both work individually
+
+combo <- subplot(pow_comp_plotly, map_p, nrows = 1, widths = c(0.6, 0.4))
+
+combo <- combo %>%
+  layout(
+    # left scatterplot uses the left 60 % of the page
+    xaxis = list(domain = c(0, 0.6), title = "Generic power curve GWh"),
+    yaxis = list(domain = c(0, 1), title = "Elexon GWh"),
+
+    # the map (scattergeo) goes in its own domain on the right
+    geo = list(
+      domain = list(x = c(0.6, 1), y = c(0, 1)),  # restrict to right 40 %
+      scope = "europe",
+      projection = list(type = "mercator"),
+      lataxis = list(range = c(49, 61)),
+      lonaxis = list(range = c(-8, 4)),
+      showland = TRUE,
+      landcolor = toRGB("gray95"),
+      showcoastlines = TRUE,
+      coastlinecolor = toRGB("gray80"),
+      resolution = 50
+    ),
+
+    margin = list(l = 0, r = 0, t = 30, b = 0)
+  ) %>%
+  highlight(
+    on = "plotly_hover",
+    off = "plotly_doubleclick",
+    color = "rgba(228,26,28,1)",
+    opacityDim = 0.6,
+    persistent = FALSE,
+    dynamic = TRUE
+  )
+
+combo
+
+
+```
+
+
+```{r}
+require(htmlwidgets)
+saveWidget(combo, "combo_plot.html", selfcontained = TRUE)
+browseURL("combo_plot.html")
+
+htmlwidgets::saveWidget(combo, "combo_plot.html")
+```
