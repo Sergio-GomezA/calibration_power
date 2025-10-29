@@ -168,7 +168,7 @@ Calibrate a GWA driven estimate to actual observed output
 
 \end{columns}
 
-## Weibull shape parameter $A$
+## Weibull scale parameter $A$
 
 \begin{columns}[T, totalwidth=\textwidth]
 
@@ -205,7 +205,7 @@ Calibrate a GWA driven estimate to actual observed output
 
 # Elexon data {#sec-elexon}
 
-## BMU data
+## BMU wind data
 
 \begin{columns}[T, totalwidth=\textwidth]
    \begin{column}{0.5\textwidth}
@@ -233,6 +233,35 @@ Calibrate a GWA driven estimate to actual observed output
   \end{column}
 
 \end{columns}
+
+## BMU wind data
+
+\small BMU wind generation data in 2025 (up to 29 September)
+```{r}
+ref_catalog_2025 <- fread(
+  file.path("../data/ref_catalog_wind_2025.csv.gz")
+)
+
+# on shore off shore distribution
+ref_catalog_2025 %>% 
+    group_by(tech_typ) %>%
+    summarise(
+        total_gen = sum(quantity, na.rm = TRUE)/1000,
+        total_cap = sum(generationCapacity, na.rm = TRUE),
+        n = n()
+    ) %>% 
+    janitor::adorn_totals("row") %>%
+    mutate(
+        cap_factor = total_gen / (total_cap * 8760)*1000
+    ) %>% 
+    kable(
+        col.names = c("Type", "Generation (GWh)", "Capacity (MW)", "Number of BMUs", "Capacity Factor"),
+        digits = c(1,1,0,1,2),
+        format = "latex",
+        format.args = list(big.mark = ",")) %>%
+    kable_styling(latex_options = c("scale_down"))
+```
+
 
 ## Renewable energy planning database (REPD)
 
@@ -330,9 +359,6 @@ kable(
 Turbine Height availability
 \vspace{1cm}
 ```{r}
-ref_catalog_2025 <- fread(
-  file.path("../data/ref_catalog_wind_2025.csv.gz")
-)
 
 ref_catalog_2025 %>% 
     mutate(heightNA = is.na(height_turb)) %>% 
@@ -456,8 +482,8 @@ where $w_i$ are random replicates of $W_i \sim \text{Weibull}(A_i, k_i)$, and $A
 ## Next Steps
 
 \begin{itemize}
-   \item Compare other years
-   \item Apply loss factors based on history
+   \item Compare other years: 2019-2024
+   \item Estimate loss factors based on history
    \item Refine power curve conversion
    \item Quantile mapping calibration
 \end{itemize}
