@@ -401,7 +401,7 @@ For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, t
     \tilde p_i = \widetilde \text{PC}_{k} (\mu_{i}) \times n_{i} \times h_i
 \end{equation*}
 
-where $h_i$ are the number of hours in the year (8,760).
+where $h_i$ are the number of hours in the year (8,760 full year, 6,527 in 2025).
 
 ## Power estimate based on generic power curves
 
@@ -419,7 +419,7 @@ where $w_i$ are random replicates of $W_i \sim \text{Weibull}(A_i, k_i)$, and $A
   % Left column: Power curve
   \begin{column}{0.5\textwidth}
     \centering
-    {\small Power curve on GWA mean wind speed}
+    {\small PC on GWA mean wind speed $\tilde p_i$}
 
     \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_estimate1.eps}
   \end{column}
@@ -427,7 +427,7 @@ where $w_i$ are random replicates of $W_i \sim \text{Weibull}(A_i, k_i)$, and $A
   % Right column: Expected power
   \begin{column}{0.5\textwidth}
     \centering
-    {\small Expected power using Weibull distribution}
+    {\small Estimate using Weibull distribution $\hat p_i$}
 
     \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_estimate2.eps}
   \end{column}
