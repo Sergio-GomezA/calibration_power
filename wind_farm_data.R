@@ -418,7 +418,7 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
     ),
     # mean power using weibull distribution E(PC(ws))
     mean_power = generic_pow_conv(
-      wind_speed = rweibull(1000, shape = k_ht, scale = A_ht),
+      wind_speed = rweibull(10000, shape = k_ht, scale = A_ht),
       turb_class = turb_class,
       turb_capacity = capacity_turb
     ) %>%
