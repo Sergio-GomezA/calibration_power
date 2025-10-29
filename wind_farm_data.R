@@ -424,7 +424,11 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
     ) %>%
       mean()
   ) %>%
-  ungroup()
+  ungroup() %>%
+  mutate(
+    gen_est0 = power_mws * turb_bmu * n_hours,
+    gen_est = mean_power * turb_bmu * n_hours
+  )
 
 write.csv(
   ref_catalog_2025,
