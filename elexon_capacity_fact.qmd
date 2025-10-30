@@ -1,0 +1,268 @@
+---
+title: "Elexon BMU capacity factors check"
+format: html
+---
+
+```{r include=FALSE}
+require(tidyverse)
+require(kableExtra)
+require(parallel)
+require(dplyr)
+require(scales)
+require(ggsci)
+
+require(jsonlite)
+require(httr)
+
+require(data.table)
+require(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+require(plotly)
+require(ggthemes)
+
+require(ggrepel)
+```
+
+## Data paths
+
+```{r}
+path <- "~/Documents/elexon"
+```
+
+```{r}
+source("aux_funct.R")
+```
+
+```{r}
+year_seq <- seq(2019,2025,1)
+
+bmu_df <- lapply(year_seq, function(x){
+  file_path <- file.path(path, "data_by_year", paste0("wind_gen_bmu_", x, ".csv.gz"))
+  fread(file_path)
+}) %>% bind_rows()
+```
+
+
+
+```{r}
+ref_catalog_2025 <- fread(
+  file.path("data/ref_catalog_wind_2025.csv.gz")) 
+top_wind_bmus <- wind.bmus %>% 
+  filter(generationCapacity>0) %>% 
+  select(elexonBmUnit, leadPartyName, bmUnitName, generationCapacity) %>% 
+  unique() %>% 
+  arrange(desc(generationCapacity)) %>%
+  mutate(
+    cum_capacity = cumsum(generationCapacity),
+    cum_cap_perc = cum_capacity / sum(generationCapacity)
+    ) 
+```
+
+
+```{r}
+top_wind_bmus %>% 
+  arrange(desc(generationCapacity)) %>% 
+  ggplot()+
+  geom_bar(
+    aes(x = reorder(bmUnitName, -generationCapacity), 
+    y = generationCapacity), 
+    stat = "identity", 
+    position = "dodge",
+    fill = "darkblue"
+    )+
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )+ labs(x  = "", y = "Capacity MW")
+```
+
+
+```{r}
+top_gen_bmus <- bmu_df %>% 
+  mutate(
+    year = year(halfHourEndTime),
+    quarter = paste0(year,"Q",quarter(halfHourEndTime))
+    ) %>% 
+  filter(bmUnit %in% top_wind_bmus$elexonBmUnit) %>% 
+  group_by(
+    year,
+    bmUnit
+  ) %>% 
+  arrange(halfHourEndTime) %>%
+  mutate(quantity = quantity + lag(quantity)) %>%
+  filter(minute(halfHourEndTime) == 0) %>%
+  summarise(
+    quantity = sum(quantity, na.rm = TRUE),
+    n_hours = n_distinct(halfHourEndTime)
+  ) %>% 
+  filter(
+    quantity>0,
+    n_hours > max(n_hours)*0.8) %>% 
+  left_join(
+    top_wind_bmus %>% select(elexonBmUnit, bmUnitName, generationCapacity) ,
+    by = c("bmUnit" = "elexonBmUnit") 
+  ) %>% 
+  left_join(
+    ref_catalog_2025 %>% select(bmUnit, tech_typ),
+    by = "bmUnit"
+  ) %>% 
+  mutate(
+    cap_factor = quantity / generationCapacity / n_hours,
+    short_name = gsub("WF|Wind farm|Windfarm|Offshore","",bmUnitName)
+  )
+```
+
+```{r}
+# Compute means per year and technology type
+means_df <- top_gen_bmus %>%
+  group_by(year, tech_typ) %>%
+  summarise(mean_cf = mean(cap_factor, na.rm = TRUE), .groups = "drop")
+
+# Identify outliers per year and tech_typ
+outliers_df <- top_gen_bmus %>%
+  group_by(year, tech_typ) %>%
+  mutate(
+    Q1 = quantile(cap_factor, 0.25, na.rm = TRUE),
+    Q3 = quantile(cap_factor, 0.75, na.rm = TRUE),
+    IQR = Q3 - Q1,
+    is_outlier = cap_factor < (Q1 - 1.5 * IQR) | cap_factor > (Q3 + 1.5 * IQR)
+  ) %>%
+  filter(is_outlier) %>%
+  ungroup()
+
+top_gen_bmus %>% 
+  ggplot(aes(x = year, y = cap_factor, group = year, fill = tech_typ))+
+  geom_boxplot()+
+  facet_wrap(~tech_typ)+
+   geom_text(
+    data = means_df,
+    aes(x = year, y = mean_cf, 
+    label = paste0("bar(c) == ", sprintf("%.2f", mean_cf))
+    ),  
+    vjust = -0.7,     # move label slightly above the mean
+    size = 2,         # text size
+    color = "white",
+    parse = TRUE
+  ) +
+  # outlier labels
+  geom_text_repel(
+    data = outliers_df,
+    aes(x = year, y = cap_factor, label = short_name),
+    size = 1.5,
+    color = "black",
+    max.overlaps = 20,     # adjust to allow more/less overlap
+    box.padding = 0.3,
+    point.padding = 0.2,
+    segment.color = "grey50"
+  ) +
+  scale_fill_manual(values = mypalette)+
+  theme(legend.position = "none")+
+  labs(x = "year", y = "Capacity factor")
+
+ggsave(
+    filename = "fig/capacity_factor.pdf",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
+```
+
+
+```{r}
+top_gen_bmus <- bmu_df %>% 
+  mutate(
+    year = year(halfHourEndTime),
+    quarter = paste0(year,"Q",quarter(halfHourEndTime))
+    ) %>% 
+  filter(bmUnit %in% top_wind_bmus$elexonBmUnit) %>% 
+  group_by(
+    quarter,
+    bmUnit
+  ) %>% 
+  arrange(halfHourEndTime) %>%
+  mutate(quantity = quantity + lag(quantity)) %>%
+  filter(minute(halfHourEndTime) == 0) %>%
+  summarise(
+    quantity = sum(quantity, na.rm = TRUE),
+    n_hours = n_distinct(halfHourEndTime)
+  ) %>% 
+  filter(
+    quantity>0,
+    n_hours > max(n_hours)*0.8) %>% 
+  left_join(
+    top_wind_bmus %>% select(elexonBmUnit, bmUnitName, generationCapacity) ,
+    by = c("bmUnit" = "elexonBmUnit") 
+  ) %>% 
+  left_join(
+    ref_catalog_2025 %>% select(bmUnit, tech_typ),
+    by = "bmUnit"
+  ) %>% 
+  mutate(
+    cap_factor = quantity / generationCapacity / n_hours,
+    short_name = gsub("WF|Wind farm|Windfarm|Offshore","",bmUnitName)
+  )
+# Compute means per year and technology type
+means_df <- top_gen_bmus %>%
+  group_by(quarter, tech_typ) %>%
+  summarise(mean_cf = mean(cap_factor, na.rm = TRUE), .groups = "drop")
+
+# Identify outliers per year and tech_typ
+outliers_df <- top_gen_bmus %>%
+  group_by(quarter, tech_typ) %>%
+  mutate(
+    Q1 = quantile(cap_factor, 0.25, na.rm = TRUE),
+    Q3 = quantile(cap_factor, 0.75, na.rm = TRUE),
+    IQR = Q3 - Q1,
+    is_outlier = cap_factor < (Q1 - 1.5 * IQR) | cap_factor > (Q3 + 1.5 * IQR)
+  ) %>%
+  filter(is_outlier) %>%
+  ungroup()
+
+
+```
+
+```{r}
+top_gen_bmus %>% 
+  group_by(tech_typ,quarter) %>% 
+  summarise(cap_factor = mean(cap_factor)) %>% 
+  ggplot(aes(x = quarter, y = cap_factor, group = 1, col = tech_typ))+
+  geom_line()+
+  facet_wrap(~tech_typ, nrow = 2)+
+  #  geom_text(
+  #   data = means_df,
+  #   aes(x = quarter, y = mean_cf, 
+  #   label = paste0("bar(c) == ", sprintf("%.2f", mean_cf))
+  #   ),  
+  #   vjust = -0.7,     # move label slightly above the mean
+  #   size = 2,         # text size
+  #   color = "white",
+  #   parse = TRUE
+  # ) +
+  # outlier labels
+  # geom_text_repel(
+  #   data = outliers_df,
+  #   aes(x = quarter, y = cap_factor, label = short_name),
+  #   size = 1.5,
+  #   color = "black",
+  #   max.overlaps = 20,     # adjust to allow more/less overlap
+  #   box.padding = 0.3,
+  #   point.padding = 0.2,
+  #   segment.color = "grey50"
+  # ) +
+  scale_color_manual(values = mypalette)+
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90, vjust = 0.5)
+  )+
+  labs(x = "Quarter", y = "Capacity factor", col = "")
+
+ggsave(
+    filename = "fig/capacity_factor_q.pdf",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
+```

@@ -23,6 +23,9 @@ Global Wind Atlas calibration to UK power
   - [x] function to extract GWA wind speed
   - [x] add GWA wind speed at multiple heights
   - [x] interpolate wind speed to hub height
+  - [ ] Elexon capacity factors check *
+  - [ ] ERA 5 calibration *
+  - [ ] Question to Dan: GWA to MIDAS (Onshore) then *
   - [ ] Get land elevation 
   - [ ] Get curtailment *
   - [ ] Data for previous years

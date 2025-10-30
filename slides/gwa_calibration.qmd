@@ -262,6 +262,23 @@ ref_catalog_2025 %>%
     kable_styling(latex_options = c("scale_down"))
 ```
 
+## Capacity factor through time
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Capacity factor by year
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/capacity_factor.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Capacity factor by quarter
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/capacity_factor_q.pdf}
+:::
+
+:::
 
 ## Renewable energy planning database (REPD)
 
