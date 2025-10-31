@@ -430,6 +430,15 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
     gen_est = mean_power * turb_bmu * n_hours
   )
 
+ref_catalog_2025 <- ref_catalog_2025 %>%
+  st_as_sf(coords = c("x_coord", "y_coord"), crs = 27700) %>%
+  st_transform(4326) %>%
+  mutate(
+    lon = st_coordinates(.)[, 1],
+    lat = st_coordinates(.)[, 2]
+  ) %>%
+  st_drop_geometry()
+
 write.csv(
   ref_catalog_2025,
   gzfile(file.path("data/ref_catalog_wind_2025.csv.gz")),

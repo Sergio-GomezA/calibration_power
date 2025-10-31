@@ -798,3 +798,25 @@ browseURL("combo_plot.html")
 
 htmlwidgets::saveWidget(combo, "combo_plot.html")
 ```
+
+
+### add coordinates in crs 4326
+```{r}
+ref_catalog_2025 <- fread(
+  file.path("data/ref_catalog_wind_2025.csv.gz")
+) %>%
+  st_as_sf(coords = c("x_coord", "y_coord"), crs = 27700) %>%
+  st_transform(4326) %>%
+  mutate(
+    lon = st_coordinates(.)[, 1],
+    lat = st_coordinates(.)[, 2]
+  ) %>%
+  st_drop_geometry()
+
+
+write.csv(
+  ref_catalog_2025,
+  gzfile(file.path("data/ref_catalog_wind_2025.csv.gz")),
+  row.names = FALSE
+)
+```
