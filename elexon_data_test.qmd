@@ -672,3 +672,26 @@ ggsave(
 ```{r}
 ref_catalog_2025$site_name %>% unique() %>% length()
 ```
+
+
+## Testing curtailment function
+
+```{r}
+source("aux_funct.R")
+path <- "~/Documents/elexon"
+```
+
+
+```{r}
+bmucurt0 <- get_curtailment(
+  year = 2025,
+  path = file.path(path,"data_by_year"),
+  end_time = "2025-09-30"
+  )
+```
+```{r}
+bmucurt0 %>% head()
+```
+```{r}
+bmucurt0 %>% 
+```
