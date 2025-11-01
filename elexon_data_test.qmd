@@ -693,5 +693,27 @@ bmucurt0 <- get_curtailment(
 bmucurt0 %>% head()
 ```
 ```{r}
+years <- 2022:2024
+
+curt_df <- lapply(
+  years,
+  \(y) get_curtailment(
+  year = y,
+  path = file.path(path,"data_by_year")
+  )
+)
+
+```
+
+
+```{r}
 bmucurt0 %>% 
+  filter(dataType == "Tagged") %>% 
+  group_by(settlementDate) %>% 
+  summarise(curtailment = -sum(totalVolumeAccepted)) %>% 
+  ggplot(aes(settlementDate, curtailment, group = 1))+
+  geom_line()
+```
+```{r}
+?g
 ```
