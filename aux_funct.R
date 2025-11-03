@@ -1,25 +1,10 @@
-require(sf)
-require(dplyr)
-require(rnaturalearth)
-library(rnaturalearthdata)
-require(ggplot2)
-require(terra)
-require(ggthemes)
-require(fst)
 require(data.table)
-require(stringr)
-
-require(jsonlite)
-require(httr)
-
-
-require(kableExtra)
-require(parallel)
-
-require(scales)
+require(dplyr)
+require(ggplot2)
 require(ggsci)
-require(plotly)
-require(ggthemes)
+require(terra)
+require(fst)
+require(stringr)
 
 theme_set(theme_bw())
 
