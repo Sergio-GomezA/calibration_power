@@ -1,3 +1,8 @@
+require(data.table)
+require(dplyr)
+require(tidyr)
+require(sf)
+
 # Data ###############################
 
 path <- "~/Documents/elexon"

@@ -64,9 +64,13 @@ top_wind_bmus <- wind.bmus %>%
 ```{r}
 top_wind_bmus %>% 
   arrange(desc(generationCapacity)) %>% 
+  head(50) %>% 
+  mutate(
+    short_name = gsub("WF|Wind|Wind farm|Windfarm|Offshore","",bmUnitName)
+  ) %>% 
   ggplot()+
   geom_bar(
-    aes(x = reorder(bmUnitName, -generationCapacity), 
+    aes(x = reorder(short_name, -generationCapacity), 
     y = generationCapacity), 
     stat = "identity", 
     position = "dodge",
@@ -171,7 +175,7 @@ ggsave(
 
 
 ```{r}
-top_gen_bmus <- bmu_df %>% 
+top_gen_bmus_q <- bmu_df %>% 
   mutate(
     year = year(halfHourEndTime),
     quarter = paste0(year,"Q",quarter(halfHourEndTime))
@@ -204,12 +208,12 @@ top_gen_bmus <- bmu_df %>%
     short_name = gsub("WF|Wind farm|Windfarm|Offshore","",bmUnitName)
   )
 # Compute means per year and technology type
-means_df <- top_gen_bmus %>%
+means_df <- top_gen_bmus_q %>%
   group_by(quarter, tech_typ) %>%
   summarise(mean_cf = mean(cap_factor, na.rm = TRUE), .groups = "drop")
 
 # Identify outliers per year and tech_typ
-outliers_df <- top_gen_bmus %>%
+outliers_df <- top_gen_bmus_q %>%
   group_by(quarter, tech_typ) %>%
   mutate(
     Q1 = quantile(cap_factor, 0.25, na.rm = TRUE),
@@ -224,7 +228,7 @@ outliers_df <- top_gen_bmus %>%
 ```
 
 ```{r}
-top_gen_bmus %>% 
+top_gen_bmus_q %>% 
   group_by(tech_typ,quarter) %>% 
   summarise(cap_factor = mean(cap_factor)) %>% 
   ggplot(aes(x = quarter, y = cap_factor, group = 1, col = tech_typ))+
@@ -266,3 +270,171 @@ ggsave(
     dpi = 300
 )
 ```
+
+
+
+## Curtailment 
+
+```{r}
+
+power_park <- readxl::read_xlsx("data/power-park-modules.xlsx", sheet = 1, n_max = 252) %>% 
+  rename(
+    elexonBmUnit = `Settlement BMU name`,
+    capacity_alt = `BMU or Large Reg Cap only`
+  )
+names(power_park) <- tolower(gsub(" ", "_", names(power_park)))
+wind.bmus.alt <- wind.bmus %>% 
+  left_join(
+    power_park %>% select(elexonbmunit,capacity_alt),
+    by = c("elexonBmUnit"="elexonbmunit")
+  ) %>% 
+  mutate(
+    diff_cap = abs(generationCapacity-capacity_alt),
+    capacity = case_when(
+      is.na(capacity_alt) ~ generationCapacity,
+      capacity_alt <= 0 ~ generationCapacity,
+      diff_cap > generationCapacity * 0.1 ~ capacity_alt,
+      TRUE ~ generationCapacity
+    )
+  )
+p_cap <- wind.bmus.alt %>% 
+  ggplot()+
+  geom_point(
+    aes(
+      generationCapacity,
+      capacity, 
+      text = paste("BM Unit:", elexonBmUnit,
+                 "<br>Gen Cap:", generationCapacity,
+                 "<br>Alt Cap:", capacity)))
+ggplotly(p_cap, tooltip = "text")
+```
+```{r}
+year_seq <- seq(2019,2025,1)
+
+curt_df <- lapply(year_seq, function(x){
+  file_path <- file.path(path, "data_by_year", paste0("wind_curt_bmu_", x, ".csv.gz"))
+  fread(file_path)
+}) %>% bind_rows() %>% 
+  filter(dataType == "Tagged")
+
+```
+
+### Check
+
+```{r}
+# confirmed curtailment day
+c_day <- "2025-02-19"
+
+bmu_code <- c("T_SGRWO-2")
+
+code <- "DBAWO"
+
+gen_frag <- bmu_df %>% 
+  filter(
+    settlementDate %in% c_day,
+    grepl(code, bmUnit)
+    # bmUnit %in% bmu_code
+  )
+
+curt_frag <- curt_df %>% 
+  filter(
+    settlementDate %in% c_day,
+    grepl(code, bmUnit)
+  ) %>% 
+    mutate(
+      halfHourEndTime = startTime + minutes(30)
+    )
+
+gen_adj <- gen_frag %>% 
+  left_join(
+    curt_frag %>% select(
+      settlementPeriod, bmUnit, totalVolumeAccepted
+    ),
+    by = c("settlementPeriod","bmUnit")
+  ) %>% 
+  mutate(totalVolumeAccepted = replace_na(totalVolumeAccepted, 0)) %>%
+  mutate(
+    potential = quantity - totalVolumeAccepted
+  ) %>% 
+  left_join(
+    wind.bmus.alt %>% select(elexonBmUnit,bmUnitName, capacity),
+    by = c("bmUnit"="elexonBmUnit")
+  ) 
+  
+
+```
+
+```{r}
+
+gen_adj %>%
+  select(halfHourEndTime, bmUnit, quantity, totalVolumeAccepted, capacity) %>%
+  mutate(
+    quantity = quantity *2,
+    curtailment = -totalVolumeAccepted*2) %>%
+  pivot_longer(cols = c(quantity, curtailment),
+               names_to = "type",
+               values_to = "value") %>% 
+  ggplot( aes(x = halfHourEndTime, y = value, fill = type)) +
+  geom_area(position = "stack") +
+  geom_hline(aes(yintercept = capacity)) +
+  facet_wrap(~bmUnit) +
+  scale_fill_aaas(name = "Type",
+                  ) +
+  theme_minimal()
+```
+### Yearly
+
+
+```{r}
+gen_adj <- bmu_df %>%
+  left_join(
+    curt_df %>% select(
+      settlementPeriod, bmUnit, totalVolumeAccepted
+    ),
+    by = c("settlementPeriod","bmUnit")
+  ) %>% 
+  mutate(totalVolumeAccepted = replace_na(-totalVolumeAccepted, 0)) %>%
+  mutate(
+    potential = quantity + totalVolumeAccepted
+  ) %>% 
+  left_join(
+    wind.bmus.alt %>% select(elexonBmUnit,bmUnitName, capacity),
+    by = c("bmUnit"="elexonBmUnit")
+  ) 
+```
+
+```{r}
+curt_df %>%  
+  mutate(
+    year = year(startTime),
+    quarter = paste0(year,"Q",quarter(startTime))
+    ) %>% 
+  filter(bmUnit %in% top_wind_bmus$elexonBmUnit) %>% 
+  group_by(
+    year,
+    bmUnit
+  ) %>% 
+  arrange(startTime) %>%
+  mutate(curtailment = totalVolumeAccepted + lead(totalVolumeAccepted)) %>%
+  filter(minute(startTime) == 0) %>%
+  summarise(
+    curtailment = sum(curtailment, na.rm = TRUE),
+    n_hours = n_distinct(startTime)
+  ) %>% 
+  filter(
+    curtailment>0,
+    n_hours > max(n_hours)*0.8) %>% 
+  left_join(
+    top_wind_bmus %>% select(elexonBmUnit, bmUnitName, generationCapacity) ,
+    by = c("bmUnit" = "elexonBmUnit") 
+  ) %>% 
+  left_join(
+    ref_catalog_2025 %>% select(bmUnit, tech_typ),
+    by = "bmUnit"
+  ) %>% 
+  mutate(
+    curt_factor = curtailment / generationCapacity / n_hours,
+    short_name = gsub("WF|Wind farm|Windfarm|Offshore","",bmUnitName)
+  )
+```
+### Quarterly
