@@ -271,9 +271,7 @@ ggsave(
 )
 ```
 
-
-
-## Curtailment 
+## alternative capacity by BMU 
 
 ```{r}
 
@@ -308,6 +306,8 @@ p_cap <- wind.bmus.alt %>%
                  "<br>Alt Cap:", capacity)))
 ggplotly(p_cap, tooltip = "text")
 ```
+
+## Curtailment 
 ```{r}
 year_seq <- seq(2019,2025,1)
 
@@ -319,7 +319,32 @@ curt_df <- lapply(year_seq, function(x){
 
 ```
 
-### Check
+
+```{r}
+# 2530106 : x
+# Row 6245 of `y`
+
+bmu_df %>% 
+  mutate(settlementDate = as.Date(settlementDate)) %>% 
+  slice(2530106)
+
+curt_df %>% 
+  mutate(settlementDate = as.Date(settlementDate)) %>% 
+  filter(settlementDate == "2020-01-01",settlementPeriod==1)
+
+curt_df %>% 
+  mutate(settlementDate = as.Date(settlementDate)) %>% 
+  slice(6245)
+
+bmu_df %>% 
+  mutate(settlementDate = as.Date(settlementDate)) %>% 
+  filter(
+    bmUnit == "T_ARCHW-1",
+    settlementDate == "2019-02-14",settlementPeriod==3)
+
+```
+
+### Check for 1 day 1 location
 
 ```{r}
 # confirmed curtailment day
@@ -382,59 +407,353 @@ gen_adj %>%
                   ) +
   theme_minimal()
 ```
-### Yearly
 
+
+### Combine with generation
 
 ```{r}
-gen_adj <- bmu_df %>%
+gen_adj <- bmu_df %>% 
+  select(settlementDate,settlementPeriod,bmUnit,halfHourEndTime,quantity) %>% 
+  unique() %>% 
+  mutate(settlementDate = as.Date(settlementDate)) %>% 
+  # head(30) %>% 
   left_join(
-    curt_df %>% select(
-      settlementPeriod, bmUnit, totalVolumeAccepted
-    ),
-    by = c("settlementPeriod","bmUnit")
-  ) %>% 
-  mutate(totalVolumeAccepted = replace_na(-totalVolumeAccepted, 0)) %>%
+    curt_df %>% 
+      select(settlementDate,settlementPeriod,bmUnit,totalVolumeAccepted) %>% 
+      unique() %>% 
+      mutate(settlementDate = as.Date(settlementDate)),
+    by = c("settlementDate","settlementPeriod","bmUnit")
+    ) %>% 
   mutate(
-    potential = quantity + totalVolumeAccepted
-  ) %>% 
+    curtailment = replace_na(-totalVolumeAccepted, 0),
+    potential = quantity + curtailment) %>% 
   left_join(
-    wind.bmus.alt %>% select(elexonBmUnit,bmUnitName, capacity),
+    wind.bmus.alt %>% 
+      select(elexonBmUnit,bmUnitName, capacity) %>% 
+      unique(),
     by = c("bmUnit"="elexonBmUnit")
-  ) 
+  ) %>% 
+  filter(
+    capacity > 0,
+    potential > 0
+  ) %>% 
+  mutate(
+    cap_factor = ifelse(capacity >0 , potential/capacity)
+  )
+
+
 ```
 
 ```{r}
-curt_df %>%  
+gen_adj$quantity %>% summary()
+gen_adj$curtailment %>% summary()
+gen_adj$potential %>% summary()
+sum(gen_adj$potential<0)
+sum(gen_adj$quantity<0)
+(gen_adj$potential/gen_adj$capacity) %>% summary()
+```
+### Yearly figures
+
+```{r}
+ref_catalog_2025 <- fread(
+  file.path("data/ref_catalog_wind_2025.csv.gz")) 
+# curtailment seasonality
+gen_norm <- gen_adj %>% 
   mutate(
-    year = year(startTime),
-    quarter = paste0(year,"Q",quarter(startTime))
+    year = year(halfHourEndTime),
+    quarter = paste0(year,"Q",quarter(halfHourEndTime))
     ) %>% 
-  filter(bmUnit %in% top_wind_bmus$elexonBmUnit) %>% 
   group_by(
     year,
     bmUnit
   ) %>% 
-  arrange(startTime) %>%
-  mutate(curtailment = totalVolumeAccepted + lead(totalVolumeAccepted)) %>%
-  filter(minute(startTime) == 0) %>%
+  arrange(halfHourEndTime) %>%
+  mutate(
+    quantity = quantity + lag(quantity),
+    curtailment = curtailment + lag(curtailment),
+    potential = potential + lag(potential)
+    ) %>%
+  filter(minute(halfHourEndTime) == 0) %>%
   summarise(
+    quantity = sum(quantity, na.rm = TRUE),
     curtailment = sum(curtailment, na.rm = TRUE),
-    n_hours = n_distinct(startTime)
+    potential = sum(potential, na.rm = TRUE),
+    n_hours = n_distinct(halfHourEndTime)
   ) %>% 
-  filter(
-    curtailment>0,
-    n_hours > max(n_hours)*0.8) %>% 
   left_join(
-    top_wind_bmus %>% select(elexonBmUnit, bmUnitName, generationCapacity) ,
+    wind.bmus.alt %>% select(elexonBmUnit, bmUnitName, generationCapacity, capacity) %>% unique() ,
     by = c("bmUnit" = "elexonBmUnit") 
   ) %>% 
+  filter(
+    potential > 0,
+    n_hours > max(n_hours)*0.8) %>% 
   left_join(
     ref_catalog_2025 %>% select(bmUnit, tech_typ),
     by = "bmUnit"
   ) %>% 
   mutate(
-    curt_factor = curtailment / generationCapacity / n_hours,
+    cap_factor = quantity / capacity / n_hours,
+    curt_factor = curtailment / capacity / n_hours,
+    pot_factor = potential / capacity / n_hours,
+    short_name = gsub("WF|Wind farm|Windfarm|Offshore","",bmUnitName)
+  )
+
+```
+
+
+### generation
+```{r}
+# Compute means per year and technology type
+means_df_y <- gen_norm %>%
+  group_by(year, tech_typ) %>%
+  summarise(
+    mean_cf = mean(cap_factor, na.rm = TRUE),
+    mean_cu = mean(curt_factor, na.rm = TRUE),
+    mean_pt = mean(pot_factor, na.rm = TRUE),
+     .groups = "drop")
+
+# Identify outliers per year and tech_typ
+outliers_df_y <- gen_norm %>%
+  group_by(year, tech_typ) %>%
+  mutate(
+    Q1 = quantile(cap_factor, 0.25, na.rm = TRUE),
+    Q3 = quantile(cap_factor, 0.75, na.rm = TRUE),
+    IQR = Q3 - Q1,
+    is_outlier = cap_factor < (Q1 - 1.5 * IQR) | cap_factor > (Q3 + 1.5 * IQR)
+  ) %>%
+  filter(is_outlier) %>%
+  ungroup()
+
+gen_norm %>% 
+  ggplot(aes(x = year, y = cap_factor, group = year, fill = tech_typ))+
+  geom_boxplot()+
+  facet_wrap(~tech_typ)+
+   geom_text(
+    data = means_df_y,
+    aes(x = year, y = mean_cf, 
+    label = paste0("bar(c) == ", sprintf("%.2f", mean_cf))
+    ),  
+    vjust = -0.7,     # move label slightly above the mean
+    size = 2,         # text size
+    color = "white",
+    parse = TRUE
+  ) +
+  # outlier labels
+  geom_text_repel(
+    data = outliers_df_y,
+    aes(x = year, y = cap_factor, label = short_name),
+    size = 1.5,
+    color = "black",
+    max.overlaps = 20,     # adjust to allow more/less overlap
+    box.padding = 0.3,
+    point.padding = 0.2,
+    segment.color = "grey50"
+  ) +
+  scale_fill_manual(values = mypalette)+
+  theme(legend.position = "none")+
+  labs(x = "year", y = "Capacity factor")
+
+ggsave(
+    filename = "fig/capacity_factor2.pdf",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
+```
+
+### curtailment year
+```{r}
+outliers_cu_y <- gen_norm %>%
+  group_by(year, tech_typ) %>%
+  mutate(
+    Q1 = quantile(curt_factor, 0.25, na.rm = TRUE),
+    Q3 = quantile(curt_factor, 0.75, na.rm = TRUE),
+    IQR = Q3 - Q1,
+    is_outlier = curt_factor < (Q1 - 1.5 * IQR) | curt_factor > (Q3 + 1.5 * IQR)
+  ) %>%
+  filter(is_outlier) %>%
+  ungroup()
+gen_norm %>% 
+  ggplot(aes(x = year, y = curt_factor, group = year, fill = tech_typ))+
+  geom_boxplot()+
+  facet_wrap(~tech_typ)+
+   geom_text(
+    data = means_df_y,
+    aes(x = year, y = mean_cu, 
+    label = paste0("bar(c) == ", sprintf("%.2f", mean_cu))
+    ),  
+    vjust = -0.7,     # move label slightly above the mean
+    size = 2,         # text size
+    color = "white",
+    parse = TRUE
+  ) +
+  # outlier labels
+  geom_text_repel(
+    data = outliers_cu_y,
+    aes(x = year, y = curt_factor, label = short_name),
+    size = 1.5,
+    color = "black",
+    max.overlaps = 20,     # adjust to allow more/less overlap
+    box.padding = 0.3,
+    point.padding = 0.2,
+    segment.color = "grey50"
+  ) +
+  scale_fill_manual(values = mypalette)+
+  theme(legend.position = "none")+
+  labs(x = "year", y = "Capacity factor")
+
+ggsave(
+    filename = "fig/curtailment_factor.pdf",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
+```
+
+### potential
+```{r}
+outliers_pot_y <- gen_norm %>%
+  group_by(year, tech_typ) %>%
+  mutate(
+    Q1 = quantile(pot_factor, 0.25, na.rm = TRUE),
+    Q3 = quantile(pot_factor, 0.75, na.rm = TRUE),
+    IQR = Q3 - Q1,
+    is_outlier = pot_factor < (Q1 - 1.5 * IQR) | cap_factor > (Q3 + 1.5 * IQR)
+  ) %>%
+  filter(is_outlier) %>%
+  ungroup()
+
+gen_norm %>% 
+  ggplot(aes(x = year, y = pot_factor, group = year, fill = tech_typ))+
+  geom_boxplot()+
+  facet_wrap(~tech_typ)+
+   geom_text(
+    data = means_df_y,
+    aes(x = year, y = mean_pt, 
+    label = paste0("bar(c) == ", sprintf("%.2f", mean_pt))
+    ),  
+    vjust = -0.7,     # move label slightly above the mean
+    size = 2,         # text size
+    color = "white",
+    parse = TRUE
+  ) +
+  # outlier labels
+  geom_text_repel(
+    data = outliers_df_y,
+    aes(x = year, y = pot_factor, label = short_name),
+    size = 1.5,
+    color = "black",
+    max.overlaps = 20,     # adjust to allow more/less overlap
+    box.padding = 0.3,
+    point.padding = 0.2,
+    segment.color = "grey50"
+  ) +
+  scale_fill_manual(values = mypalette)+
+  theme(legend.position = "none")+
+  labs(x = "year", y = "Capacity factor")
+
+ggsave(
+    filename = "fig/potential_factor.pdf",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
+```
+### Quarterly
+
+```{r}
+gen_norm_q <- gen_adj %>% 
+  mutate(
+    year = year(halfHourEndTime),
+    quarter = paste0(year,"Q",quarter(halfHourEndTime))
+    ) %>% 
+  group_by(
+    quarter,
+    bmUnit
+  ) %>% 
+  arrange(halfHourEndTime) %>%
+  mutate(
+    quantity = quantity + lag(quantity),
+    curtailment = curtailment + lag(curtailment),
+    potential = potential + lag(potential)
+    ) %>%
+  filter(minute(halfHourEndTime) == 0) %>%
+  summarise(
+    quantity = sum(quantity, na.rm = TRUE),
+    curtailment = sum(curtailment, na.rm = TRUE),
+    potential = sum(potential, na.rm = TRUE),
+    n_hours = n_distinct(halfHourEndTime)
+  ) %>% 
+  left_join(
+    wind.bmus.alt %>% select(elexonBmUnit, bmUnitName, generationCapacity, capacity) %>% unique() ,
+    by = c("bmUnit" = "elexonBmUnit") 
+  ) %>% 
+  filter(
+    potential > 0,
+    n_hours > max(n_hours)*0.8) %>% 
+  left_join(
+    ref_catalog_2025 %>% select(bmUnit, tech_typ),
+    by = "bmUnit"
+  ) %>% 
+  mutate(
+    cap_factor = quantity / capacity / n_hours,
+    curt_factor = curtailment / capacity / n_hours,
+    pot_factor = potential / capacity / n_hours,
     short_name = gsub("WF|Wind farm|Windfarm|Offshore","",bmUnitName)
   )
 ```
-### Quarterly
+```{r}
+gen_norm_q %>% 
+  group_by(tech_typ,quarter) %>% 
+  summarise(
+    across(c(cap_factor,curt_factor,pot_factor), mean)) %>% 
+  ggplot(aes(x = quarter, y = cap_factor, group = 1, col = tech_typ))+
+  geom_line()+
+  facet_wrap(~tech_typ, nrow = 2)+
+  scale_color_manual(values = mypalette)+
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90, vjust = 0.5)
+  )+
+  labs(x = "Quarter", y = "Capacity factor", col = "")
+
+ggsave(
+    filename = "fig/capacity_factor2_q.pdf",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
+
+gen_norm_q %>% 
+  group_by(tech_typ,quarter) %>% 
+  summarise(
+    across(c(cap_factor,curt_factor,pot_factor), mean)) %>% 
+  ggplot(aes(x = quarter, y = curt_factor, group = 1, col = tech_typ))+
+  geom_line()+
+  facet_wrap(~tech_typ, nrow = 2)+
+  scale_color_manual(values = mypalette)+
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90, vjust = 0.5)
+  )+
+  labs(x = "Quarter", y = "Capacity factor", col = "")
+
+
+gen_norm_q %>% 
+  group_by(tech_typ,quarter) %>% 
+  summarise(
+    across(c(cap_factor,curt_factor,pot_factor), mean)) %>% 
+  ggplot(aes(x = quarter, y = pot_factor, group = 1, col = tech_typ))+
+  geom_line()+
+  facet_wrap(~tech_typ, nrow = 2)+
+  scale_color_manual(values = mypalette)+
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 90, vjust = 0.5)
+  )+
+  labs(x = "Quarter", y = "Capacity factor", col = "")
+```
