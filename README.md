@@ -14,12 +14,14 @@ Global Wind Atlas calibration to UK power
   - [ ] elexon panel data characteristics
   - [ ] overall evolution generation
   - [ ] Curtailment
-    - [ ] Seasonality
-    - [ ] Potential yield
-    - [ ] Double check curtailment days 
+    - [x] Seasonality
+    - [x] Potential yield
+    - [x] Double check curtailment days 
     - [ ] Curtailment map
-    - [ ] Wind farms with most curtailment
-  - [ ] Power curve
+    - [x] Wind farms with most curtailment
+  - [ ] Revised capacity factors
+  - [ ] Wind speed seasonality
+  - [ ] Power curve *
     - [ ] Scatter for select BMUs (curtailment adjusted)
     - [ ] Comparison with scaled generic curve
     - [ ] Curve matching
@@ -37,13 +39,14 @@ Global Wind Atlas calibration to UK power
   - [ ] Question to Dan: GWA to MIDAS (Onshore) then *
   - [ ] Get land elevation 
   - [x] Get curtailment (DISPTAV)
-  - [ ] Data for previous years
+  - [x] Data for previous years
+  - [ ] prepare wind speed for power conversion *
 
 
 - **Power curve fitting**
   - Using generic curves
     - [x] IEC class
-    - [ ] allocate n_turb_bmu based on elexon capacity
+    - [ ] allocate n_turb_bmu based on revised capacity
     - [x] function to rescale pc
     - [x] add zeroes at the end of power curve
     - map curves
@@ -58,6 +61,8 @@ Global Wind Atlas calibration to UK power
   - [ ] Using historical power data  
   - [ ] Bayesian approach (PC + data)
 
+- **Slides**
+  - New set with era 5
 - **Loss factors**
   - Estimate using history
 
