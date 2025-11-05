@@ -43,7 +43,20 @@ bmu_code <- "HOWAO-1"
 
 pwr_curv_1wf <- gen_adj %>%
   filter(grepl(bmu_code, bmUnit)) %>%
-  left_join()
+
+  left_join(
+    ref_catalog_2025 %>%
+      select(bmUnit, matches("lon|lat"), site_name, tech_typ),
+    by = c("bmUnit")
+  ) %>%
+  left_join(
+    era_df %>% select(time, longitude, latitude, ws100, wd100),
+    by = c(
+      "halfHourEndTime" = "time",
+      "era5lon" = "longitude",
+      "era5lat" = "latitude"
+    )
+  )
 
 ## Offshore with curtailment ####
 "T_SGRWO-1"
