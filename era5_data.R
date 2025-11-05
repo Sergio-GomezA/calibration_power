@@ -7,6 +7,7 @@ require(ggplot2)
 require(ggthemes)
 require(FNN)
 require(data.table)
+require(geosphere)
 
 source("aux_funct.R")
 
@@ -63,9 +64,21 @@ nn <- get.knnx(era5_mat, ref_mat, k = 1)
 ref_catalog_2025[, era5lon := coords_tb$era5lon[nn$nn.index]]
 ref_catalog_2025[, era5lat := coords_tb$era5lat[nn$nn.index]]
 ref_catalog_2025[, dist_deg := nn$nn.dist] # distance in degrees
+ref_catalog_2025 <- ref_catalog_2025 %>%
+  mutate(
+    distance_km = distHaversine(
+      cbind(lon, lat),
+      cbind(era5lon, era5lat)
+    ) /
+      1000
+  ) # convert meters to km
 
 ## Group era5 data by tech_typ
-
+write.csv(
+  ref_catalog_2025,
+  gzfile("data/ref_catalog_wind_2025.csv.gz"),
+  row.names = FALSE
+)
 coords_tb <- coords_tb %>%
   left_join(
     ref_catalog_2025 %>% select(era5lon, era5lat, tech_typ) %>% unique(),

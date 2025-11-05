@@ -465,6 +465,7 @@ pot_summary <- gen_adj %>%
   ) %>% 
     mutate(
       cf = quantity / capacity / n_hours *2,
+      cuf = curtailment / capacity / n_hours *2,
       pf = potential / capacity / n_hours *2
     )
   

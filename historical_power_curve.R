@@ -21,18 +21,9 @@ era_df <- read_parquet(
   )
 
 
-year_seq <- seq(2019, 2025, 1)
-
-bmu_df <- lapply(year_seq, function(x) {
-  file_path <- file.path(
-    path,
-    "data_by_year",
-    paste0("wind_gen_bmu_", x, ".csv.gz")
-  )
-  fread(file_path)
-}) %>%
-  bind_rows()
-
+gen_adj <- read_parquet(
+  file.path(data_path, "gen_adj.parquet")
+)
 
 ref_catalog_2025 <- fread(
   file.path("data/ref_catalog_wind_2025.csv.gz")
@@ -40,3 +31,25 @@ ref_catalog_2025 <- fread(
 
 coords_tb <- read.csv("data/era5_loc_mapping.csv")
 wind.bmus.alt <- read.csv("data/wind_bmu_alt.csv")
+
+pot_summary <- read.csv("data/hist_pot2024.csv")
+
+
+# filter one wind farm ###
+
+## Offshore no curtailment ####
+
+bmu_code <- "HOWAO-1"
+
+pwr_curv_1wf <- gen_adj %>%
+  filter(grepl(bmu_code, bmUnit)) %>%
+  left_join()
+
+## Offshore with curtailment ####
+"T_SGRWO-1"
+
+## Onshore high curtailment ####
+"T_VKNGW-1"
+
+## Onshore low curtailment ####
+"T_FALGW-1"
