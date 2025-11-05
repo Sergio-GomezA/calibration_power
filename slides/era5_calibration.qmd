@@ -1,11 +1,11 @@
 ---
-title: "Global Wind Atlas calibration to Elexon power"
+title: "ERA 5 calibration to Elexon power"
 author:
   - "S. Gomez$^1$"
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2025-10-29"
+date: "2025-11-04"
 format: 
   beamer:
     theme: Rochester
@@ -14,7 +14,7 @@ format:
     fig-cap-location: top
     toc: true
     split-bib: true
-    output-file: "gwa_calibration_slides.pdf"
+    output-file: "era5_calibration_slides.pdf"
 header-includes:
   - \usepackage{graphicx}
 fontsize: 12pt
@@ -41,6 +41,7 @@ library(rnaturalearthdata)
 
 require(plotly)
 require(ggthemes)
+require(arrow)
 path <- "~/Documents/elexon"
 ```
 
@@ -49,15 +50,22 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FA
 ```
 # Calibration to power {#sec-intro}
 
-## Global Wind Atlas (GWA) vs Elexon generation
-Calibrate a GWA driven estimate to actual observed output
+## Updates
+
+- Curtailment data to obtain potential generation
+- Power curve comparison to data
+- ERA 5 wind speed conversion to power
+
+
+## ERA5 vs Elexon generation
+Calibrate a ERA5 driven estimate to actual observed output accounting for spatiotemporal properties.
 
 \vspace{0.2cm}
 \begin{columns}[T, totalwidth=\textwidth]
   \begin{column}{0.5\textwidth}
     \centering
-    \textbf{\small Global Wind Atlas}\\[0.5em]
-    \includegraphics[width=\linewidth]{../fig_extra/gwa_screenshot.png}
+    \textbf{\small ERA5 at wind farms}\\[0.5em]
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/era5_at_windfarms.eps}
   \end{column}
 
   \begin{column}{0.5\textwidth}
@@ -69,138 +77,72 @@ Calibrate a GWA driven estimate to actual observed output
 \end{columns}
 
 
-# Global Wind Atlas {#sec-gwa}
+# ERA5 {#sec-gwa}
 
 ## Characteristics
 
 \begin{columns}[T, totalwidth=\textwidth]
-   \begin{column}{0.5\textwidth}
+   \begin{column}{0.4\textwidth}
     % set font size for itemize levels locally
     {
     \setbeamerfont{itemize/enumerate body}{size=\fontsize{9}{10}\selectfont}
     \setbeamerfont{itemize/enumerate subbody}{size=\fontsize{8}{10}\selectfont}
 
     \begin{itemize}
-      \item Using DTU's Wind WAsP methodology
-      \item Downscaled from ERA 5 to a 250m grid
-      \item Models land and 200km from shorelines
-      \item Long term average wind speed
-      \item Heights: 10m, 50m, 100m, 150m, 200m
-      \item Scale and shape parameters Weibull
+      \item 5th generation of ECMWF's global reanalysis
+      \item Spatial resolution $0.25^\circ \times 0.25^\circ$ (31km $\times$ 31 km at equator)
+      \item Hourly temporal resolution
+      \item Heights: 10m, 100m
     \end{itemize}
     } % end local font block
   \end{column}
 
   % Right column: figure
-  \begin{column}{0.5\textwidth}
+  
+  \begin{column}{0.6\textwidth}
     \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_150m_merged_agg20.png}
+    \small Average monthly and 90 CI
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_uk_1s.pdf}
   \end{column}
 
 \end{columns}
 
-## Mean wind speed
+## ERA5 series
 
-\begin{columns}[T, totalwidth=\textwidth]
+::: {.columns}
 
-  % Column 1: 50m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_50m_merged_agg20.png}\\[0.3em]
-    \small 50m
-  \end{column}
+::: {.column width="50%"}
+\centering
+    \small Wind speed seasonality
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_uk_1s_seas.eps}
+:::
 
-  % Column 2: 100m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_100m_merged_agg20.png}\\[0.3em]
-    \small 100m
-  \end{column}
+::: {.column width="50%"}
+\centering
+    \small Wind speed by location type
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_uk_tech.eps}
+:::
 
-  % Column 3: 150m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_150m_merged_agg20.png}\\[0.3em]
-    \small 150m
-  \end{column}
+:::
 
-  % Column 4: 200m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-A_200m_merged_agg20.png}\\[0.3em]
-    \small 200m
-  \end{column}
 
-\end{columns}
+## ERA5 wind direction at wind farms
 
-## Weibull shape parameter $k$
+::: {.columns}
 
-\setlength{\columnsep}{0pt} 
-\begin{columns}[T, totalwidth=\textwidth]
+::: {.column width="50%"}
+\centering
+    \small Wind direction frequency
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wd_uk_1s.eps}
+:::
 
-  % Column 1: 50m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-k_50m_merged_agg20.png}\\[0.3em]
-    \small 50m
-  \end{column}
+::: {.column width="70%"}
+\centering
+    \small Seasonal patterns
+    \includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/wd_uk_1s_seas.eps}
+:::
 
-  % Column 2: 100m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-k_100m_merged_agg20.png}\\[0.3em]
-    \small 100m
-  \end{column}
-
-  % Column 3: 150m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-k_150m_merged_agg20.png}\\[0.3em]
-    \small 150m
-  \end{column}
-
-  % Column 4: 200m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-k_200m_merged_agg20.png}\\[0.3em]
-    \small 200m
-  \end{column}
-
-\end{columns}
-
-## Weibull scale parameter $A$
-
-\begin{columns}[T, totalwidth=\textwidth]
-
-  % Column 1: 50m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-A_50m_merged_agg20.png}\\[0.3em]
-    \small 50m
-  \end{column}
-
-  % Column 2: 100m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-A_100m_merged_agg20.png}\\[0.3em]
-    \small 100m
-  \end{column}
-
-  % Column 3: 150m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-A_150m_merged_agg20.png}\\[0.3em]
-    \small 150m
-  \end{column}
-
-  % Column 4: 200m
-  \begin{column}{0.25\textwidth}
-    \centering
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/combined-Weibull-A_200m_merged_agg20.png}\\[0.3em]
-    \small 200m
-  \end{column}
-
-\end{columns}
+:::
 
 
 # Elexon data {#sec-elexon}
@@ -236,27 +178,31 @@ Calibrate a GWA driven estimate to actual observed output
 
 ## BMU wind data
 
-\small BMU wind generation data in 2025 (up to 29 September)
+\small BMU wind generation (2024) 
 ```{r}
-ref_catalog_2025 <- fread(
-  file.path("../data/ref_catalog_wind_2025.csv.gz")
+pot_summary <- fread(
+  file.path("../data/hist_pot.csv")
 )
 
 # on shore off shore distribution
-ref_catalog_2025 %>% 
+pot_summary %>% 
     group_by(tech_typ) %>%
     summarise(
         total_gen = sum(quantity, na.rm = TRUE)/1000,
-        total_cap = sum(generationCapacity, na.rm = TRUE),
+        total_curt = sum(curtailment, na.rm = TRUE)/1000,
+        total_pot = sum(potential, na.rm = TRUE)/1000,
+        total_cap = sum(capacity, na.rm = TRUE),
+        n_hours = sum(n_hours),
         n = n()
     ) %>% 
     janitor::adorn_totals("row") %>%
     mutate(
-        cap_factor = total_gen / (total_cap * 6527)*1000
-    ) %>% 
+        cap_factor = total_gen*1000 / (total_cap )/(n_hours/n/2),
+        pot_factor = total_pot*1000 / (total_cap )/(n_hours/n/2)
+    ) %>% select(-n_hours) %>% 
     kable(
-        col.names = c("Type", "Generation (GWh)", "Capacity (MW)", "Number of BMUs", "Capacity Factor"),
-        digits = c(1,1,0,1,2),
+        col.names = c("Type", "Generation (GWh)", "Curtailment", "Potential" ,"Capacity (MW)", "Number of BMUs", "CF","PF"),
+        digits = c(0,0,0,0,0,0,2,2),
         format = "latex",
         format.args = list(big.mark = ",")) %>%
     kable_styling(latex_options = c("scale_down"))
@@ -269,13 +215,50 @@ ref_catalog_2025 %>%
 ::: {.column width="50%"}
 \centering
     \small Capacity factor by year
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/capacity_factor.pdf}
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/capacity_factor2.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
     \small Capacity factor by quarter
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/capacity_factor_q.pdf}
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/capacity_factor2_q.pdf}
+:::
+
+:::
+
+## Curtailment through time
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Curtailment by year
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_factor.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Curtailment seasonality
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_factor_q.pdf}
+:::
+
+:::
+
+
+## Potential generation
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Potential by year
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/potential_factor.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Potential seasonality
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/potential_factor_q.pdf}
 :::
 
 :::
@@ -376,7 +359,8 @@ kable(
 Turbine Height availability
 \vspace{1cm}
 ```{r}
-
+ref_catalog_2025 <- fread(
+  file.path("../data/ref_catalog_wind_2025.csv.gz")) 
 ref_catalog_2025 %>% 
     mutate(heightNA = is.na(height_turb)) %>% 
     group_by(tech_typ, heightNA) %>% 
@@ -451,7 +435,7 @@ III & 7.5  & 52.5 & Low-wind / inland sites \\
 
 ## Power estimate based on generic power curves
 
-For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, turbine capacity $c_i$, turbine height $v_i$, and mean wind speed $\mu_i$.
+For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, turbine capacity $c_i$, turbine height $v_i$, and wind speed $w_i$.
 
 \begin{itemize}
   \item Map location to a rescaled power curve $\widetilde \text{PC}_k$
@@ -459,22 +443,11 @@ For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, t
 \end{itemize}
 
 \begin{equation*}
-    \tilde p_i = \widetilde \text{PC}_{k} (\mu_{i}) \times n_{i} \times h_i
+    \tilde p_i = \widetilde \text{PC}_{k} (w_{i}) \times n_{i}
 \end{equation*}
 
-where $h_i$ are the number of hours in the year (8,760 full year, 6,527 in 2025).
 
-## Power estimate based on generic power curves
-
-GWA also offers access to the Weibull parameters at each grid point. 
-Due to the heavy tail of the Weibull distribution applying $\widetilde \text{PC}_{k}(\mu_i)$ overestimates power.
-
-\begin{equation*}
-    \hat p_i = n_{i} \times h_i \times \operatorname{E}\Big(\widetilde \text{PC}_{k} (w_{i})\Big)
-\end{equation*}
-where $w_i$ are random replicates of $W_i \sim \text{Weibull}(A_i, k_i)$, and $A_i$, $k_i$ are the scale and shape parameters, respectively.
-
-## GWA based estimates vs Elexon 2025
+## ERA5 based estimates vs Elexon 2025
 \begin{columns}[T, totalwidth=\textwidth]
 
   % Left column: Power curve
@@ -482,7 +455,7 @@ where $w_i$ are random replicates of $W_i \sim \text{Weibull}(A_i, k_i)$, and $A
     \centering
     {\small PC on GWA mean wind speed $\tilde p_i$}
 
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_estimate1.eps}
+    
   \end{column}
 
   % Right column: Expected power
@@ -490,7 +463,7 @@ where $w_i$ are random replicates of $W_i \sim \text{Weibull}(A_i, k_i)$, and $A
     \centering
     {\small Estimate using Weibull distribution $\hat p_i$}
 
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_estimate2.eps}
+    <!-- \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_estimate2.eps} -->
   \end{column}
 
 \end{columns}
@@ -499,8 +472,6 @@ where $w_i$ are random replicates of $W_i \sim \text{Weibull}(A_i, k_i)$, and $A
 ## Next Steps
 
 \begin{itemize}
-   \item Compare other years: 2019-2024
-   \item Estimate loss factors based on history
-   \item Refine power curve conversion
+   \item Learn power curve from history
    \item Quantile mapping calibration
 \end{itemize}
