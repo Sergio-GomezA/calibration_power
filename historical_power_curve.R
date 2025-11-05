@@ -6,6 +6,7 @@ require(ggplot2)
 require(ggthemes)
 # require(FNN)
 require(data.table)
+require(parallel)
 
 # read Data ####
 data_path <- "~/Documents/ERA5_at_wf/"
@@ -114,4 +115,41 @@ ggsave(
   height = 4,
   units = "in",
   dpi = 300
+)
+
+# apply to generic power curve to entire data ###
+
+pwr_curv_df <- gen_adj %>%
+  mutate(
+    quantity = quantity + lag(quantity),
+    curtailment = curtailment + lag(curtailment),
+    potential = potential + lag(potential)
+  ) %>%
+  filter(minute(halfHourEndTime) == 0) %>%
+  left_join(
+    ref_catalog_2025 %>%
+      select(bmUnit, matches("lon|lat"), site_name, tech_typ, turb_class),
+    by = c("bmUnit")
+  ) %>%
+  left_join(
+    era_df %>% select(time, longitude, latitude, ws100, wd100),
+    by = c(
+      "halfHourEndTime" = "time",
+      "era5lon" = "longitude",
+      "era5lat" = "latitude"
+    )
+  )
+pwr_curv_df$power_est0 <- mcmapply(
+  generic_pow_conv,
+  wind_speed = pwr_curv_df$ws100,
+  turb_class = pwr_curv_df$turb_class,
+  turb_capacity = pwr_curv_df$capacity,
+  mc.cores = parallel::detectCores() - 2, # use all but one core
+  SIMPLIFY = TRUE
+)
+
+
+arrow::write_parquet(
+  pwr_curv_df,
+  file.path(path, "power_curve.parquet")
 )
