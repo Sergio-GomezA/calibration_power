@@ -165,7 +165,7 @@ top_gen_bmus %>%
   labs(x = "year", y = "Capacity factor")
 
 ggsave(
-    filename = "fig/capacity_factor.pdf",
+    filename = "fig/capacity_factor0.pdf",
     width = 6,
     height = 4,
     units = "in",
@@ -263,7 +263,7 @@ top_gen_bmus_q %>%
   labs(x = "Quarter", y = "Capacity factor", col = "")
 
 ggsave(
-    filename = "fig/capacity_factor_q.pdf",
+    filename = "fig/capacity_factor_q0.pdf",
     width = 6,
     height = 4,
     units = "in",
@@ -441,9 +441,53 @@ gen_adj <- bmu_df %>%
     cap_factor = ifelse(capacity >0 , potential/capacity)
   )
 
-
+arrow::write_parquet(
+  gen_adj,
+  file.path(path,"gen_adj.parquet"))
 ```
 
+```{r}
+pot_summary <- gen_adj %>% 
+  filter(
+    halfHourEndTime >= "2024-01-01",
+    halfHourEndTime <= "2024-12-31",
+  ) %>% 
+  group_by(bmUnit) %>% 
+  summarise(
+    across(c(quantity, curtailment, potential), sum),
+    capacity = max(capacity),
+    n_hours = n_distinct(halfHourEndTime)
+  ) %>% 
+  left_join(
+    ref_catalog_2025 %>% select(bmUnit, tech_typ),
+    by = "bmUnit"
+  )
+  
+pot_summary %>% 
+  write.csv(., "data/hist_pot.csv", row.names = FALSE)
+
+pot_summary %>% 
+    group_by(tech_typ) %>%
+    summarise(
+        total_gen = sum(quantity, na.rm = TRUE)/1000,
+        total_curt = sum(curtailment, na.rm = TRUE)/1000,
+        total_pot = sum(potential, na.rm = TRUE)/1000,
+        total_cap = sum(capacity, na.rm = TRUE),
+        n_hours = sum(n_hours),
+        n = n()
+    ) %>% 
+    janitor::adorn_totals("row") %>%
+    mutate(
+        cap_factor = total_gen*1000 / (total_cap )/(n_hours/n/2),
+        pot_factor = total_pot*1000 / (total_cap )/(n_hours/n/2)
+    ) %>% select(-n_hours) %>% 
+    kable(
+        col.names = c("Type", "Generation (GWh)", "Curtailment", "Potential" ,"Capacity (MW)", "Number of BMUs", "CF","PF"),
+        digits = c(0,0,0,0,0,0,2,2),
+        # format = "latex",
+        format.args = list(big.mark = ",")) %>%
+    kable_styling(latex_options = c("scale_down"))
+```
 ```{r}
 gen_adj$quantity %>% summary()
 gen_adj$curtailment %>% summary()
@@ -741,7 +785,13 @@ gen_norm_q %>%
     axis.text.x = element_text(angle = 90, vjust = 0.5)
   )+
   labs(x = "Quarter", y = "Capacity factor", col = "")
-
+ggsave(
+    filename = "fig/curtailment_factor_q.pdf",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
 
 gen_norm_q %>% 
   group_by(tech_typ,quarter) %>% 
@@ -756,4 +806,12 @@ gen_norm_q %>%
     axis.text.x = element_text(angle = 90, vjust = 0.5)
   )+
   labs(x = "Quarter", y = "Capacity factor", col = "")
+
+ggsave(
+    filename = "fig/potential_factor_q.pdf",
+    width = 6,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
 ```
