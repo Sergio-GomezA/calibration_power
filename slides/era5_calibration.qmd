@@ -101,7 +101,7 @@ Calibrate a ERA5 driven estimate to actual observed output accounting for spatio
   
   \begin{column}{0.6\textwidth}
     \centering
-    \small Average monthly and 90 CI
+    \small Average monthly wind speed and 90 CI
     \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_uk_1s.pdf}
   \end{column}
 
@@ -432,7 +432,6 @@ III & 7.5  & 52.5 & Low-wind / inland sites \\
 :::
 
 :::
-
 ## Power estimate based on generic power curves
 
 For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, turbine capacity $c_i$, turbine height $v_i$, and wind speed $w_i$.
@@ -445,6 +444,106 @@ For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, t
 \begin{equation*}
     \tilde p_i = \widetilde \text{PC}_{k} (w_{i}) \times n_{i}
 \end{equation*}
+
+## Generic power curves vs observed data - Fall Rig
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with raw generation}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_FALGW-1_valq0.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with potential generation}
+
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_FALGW-1_valpot.pdf}
+  \end{column}
+
+\end{columns}
+
+## Generic power curves vs observed data - Viking
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with raw generation}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_VKNGW-1_valq0.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with potential generation}
+
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_VKNGW-1_valpot.pdf}
+  \end{column}
+
+\end{columns}
+
+## Generic power curves vs observed data - Hornsea 1
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with raw generation}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_HOWAO-1_valq0.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with potential generation}
+
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_comparison_HOWAO-1_valpot.pdf}
+  \end{column}
+
+\end{columns}
+
+## Generic power curves vs observed data - Seagreen 1
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with raw generation}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_SGRWO-1_valq0.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with potential generation}
+
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_SGRWO-1_valpot.pdf}
+  \end{column}
+
+\end{columns}
+
+
+
 
 
 ## ERA5 based estimates vs Elexon 2025
