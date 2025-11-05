@@ -434,15 +434,25 @@ III & 7.5  & 52.5 & Low-wind / inland sites \\
 :::
 ## Power estimate based on generic power curves
 
-For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, turbine capacity $c_i$, turbine height $v_i$, and wind speed $w_i$.
+For each location $i$ we have: 
 
+- observed raw power $\tilde p_{it}$
+- curtailment amount $a_{it}$
+- potential output $p_{it} = \tilde p_{it} + a_{it}$
+- wind farm capacity $c_i$
+- turbine height $v_i$
+- ERA5 wind speed $w_{it}$.
+
+## Power estimate based on generic power curves
+
+An initial estimate will require:
 \begin{itemize}
-  \item Map location to a rescaled power curve $\widetilde \text{PC}_k$
+  \item Mapping location to a rescaled power curve $\widetilde \text{PC}_k$
   \item Estimate wind farm power in GWh
 \end{itemize}
 
 \begin{equation*}
-    \tilde p_i = \widetilde \text{PC}_{k} (w_{i}) \times n_{i}
+    \hat p_{it} = \widetilde \text{PC}_{k} (w_{it})
 \end{equation*}
 
 ## Generic power curves vs observed data - Fall Rig
@@ -562,7 +572,7 @@ For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, t
     \centering
     {\small Estimate using Weibull distribution $\hat p_i$}
 
-    <!-- \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_estimate2.eps} -->
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_estimate2.eps}
   \end{column}
 
 \end{columns}
@@ -571,6 +581,7 @@ For each location $i$ we have: observed power $p_i$, number of turbines $n_i$, t
 ## Next Steps
 
 \begin{itemize}
+   \item Data on planned unavailability
    \item Learn power curve from history
    \item Quantile mapping calibration
 \end{itemize}
