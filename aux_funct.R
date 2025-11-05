@@ -952,3 +952,75 @@ generic_pow_conv <- function(
 
   power_est
 }
+
+
+power_curve_data1f <- function(
+  bmu_code,
+  t0 = "2024-01-01",
+  t1 = "2024-12-31"
+) {
+  turb_class <- ref_catalog_2025 %>%
+    filter(grepl(bmu_code, bmUnit)) %>%
+    pull(turb_class) %>%
+    unique()
+
+  pwr_curv_1wf <- gen_adj %>%
+    filter(grepl(bmu_code, bmUnit)) %>%
+    mutate(
+      quantity = quantity + lag(quantity),
+      curtailment = curtailment + lag(curtailment),
+      potential = potential + lag(potential)
+    ) %>%
+    filter(minute(halfHourEndTime) == 0) %>%
+    left_join(
+      ref_catalog_2025 %>%
+        select(bmUnit, matches("lon|lat"), site_name, tech_typ, turb_class),
+      by = c("bmUnit")
+    ) %>%
+    left_join(
+      era_df %>% select(time, longitude, latitude, ws100, wd100),
+      by = c(
+        "halfHourEndTime" = "time",
+        "era5lon" = "longitude",
+        "era5lat" = "latitude"
+      )
+    )
+
+  scaled_pc <- generic_pc %>%
+    filter(class %in% turb_class) %>%
+    mutate(power_scaled = power_kw * pwr_curv_1wf$capacity[1] / ratedPower)
+
+  p_quant <- pwr_curv_1wf %>%
+    filter(between(halfHourEndTime, t0, t1)) %>%
+    ggplot(aes(ws100, quantity, col = "observed")) +
+    geom_point(alpha = 0.2) +
+    geom_line(
+      data = scaled_pc,
+      aes(wind_speed, power_scaled, col = "generic power curve")
+    ) +
+    scale_color_manual(
+      values = c("observed" = "darkblue", "generic power curve" = "darkred")
+    ) +
+    theme(
+      legend.position = "bottom"
+    ) +
+    labs(col = "", x = "wind speed", y = "generation (MW)")
+
+  p_pot <- pwr_curv_1wf %>%
+    filter(between(halfHourEndTime, "2024-01-01", "2024-12-31")) %>%
+    ggplot(aes(ws100, potential, col = "observed")) +
+    geom_point(alpha = 0.2) +
+    geom_line(
+      data = scaled_pc,
+      aes(wind_speed, power_scaled, col = "generic power curve")
+    ) +
+    scale_color_manual(
+      values = c("observed" = "darkblue", "generic power curve" = "darkred")
+    ) +
+    theme(
+      legend.position = "bottom"
+    ) +
+    labs(col = "", x = "wind speed", y = "potential generation (MW)")
+
+  invisible(list(data = pwr_curv_1wf, p_quant = p_quant, p_pot = p_pot))
+}

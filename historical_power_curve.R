@@ -34,35 +34,84 @@ wind.bmus.alt <- read.csv("data/wind_bmu_alt.csv")
 
 pot_summary <- read.csv("data/hist_pot2024.csv")
 
-
+generic_pc <- fread("data/generic_powerCurves.csv.gz")
 # filter one wind farm ###
 
 ## Offshore no curtailment ####
-
+source("aux_funct.R")
 bmu_code <- "HOWAO-1"
-
-pwr_curv_1wf <- gen_adj %>%
-  filter(grepl(bmu_code, bmUnit)) %>%
-
-  left_join(
-    ref_catalog_2025 %>%
-      select(bmUnit, matches("lon|lat"), site_name, tech_typ),
-    by = c("bmUnit")
-  ) %>%
-  left_join(
-    era_df %>% select(time, longitude, latitude, ws100, wd100),
-    by = c(
-      "halfHourEndTime" = "time",
-      "era5lon" = "longitude",
-      "era5lat" = "latitude"
-    )
-  )
-
+pc_temp <- power_curve_data1f(bmu_code)
+file_string <- "fig/pc_comparison_%s_val%s.pdf"
+ggsave(
+  sprintf(file_string, bmu_code, "q0"),
+  pc_temp$p_quant,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+ggsave(
+  sprintf(file_string, bmu_code, "pot"),
+  pc_temp$p_pot,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
 ## Offshore with curtailment ####
-"T_SGRWO-1"
-
+bmu_code <- "T_SGRWO-1"
+pc_temp <- power_curve_data1f(bmu_code)
+ggsave(
+  sprintf(file_string, bmu_code, "q0"),
+  pc_temp$p_quant,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+ggsave(
+  sprintf(file_string, bmu_code, "pot"),
+  pc_temp$p_pot,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
 ## Onshore high curtailment ####
-"T_VKNGW-1"
-
+bmu_code <- "T_VKNGW-1"
+pc_temp <- power_curve_data1f(bmu_code)
+ggsave(
+  sprintf(file_string, bmu_code, "q0"),
+  pc_temp$p_quant,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+ggsave(
+  sprintf(file_string, bmu_code, "pot"),
+  pc_temp$p_pot,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
 ## Onshore low curtailment ####
-"T_FALGW-1"
+bmu_code <- "T_FALGW-1"
+pc_temp <- power_curve_data1f(bmu_code)
+ggsave(
+  sprintf(file_string, bmu_code, "q0"),
+  pc_temp$p_quant,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
+ggsave(
+  sprintf(file_string, bmu_code, "pot"),
+  pc_temp$p_pot,
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
