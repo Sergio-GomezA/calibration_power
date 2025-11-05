@@ -73,6 +73,7 @@ coords_tb <- coords_tb %>%
   ) %>%
   na.omit()
 
+write.csv(coords_tb, "data/era5_loc_mapping.csv", row.names = FALSE)
 ## plot ERA 5 series by aggregate ####
 
 era_1ser <- era_df %>%
