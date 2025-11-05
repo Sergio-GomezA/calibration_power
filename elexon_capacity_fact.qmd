@@ -295,6 +295,7 @@ wind.bmus.alt <- wind.bmus %>%
       TRUE ~ generationCapacity
     )
   )
+write.csv(wind.bmus.alt, "data/wind_bmu_alt.csv", row.names = FALSE)
 p_cap <- wind.bmus.alt %>% 
   ggplot()+
   geom_point(
@@ -461,8 +462,14 @@ pot_summary <- gen_adj %>%
   left_join(
     ref_catalog_2025 %>% select(bmUnit, tech_typ),
     by = "bmUnit"
-  )
+  ) %>% 
+    mutate(
+      cf = quantity / capacity / n_hours *2,
+      pf = potential / capacity / n_hours *2
+    )
   
+pot_summary %>% 
+  write.csv(., "data/hist_pot2024.csv", row.names = FALSE)
 pot_summary %>% 
   write.csv(., "data/hist_pot.csv", row.names = FALSE)
 
