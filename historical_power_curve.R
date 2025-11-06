@@ -10,6 +10,7 @@ require(parallel)
 
 # read Data ####
 data_path <- "~/Documents/ERA5_at_wf/"
+gen_path <- "~/Documents/elexon/"
 
 era_df <- read_parquet(
   file.path(data_path, "era5_combined.parquet")
@@ -23,7 +24,7 @@ era_df <- read_parquet(
 
 
 gen_adj <- read_parquet(
-  file.path(data_path, "gen_adj.parquet")
+  file.path(gen_path, "gen_adj.parquet")
 )
 
 ref_catalog_2025 <- fread(
@@ -118,8 +119,11 @@ ggsave(
 )
 
 # apply to generic power curve to entire data ###
+t0 <- "2024-01-01"
+t1 <- "2024-12-31"
 
 pwr_curv_df <- gen_adj %>%
+  filter(between(halfHourEndTime, t0, t1)) %>%
   mutate(
     quantity = quantity + lag(quantity),
     curtailment = curtailment + lag(curtailment),
@@ -139,15 +143,52 @@ pwr_curv_df <- gen_adj %>%
       "era5lat" = "latitude"
     )
   )
-pwr_curv_df$power_est0 <- mcmapply(
-  generic_pow_conv,
-  wind_speed = pwr_curv_df$ws100,
-  turb_class = pwr_curv_df$turb_class,
-  turb_capacity = pwr_curv_df$capacity,
-  mc.cores = parallel::detectCores() - 2, # use all but one core
-  SIMPLIFY = TRUE
+
+class_curves <- fread("data/generic_powerCurves.csv.gz") %>%
+  group_by(class) %>%
+  mutate(power_scaled = power_kw / ratedPower) %>%
+  ungroup()
+classes <- class_curves$class %>% unique()
+pwr_curv_df$power_est0 <- 0
+for (class in classes) {
+  # print(class)
+  # browser()
+  class_ind <- pwr_curv_df$turb_class == class
+  pwr_curv_df$power_est0[class_ind] <- approx(
+    x = class_curve$wind_speed,
+    y = class_curve$power_scaled,
+    xout = pwr_curv_df$ws100[class_ind],
+    rule = 2
+  )$y *
+    pwr_curv_df$capacity[class_ind]
+}
+
+
+pwr_curv_df %>%
+  filter(grepl("T_FALGW-1", bmUnit)) %>%
+  ggplot(aes(power_est0, potential)) +
+  geom_point(col = "darkblue", alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1, col = "red", linetype = 2)
+ggsave(
+  "fig/falgw_conv.pdf",
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
 )
 
+pwr_curv_df %>%
+  filter(grepl("HOWAO", bmUnit)) %>%
+  ggplot(aes(power_est0, potential)) +
+  geom_point(col = "darkblue", alpha = 0.2) +
+  geom_abline(intercept = 0, slope = 1, col = "red", linetype = 2)
+ggsave(
+  "fig/howao_conv.pdf",
+  width = 6,
+  height = 4,
+  units = "in",
+  dpi = 300
+)
 
 arrow::write_parquet(
   pwr_curv_df,

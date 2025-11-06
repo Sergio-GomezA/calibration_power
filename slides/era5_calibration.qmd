@@ -455,7 +455,7 @@ An initial estimate will require:
     \hat p_{it} = \widetilde \text{PC}_{k} (w_{it})
 \end{equation*}
 
-## Generic power curves vs observed data - Fall Rig
+## Generic power curves vs observed data - Fallago Rig
 \begin{columns}[T, totalwidth=\textwidth]
 
   \begin{column}{0.5\textwidth}
@@ -552,27 +552,23 @@ An initial estimate will require:
 
 \end{columns}
 
-
-
-
-
 ## ERA5 based estimates vs Elexon 2025
 \begin{columns}[T, totalwidth=\textwidth]
 
   % Left column: Power curve
   \begin{column}{0.5\textwidth}
     \centering
-    {\small PC on GWA mean wind speed $\tilde p_i$}
-
+    {\small Fallago Rig}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/falgw_conv.pdf}
     
   \end{column}
 
   % Right column: Expected power
   \begin{column}{0.5\textwidth}
     \centering
-    {\small Estimate using Weibull distribution $\hat p_i$}
+    {\small Hornsea}
 
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_estimate2.eps}
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/howao_conv.pdf}
   \end{column}
 
 \end{columns}
