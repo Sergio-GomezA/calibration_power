@@ -194,3 +194,74 @@ arrow::write_parquet(
   pwr_curv_df,
   file.path(path, "power_curve.parquet")
 )
+
+
+gen_adj %>%
+  filter(
+    grepl("HOWAO-1", bmUnit),
+    between(halfHourEndTime, "2024-01-23", "2024-01-31")
+  ) %>%
+  ggplot() +
+  geom_line(aes(halfHourEndTime, quantity, col = "gen")) +
+  geom_line(aes(halfHourEndTime, curtailment, col = "curt")) +
+  geom_line(aes(halfHourEndTime, potential, col = "potential")) +
+  scale_color_aaas()
+
+gen_adj %>%
+  filter(
+    grepl("HOWAO-1", bmUnit),
+    between(halfHourEndTime, "2024-02-1", "2024-5-1")
+  ) %>%
+  ggplot() +
+  geom_line(aes(halfHourEndTime, quantity, col = "gen")) +
+  geom_line(aes(halfHourEndTime, curtailment, col = "curt")) +
+  geom_line(aes(halfHourEndTime, potential, col = "potential")) +
+  scale_color_aaas()
+
+gen_adj %>%
+  filter(
+    grepl("HOWAO-1", bmUnit),
+    between(halfHourEndTime, "2024-05-1", "2024-5-10")
+  ) %>%
+  View()
+ggplot() +
+  geom_line(aes(halfHourEndTime, quantity, col = "gen")) +
+  geom_line(aes(halfHourEndTime, curtailment, col = "curt")) +
+  geom_line(aes(halfHourEndTime, potential, col = "potential")) +
+  scale_color_aaas()
+
+class(gen_adj$halfHourEndTime)
+lubridate::tz(gen_adj$halfHourEndTime)
+gen_adj %>%
+  filter(
+    grepl("HOWAO-1", bmUnit),
+    between(halfHourEndTime, "2024-05-09T06:00:00Z", "2024-05-09T11:00:00Z")
+  ) %>%
+  ggplot() +
+  geom_line(aes(halfHourEndTime, quantity, col = "gen")) +
+  geom_line(aes(halfHourEndTime, curtailment, col = "curt")) +
+  geom_line(aes(halfHourEndTime, potential, col = "potential")) +
+  scale_color_aaas()
+
+gen_adj %>%
+  filter(
+    grepl("HOWAO-1", bmUnit),
+    between(halfHourEndTime, "2024-5-10", "2024-06-04")
+  ) %>% #View()
+  ggplot() +
+  geom_line(aes(halfHourEndTime, quantity, col = "gen")) +
+  geom_line(aes(halfHourEndTime, curtailment, col = "curt")) +
+  geom_line(aes(halfHourEndTime, potential, col = "potential")) +
+  scale_color_aaas()
+
+
+gen_adj %>%
+  filter(
+    grepl("SGRWO-1", bmUnit),
+    between(halfHourEndTime, "2025-01-28", "2025-01-29")
+  ) %>%
+  ggplot() +
+  geom_line(aes(halfHourEndTime, quantity, col = "gen")) +
+  geom_line(aes(halfHourEndTime, curtailment, col = "curt")) +
+  geom_line(aes(halfHourEndTime, potential, col = "potential")) +
+  scale_color_aaas()

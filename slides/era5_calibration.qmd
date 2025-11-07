@@ -456,6 +456,7 @@ An initial estimate will require:
 \end{equation*}
 
 ## Generic power curves vs observed data - Fallago Rig
+Onshore wind farm with moderate curtailment
 \begin{columns}[T, totalwidth=\textwidth]
 
   \begin{column}{0.5\textwidth}
@@ -470,7 +471,7 @@ An initial estimate will require:
 
   \begin{column}{0.5\textwidth}
     \centering
-    {\small Comparison with potential generation}
+    {\small Adding curtailment}
 
     \includegraphics[
       width=\linewidth,
@@ -481,6 +482,7 @@ An initial estimate will require:
 \end{columns}
 
 ## Generic power curves vs observed data - Viking
+Onshore wind farm with high curtailment
 \begin{columns}[T, totalwidth=\textwidth]
 
   \begin{column}{0.5\textwidth}
@@ -495,7 +497,7 @@ An initial estimate will require:
 
   \begin{column}{0.5\textwidth}
     \centering
-    {\small Comparison with potential generation}
+    {\small Adding curtailment}
 
     \includegraphics[
       width=\linewidth,
@@ -506,6 +508,7 @@ An initial estimate will require:
 \end{columns}
 
 ## Generic power curves vs observed data - Hornsea 1
+Offshore wind farm with low curtailment
 \begin{columns}[T, totalwidth=\textwidth]
 
   \begin{column}{0.5\textwidth}
@@ -520,7 +523,7 @@ An initial estimate will require:
 
   \begin{column}{0.5\textwidth}
     \centering
-    {\small Comparison with potential generation}
+    {\small Adding curtailment}
 
     \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_comparison_HOWAO-1_valpot.pdf}
   \end{column}
@@ -528,6 +531,7 @@ An initial estimate will require:
 \end{columns}
 
 ## Generic power curves vs observed data - Seagreen 1
+Offshore wind farm with high curtailment
 \begin{columns}[T, totalwidth=\textwidth]
 
   \begin{column}{0.5\textwidth}
@@ -542,7 +546,7 @@ An initial estimate will require:
 
   \begin{column}{0.5\textwidth}
     \centering
-    {\small Comparison with potential generation}
+    {\small Adding curtailment}
 
     \includegraphics[
       width=\linewidth,
