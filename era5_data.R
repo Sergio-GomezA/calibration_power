@@ -267,3 +267,12 @@ era_df %>%
     axis.text.y = element_blank()
   )
 ggsave("fig/wd_uk_1s_seas.eps", width = 10, height = 6, units = "in", dpi = 300)
+
+
+set.seed(0)
+era_df %>%
+  filter(between(time, "2024-01-01", "2024-12-31")) %>%
+  slice_sample(n = 100000) %>%
+  ggplot() +
+  geom_point(aes(ws10, ws100), alpha = 0.2) +
+  geom_abline(intercept = 0, slope = 1, col = "red", linetype = 2)

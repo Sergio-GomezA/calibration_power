@@ -921,6 +921,103 @@ get_curtailment <- function(
   invisible(df)
 }
 
+get_remit <- function(
+  year = 2024,
+  path,
+  file_name = sprintf("remit_%d.csv.gz", year),
+  end_time = NULL
+) {
+  if (is.null(end_time)) {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(sprintf("%d-12-31", year)),
+      by = "4 days"
+    )
+    time_seq <- c(time_seq, as.Date(sprintf("%d-01-01", year + 1)))
+  } else {
+    time_seq <- dates <- seq.Date(
+      from = as.Date(sprintf("%d-01-01", year)),
+      to = as.Date(end_time),
+      by = "4 days"
+    )
+    if (time_seq[length(time_seq)] < end_time) time_seq <- c(time_seq, end_time)
+  }
+
+  # browser()
+  extraction <- lapply(
+    seq_along(time_seq),
+
+    \(i) {
+      t0 <- as.character(time_seq[i])
+      # t1 <- as.character(time_seq[i + 1])
+      dt0 <- paste(t0, "01:00")
+      # dt1 <- paste(t1, "01:00")
+      dt0_enc <- URLencode(dt0, reserved = TRUE)
+      # dt1_enc <- URLencode(dt1, reserved = TRUE)
+
+      base_url <- "https://data.elexon.co.uk/bmrs/api/v1/balancing/settlement/indicative/volumes/all/bid/"
+
+      url <- sprintf(
+        "%s%s?&bmUnit=",
+        base_url,
+        dt0_enc
+      )
+
+      fragments <- 3
+      n_bmu <- nrow(wind.bmus)
+      parts_vec <- seq(1, n_bmu, length.out = fragments + 1) %>% trunc()
+
+      # list strings in fragments
+      bmu_strings <- mapply(
+        \(left, right) {
+          bmu.string <- wind.bmus %>%
+            slice(left:right) %>%
+            pull(elexonBmUnit) %>%
+            paste(., collapse = "&bmUnit=")
+
+          # print(bmu.string)
+        },
+        left = parts_vec[1:fragments] + c(0, rep(1, fragments - 1)),
+        right = parts_vec[-1]
+      )
+
+      # query data by fragment
+      bmu_df <- lapply(
+        bmu_strings,
+        \(string) {
+          url <- paste0(url, string)
+          response <- GET(url, accept("text/plain"))
+          json_data <- content(response, "text", encoding = "UTF-8")
+          generation.bmu <- tryCatch(
+            fromJSON(json_data) %>%
+              mutate(across(
+                matches("Time"),
+                ~ as.POSIXct(., format = "%Y-%m-%dT%H:%M:%OS")
+              )),
+            error = function(e) {
+              warning(sprintf(
+                "Data extraction for day %s failed. Response: %s\n",
+                t0,
+                response$status_code
+              ))
+              return(NULL)
+            }
+          )
+        }
+      ) %>%
+        bind_rows()
+    }
+  )
+
+  df <- extraction %>% bind_rows()
+
+  df %>%
+    write.csv(
+      gzfile(file.path(path, file_name))
+    )
+
+  invisible(df)
+}
 
 interp_log_ws <- function(h, z1, z2, u1, u2) {
   u1 + (log(h / z1) / log(z2 / z1)) * (u2 - u1)
