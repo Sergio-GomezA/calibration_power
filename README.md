@@ -19,11 +19,11 @@ Global Wind Atlas calibration to UK power
     - [x] Double check curtailment days 
     - [ ] Curtailment map
     - [x] Wind farms with most curtailment
-  - [ ] Revised capacity factors
-  - [ ] Wind speed seasonality
+  - [x] Revised capacity factors
+  - [x] Wind speed seasonality
   - [ ] Power curve *
-    - [ ] Scatter for select BMUs (curtailment adjusted)
-    - [ ] Comparison with scaled generic curve
+    - [x] Scatter for select BMUs (curtailment adjusted)
+    - [x] Comparison with scaled generic curve
     - [ ] Curve matching
 
 - **Inputs and EDA**
@@ -40,7 +40,9 @@ Global Wind Atlas calibration to UK power
   - [ ] Get land elevation 
   - [x] Get curtailment (DISPTAV)
   - [x] Data for previous years
-  - [ ] prepare wind speed for power conversion *
+  - [x] prepare wind speed for power conversion *
+  - [ ] Combine BMUs with same coordinates *
+  - [ ] remit messages
 
 
 - **Power curve fitting**
@@ -57,7 +59,8 @@ Global Wind Atlas calibration to UK power
     - [x] convert GWA to power using weibull
     - [x] compare with generation
   - [ ] Using turbine characteristics
-    - [ ] find power curves for each model  
+    - [ ] find power curves for some models
+    - [ ] interpolate wind speed to turbine height  
   - [ ] Using historical power data  
   - [ ] Bayesian approach (PC + data)
 
