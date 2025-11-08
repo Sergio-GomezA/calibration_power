@@ -7,10 +7,12 @@ require(fst)
 require(stringr)
 require(httr)
 require(jsonlite)
+require(arrow)
 
 theme_set(theme_bw())
 
 wind.bmus <- fread(file.path("data", "wind_bmu_2.csv.gz"))
+wind.bmus.alt <- read.csv("data/wind_bmu_alt.csv")
 
 mypalette <- pal_aaas()(3)[c(1, 3)]
 ## functions
