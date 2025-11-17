@@ -2,6 +2,8 @@
 
 require(arrow)
 require(dplyr)
+require(tidyr)
+require(lubridate)
 require(rnaturalearth)
 require(sf)
 require(ggplot2)
@@ -48,7 +50,6 @@ remit_df <- lapply(
 
 # get BmUnit
 remit_df <- remit_df %>%
-  mutate(inelexon = assetId %in% wind.bmus.alt$elexonBmUnit) %>%
   mutate(
     elexonBmUnit = case_when(
       # asset matches bmUnit
@@ -68,7 +69,8 @@ remit_df <- remit_df %>%
       grepl("RAMP", assetId) ~ paste0("T_", gsub("RAMP", "RMPNO", assetId)),
       # else
       TRUE ~ NA
-    )
+    ),
+    inelexon = !is.na(elexonBmUnit)
   ) %>%
   left_join(
     ref_catalog_2025 %>% select(bmUnit, tech_typ),
@@ -111,6 +113,7 @@ remit_df %>%
 # active by year
 remit_df %>%
   filter(eventStatus == "Active") %>%
+  unique() %>%
   mutate(year = factor(year(eventStartTime))) %>%
   ggplot() +
   geom_bar(
@@ -122,6 +125,7 @@ remit_df %>%
 
 # fuel type
 remit_df %>%
+  unique() %>%
   ggplot() +
   geom_bar(
     aes(x = forcats::fct_infreq(fuelType)),
@@ -142,6 +146,7 @@ remit_df %>%
     !is.na(elexonBmUnit),
     # grepl("Wind", fuelType)
   ) %>%
+  unique() %>%
   mutate(year = factor(year(eventStartTime))) %>%
   ggplot() +
   geom_bar(
@@ -169,6 +174,7 @@ remit_df %>%
     !is.na(elexonBmUnit),
     # grepl("Wind", fuelType)
   ) %>%
+  unique() %>%
   mutate(year = factor(year(eventStartTime))) %>%
   ggplot() +
   geom_bar(
@@ -182,3 +188,23 @@ remit_df %>%
   ) +
   scale_fill_manual(values = mypalette) +
   labs(fill = "", x = "year", y = "count")
+
+# outgage profile extraction ####
+remit_wf <- remit_df %>%
+  filter(
+    eventStatus == "Active",
+    !is.na(elexonBmUnit),
+    # grepl("Wind", fuelType)
+  ) %>%
+  unique() %>%
+  unnest(outageProfile, keep_empty = TRUE) %>%
+  mutate(
+    startTime = if_else(is.na(startTime), eventStartTime, startTime) %>%
+      ymd_hms(., tz = "UTC"),
+    endTime = if_else(is.na(endTime), eventEndTime, endTime) %>%
+      ymd_hms(., tz = "UTC"),
+    capacity = if_else(is.na(capacity), availableCapacity, capacity)
+  ) %>%
+  filter(!is.na(capacity))
+
+# joining with generation adjusted by curtailment ####
