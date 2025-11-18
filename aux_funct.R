@@ -1040,6 +1040,7 @@ power_curve_data1f <- function(
   t0 = "2024-01-01",
   t1 = "2024-12-31"
 ) {
+  # browser()
   turb_class <- ref_catalog_2025 %>%
     filter(grepl(bmu_code, bmUnit)) %>%
     pull(turb_class) %>%
@@ -1088,7 +1089,7 @@ power_curve_data1f <- function(
     labs(col = "", x = "wind speed", y = "generation (MW)")
 
   p_pot <- pwr_curv_1wf %>%
-    filter(between(halfHourEndTime, "2024-01-01", "2024-12-31")) %>%
+    filter(between(halfHourEndTime, t0, t1)) %>%
     ggplot(aes(ws100, potential, col = "observed")) +
     geom_point(alpha = 0.2) +
     geom_line(
@@ -1103,5 +1104,56 @@ power_curve_data1f <- function(
     ) +
     labs(col = "", x = "wind speed", y = "potential generation (MW)")
 
-  invisible(list(data = pwr_curv_1wf, p_quant = p_quant, p_pot = p_pot))
+  p_out <- pwr_curv_1wf %>%
+    filter(between(halfHourEndTime, t0, t1)) %>%
+    ggplot(aes(ws100, potential, col = "observed")) +
+    geom_point(alpha = 0.2) +
+    geom_point(
+      aes(ws100, potential, col = "outages"),
+      data = pwr_curv_1wf %>%
+        filter(between(halfHourEndTime, t0, t1), !is.na(outageCapacity)),
+      alpha = 0.2
+    ) +
+    geom_line(
+      data = scaled_pc,
+      aes(wind_speed, power_scaled, col = "generic power curve")
+    ) +
+    scale_color_manual(
+      values = c(
+        "observed" = "darkblue",
+        "generic power curve" = "darkred",
+        "outages" = "darkorange"
+      )
+    ) +
+    theme(
+      legend.position = "bottom"
+    ) +
+    labs(col = "", x = "wind speed", y = "potential generation (MW)")
+
+  p_nout <- pwr_curv_1wf %>%
+    filter(between(halfHourEndTime, t0, t1), is.na(outageCapacity)) %>%
+    ggplot(aes(ws100, potential, col = "observed")) +
+    geom_point(alpha = 0.2) +
+    geom_line(
+      data = scaled_pc,
+      aes(wind_speed, power_scaled, col = "generic power curve")
+    ) +
+    scale_color_manual(
+      values = c(
+        "observed" = "darkblue",
+        "generic power curve" = "darkred",
+        "outages" = "darkorange"
+      )
+    ) +
+    theme(
+      legend.position = "bottom"
+    ) +
+    labs(col = "", x = "wind speed", y = "potential generation (MW)")
+  invisible(list(
+    data = pwr_curv_1wf,
+    p_quant = p_quant,
+    p_pot = p_pot,
+    p_out = p_out,
+    p_nout = p_nout
+  ))
 }
