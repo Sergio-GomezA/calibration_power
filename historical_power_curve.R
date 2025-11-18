@@ -235,7 +235,7 @@ lapply(
   \(i) {
     lm_t_calib[[i]]$data %>%
       ggplot(aes(power_est0, potential)) +
-      geom_point(col = "gray75", alpha = 0.5) +
+      geom_point(col = blues9[6], alpha = 0.5) +
       geom_abline(intercept = 0, slope = 1, col = "black", linetype = 2) +
       geom_abline(
         intercept = 0,

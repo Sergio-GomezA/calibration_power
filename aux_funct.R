@@ -1038,7 +1038,12 @@ generic_pow_conv <- function(
 power_curve_data1f <- function(
   bmu_code,
   t0 = "2024-01-01",
-  t1 = "2024-12-31"
+  t1 = "2024-12-31",
+  col_palette = c(
+    "observed" = blues9[7],
+    "generic power curve" = "darkred",
+    "outages" = "darkorange"
+  )
 ) {
   # browser()
   turb_class <- ref_catalog_2025 %>%
@@ -1081,7 +1086,7 @@ power_curve_data1f <- function(
       aes(wind_speed, power_scaled, col = "generic power curve")
     ) +
     scale_color_manual(
-      values = c("observed" = "darkblue", "generic power curve" = "darkred")
+      values = col_palette
     ) +
     theme(
       legend.position = "bottom"
@@ -1097,7 +1102,7 @@ power_curve_data1f <- function(
       aes(wind_speed, power_scaled, col = "generic power curve")
     ) +
     scale_color_manual(
-      values = c("observed" = "darkblue", "generic power curve" = "darkred")
+      values = col_palette
     ) +
     theme(
       legend.position = "bottom"
@@ -1119,11 +1124,7 @@ power_curve_data1f <- function(
       aes(wind_speed, power_scaled, col = "generic power curve")
     ) +
     scale_color_manual(
-      values = c(
-        "observed" = "darkblue",
-        "generic power curve" = "darkred",
-        "outages" = "darkorange"
-      )
+      values = col_palette
     ) +
     theme(
       legend.position = "bottom"
@@ -1139,11 +1140,7 @@ power_curve_data1f <- function(
       aes(wind_speed, power_scaled, col = "generic power curve")
     ) +
     scale_color_manual(
-      values = c(
-        "observed" = "darkblue",
-        "generic power curve" = "darkred",
-        "outages" = "darkorange"
-      )
+      values = col_palette
     ) +
     theme(
       legend.position = "bottom"
