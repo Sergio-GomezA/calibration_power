@@ -41,11 +41,11 @@ Global Wind Atlas calibration to UK power
   - [x] Get curtailment (DISPTAV)
   - [x] Data for previous years
   - [x] prepare wind speed for power conversion *
-  - [ ] Data capping at 0 and max capacity instead of removing *
+  - [x] Data capping at 0 and max capacity instead of removing *
   - [ ] Combine BMUs with same coordinates *
-  - [ ] remit messages download
-  - [ ] unwind remit outage profile
-  - [ ] merge with clean generation data
+  - [x] remit messages download
+  - [x] unwind remit outage profile
+  - [x] merge with clean generation data
 
 
 - **Power curve fitting**
