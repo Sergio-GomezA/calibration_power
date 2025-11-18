@@ -208,3 +208,4 @@ remit_wf <- remit_df %>%
   filter(!is.na(capacity))
 
 # joining with generation adjusted by curtailment ####
+# done in elexon_adj_data.R
