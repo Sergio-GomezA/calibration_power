@@ -25,6 +25,11 @@ Global Wind Atlas calibration to UK power
     - [x] Scatter for select BMUs (curtailment adjusted)
     - [x] Comparison with scaled generic curve
     - [ ] Curve matching
+  - [ ] outages statistics
+    - [ ] number of events
+    - [ ] duration
+    - [ ] capacity impact
+    - [ ] spatial distribution
 
 - **Inputs and EDA**
   - [x] cleaning data code
@@ -46,6 +51,7 @@ Global Wind Atlas calibration to UK power
   - [x] remit messages download
   - [x] unwind remit outage profile
   - [x] merge with clean generation data
+  - [ ] wind vertical interpolation
 
 
 - **Power curve fitting**
@@ -69,7 +75,7 @@ Global Wind Atlas calibration to UK power
 
 - **Slides**
   - [x] New set with era 5
-  - [ ] Power curve updates
+  - [ ] Power curve updates 
   - [ ] Curtailment and Maintenance
   - [ ] New comparison
   - [ ] lm, QM, QR
