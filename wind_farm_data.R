@@ -202,6 +202,7 @@ repd_vars <- c(
   "devel_stat",
   "x_coord",
   "y_coord",
+  "country",
   "operational"
 )
 
