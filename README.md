@@ -17,7 +17,7 @@ Global Wind Atlas calibration to UK power
     - [x] Seasonality
     - [x] Potential yield
     - [x] Double check curtailment days 
-    - [ ] Curtailment map
+    - [x] Curtailment map
     - [x] Wind farms with most curtailment
   - [x] Revised capacity factors
   - [x] Wind speed seasonality
