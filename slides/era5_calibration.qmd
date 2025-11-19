@@ -245,20 +245,46 @@ pot_summary %>%
 
 :::
 
-## Curtailment map
+## Curtailment
 
 ::: {.columns}
 
-::: {.column width="40%"}
+::: {.column width="50%"}
 \centering
-    \small Curtailment map
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_map.svg}
+    \footnotesize Curtailment map
+    \includegraphics[width=\linewidth,height=6cm,keepaspectratio]{../fig/curtailment_map.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
-    \small Curtailment seasonality
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_factor_q.pdf}
+ \footnotesize Curtailment by region
+
+![](../fig/curtailment_monthly.pdf){width=100% height=2.5cm}
+
+\footnotesize Average during curtailment periods
+
+![](../fig/curtailment_plus_monthly.pdf){width=100% height=2.5cm}
+
+
+:::
+
+:::
+
+
+## Curtailment through the day
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Curtailment by hour
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_intraday.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Average during curtailment periods
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_plus_intraday.pdf}
 :::
 
 :::
@@ -406,6 +432,13 @@ ref_catalog_2025 %>%
 :::
 
 :::
+
+# Outages {#sec-outages}
+## Outage data
+\begin{itemize}
+  \item REMIT messages announce plan or unplanned outages
+  
+\end{itemize}
 
 # Power conversion {#sec-power_curves}
 
