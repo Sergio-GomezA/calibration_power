@@ -162,7 +162,7 @@ Calibrate a ERA5 driven estimate to actual observed output accounting for spatio
       \item Total capacity: 27 GW
       \item Half hourly resolution
       \item Records starting in 2019
-      \item Curtailment (pending)
+      \item Curtailment and outage data available
       \item Location / turbine data unavailable
     \end{itemize}
     } % end local font block
@@ -245,6 +245,23 @@ pot_summary %>%
 
 :::
 
+## Curtailment map
+
+::: {.columns}
+
+::: {.column width="40%"}
+\centering
+    \small Curtailment map
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_map.svg}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Curtailment seasonality
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_factor_q.pdf}
+:::
+
+:::
 
 ## Potential generation
 
