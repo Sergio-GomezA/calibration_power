@@ -20,14 +20,10 @@ ref_catalog_2025 <- fread(
   file.path("data/ref_catalog_wind_2025.csv.gz")
 )
 
-
-uk <- ne_states(country = "United Kingdom", returnclass = "sf")
-
-uk$geonunit %>% unique()
 # Figures ####
 
 ## Curtailment ####
-
+source("wind_farm_data.R")
 ### monthly ####
 curt_mdata <- gen_adj %>%
   filter(
