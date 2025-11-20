@@ -73,7 +73,7 @@ Calibrate a ERA5 driven estimate to actual observed output accounting for spatio
     \centering
     \textbf{\small Elexon wind farms map (2025)}\\[0.5em]
     \vspace{-0.2cm}
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_farms_elexon_size_2025.jpeg}
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_farms_elexon_size_2025.pdf}
   \end{column}
 \end{columns}
 
@@ -480,7 +480,7 @@ ref_catalog_2025 %>%
 
 ::: {.column width="32%"}
 \centering
-    \small Duration
+    \small Mean duration
     \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_duration_map.pdf}
 :::
 
