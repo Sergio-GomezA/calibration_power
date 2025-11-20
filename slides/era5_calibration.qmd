@@ -435,10 +435,62 @@ ref_catalog_2025 %>%
 
 # Outages {#sec-outages}
 ## Outage data
+::: {.columns}
+
+::: {.column width="50%"}
 \begin{itemize}
   \item REMIT messages announce plan or unplanned outages
-  
+  \item event start / end times
+  \item affected BMUs and capacity reduction
 \end{itemize}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Duration of events
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_events_by_year.pdf}
+:::
+
+:::
+## Outage characteristics
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Number of events by year
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_event_duration.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Duration of events
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_capacity_impact_perc.eps}
+:::
+
+:::
+
+## Outages characteristics by location
+::: {.columns}
+
+::: {.column width="32%"}
+\centering
+    \small No. of events
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_nevents_map.pdf}
+:::
+
+::: {.column width="32%"}
+\centering
+    \small Duration
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_duration_map.pdf}
+:::
+
+::: {.column width="32%"}
+\centering
+    \small Unavailable capacity
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_cap_imp_map.pdf}
+:::
+
+:::
 
 # Power conversion {#sec-power_curves}
 

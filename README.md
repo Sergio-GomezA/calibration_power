@@ -26,9 +26,9 @@ Global Wind Atlas calibration to UK power
     - [x] Comparison with scaled generic curve
     - [ ] Curve matching
   - [ ] outages statistics
-    - [ ] number of events
-    - [ ] duration
-    - [ ] capacity impact
+    - [x] number of events
+    - [x] duration
+    - [x] capacity impact
     - [ ] spatial distribution
 
 - **Inputs and EDA**
