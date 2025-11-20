@@ -21,7 +21,7 @@ data_path <- "~/Documents/elexon/data_by_year"
 
 # test <- get_remit(year = 2024, path = data_path, end_time = "2024-01-31")
 
-test <- get_remit(year = 2025, path = data_path, end_time = "2025-09-30")
+# test <- get_remit(year = 2025, path = data_path, end_time = "2025-09-30")
 
 # Data Download ####
 
@@ -118,6 +118,8 @@ write_parquet(
   remit_wf,
   sink = "~/Documents/elexon/remit_wind.parquet"
 )
+
+remit_wf <- read_parquet("~/Documents/elexon/remit_wind.parquet")
 # check missing
 # remit_df %>%
 #   filter(
@@ -259,7 +261,7 @@ ggsave("fig/remit_capacity_impact_perc.eps", width = 6, height = 4)
 
 # spatial distribution ####
 map_dat <- remit_wf %>%
-  group_by(lon, lat, elexonBmUnit, tech_typ) %>%
+  group_by(lon, lat, tech_typ) %>%
   summarise(
     n_events = n(),
     duration = mean(duration),
@@ -276,7 +278,8 @@ map_dat %>%
     color = "white"
   ) +
   geom_sf(
-    aes(geometry = geometry, size = n_events, color = tech_typ)
+    aes(geometry = geometry, size = n_events, color = tech_typ),
+    alpha = 0.7
   ) +
   scale_color_manual(values = mypalette) +
   labs(color = "", size = "Number of events") +
@@ -293,7 +296,8 @@ map_dat %>%
     color = "white"
   ) +
   geom_sf(
-    aes(geometry = geometry, size = duration, color = tech_typ)
+    aes(geometry = geometry, size = duration, color = tech_typ),
+    alpha = 0.7
   ) +
   scale_color_manual(values = mypalette) +
   scale_size_continuous(
@@ -315,7 +319,8 @@ map_dat %>%
     color = "white"
   ) +
   geom_sf(
-    aes(geometry = geometry, size = capacity_imp_perc, color = tech_typ)
+    aes(geometry = geometry, size = capacity_imp_perc, color = tech_typ),
+    alpha = 0.7
   ) +
   scale_color_manual(values = mypalette) +
   labs(color = "", size = "Capacity impact (%)") +
