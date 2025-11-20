@@ -116,15 +116,23 @@ remit_df <- remit_df %>%
   unique() %>%
   unnest(outageProfile, keep_empty = TRUE) %>%
   mutate(
-    startTime = if_else(is.na(startTime), eventStartTime, startTime) %>%
-      ymd_hms(., tz = "UTC"),
-    endTime = if_else(is.na(endTime), eventEndTime, endTime) %>%
-      ymd_hms(., tz = "UTC"),
+    startTime = if_else(
+      is.na(startTime),
+      eventStartTime,
+      startTime %>%
+        ymd_hms(., format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+    ),
+    endTime = if_else(
+      is.na(endTime),
+      eventEndTime,
+      endTime %>%
+        ymd_hms(., format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+    ),
     capacity = if_else(is.na(capacity), availableCapacity, capacity),
   ) %>%
-  mutate(
-    endTime = if_else(endTime < startTime, startTime + hours(1), endTime)
-  ) %>%
+  # mutate(
+  #   endTime = if_else(endTime < startTime, startTime + hours(1), endTime)
+  # ) %>%
   filter(!is.na(capacity)) %>%
   rename(outageCapacity = capacity) %>%
   select(
@@ -135,8 +143,44 @@ remit_df <- remit_df %>%
     outageCapacity
   )
 
+remit_wf <- read_parquet("~/Documents/elexon/remit_wind.parquet") %>%
+  unnest(outageProfile, keep_empty = TRUE) %>%
+  mutate(
+    startTime = if_else(
+      is.na(startTime),
+      eventStartTime,
+      as.POSIXct(startTime, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+    ), #%>%
+    # ymd_hms(., format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC"),
+    endTime = if_else(
+      is.na(endTime),
+      eventEndTime,
+      as.POSIXct(endTime, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+    ), #%>%
+    # ymd_hms(., format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC"),
+    capacity = if_else(is.na(capacity), availableCapacity, capacity),
+  ) %>%
+  mutate(
+    duration = as.numeric(difftime(
+      endTime,
+      startTime,
+      units = "hours"
+    ))
+  ) %>%
+  filter(!is.na(capacity), duration > 0) %>%
+  rename(outageCapacity = capacity) %>%
+  select(
+    startTime,
+    # startTime2,
+    endTime,
+    elexonBmUnit,
+    normalCapacity,
+    outageCapacity,
+    duration
+  )
 
-remit_dt <- as.data.table(remit_df)
+
+remit_dt <- as.data.table(remit_wf)
 gen_dt <- as.data.table(gen_adj)
 
 # remit_dt[, startTime := ymd_hms(startTime, tz = "UTC")]
