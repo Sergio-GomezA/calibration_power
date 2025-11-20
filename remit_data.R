@@ -114,6 +114,10 @@ remit_wf <- remit_df %>%
     ))
   )
 
+write_parquet(
+  remit_wf,
+  sink = "~/Documents/elexon/remit_wind.parquet"
+)
 # check missing
 # remit_df %>%
 #   filter(
@@ -318,6 +322,15 @@ map_dat %>%
   ggthemes::theme_map() +
   theme(legend.position = "right")
 ggsave("fig/remit_cap_imp_map.pdf", width = 4, height = 4)
+
+
+remit_wf %>%
+  filter(elexonBmUnit == "T_BDCHW-1") %>%
+  View()
+
+remit_wf %>%
+  filter(grepl("T_MOWEO", elexonBmUnit)) %>%
+  View()
 # outgage profile extraction ####
 # remit_wf <- remit_df %>%
 #   filter(
