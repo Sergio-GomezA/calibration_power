@@ -77,7 +77,7 @@ ref_catalog_2025 <- ref_catalog_2025 %>%
 ## Group era5 data by tech_typ
 write.csv(
   ref_catalog_2025,
-  gzfile("data/ref_catalog_wind_2025.csv.gz"),
+  gzfile("data/ref_catalog_wind_2025_era.csv.gz"),
   row.names = FALSE
 )
 coords_tb <- coords_tb %>%

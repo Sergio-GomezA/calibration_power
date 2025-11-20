@@ -72,76 +72,76 @@ gen_adj <- bmu_df %>%
 
 
 # add outages ####
-remit_df <- lapply(
-  2019:2025,
-  \(y) {
-    read_parquet(
-      file.path("~/Documents/elexon/", sprintf("remit_all_%d.parquet", y))
-    )
-  }
-) %>%
-  bind_rows()
+# remit_df <- lapply(
+#   2019:2025,
+#   \(y) {
+#     read_parquet(
+#       file.path("~/Documents/elexon/", sprintf("remit_all_%d.parquet", y))
+#     )
+#   }
+# ) %>%
+#   bind_rows()
 
-remit_df <- remit_df %>%
-  filter(eventStatus == "Active") %>%
-  mutate(
-    elexonBmUnit = case_when(
-      # asset matches bmUnit
-      assetId %in% wind.bmus.alt$elexonBmUnit ~ assetId,
-      # asset matches with T_
-      paste0("T_", assetId) %in% wind.bmus.alt$elexonBmUnit ~ paste0(
-        "T_",
-        assetId
-      ),
-      # affected unit matches
-      toupper(affectedUnit) %in% wind.bmus.alt$elexonBmUnit ~ affectedUnit,
-      # affected unit matches with T_
-      paste0("T_", toupper(affectedUnit)) %in%
-        wind.bmus.alt$elexonBmUnit ~ paste0("T_", toupper(affectedUnit)),
-      # special cases
-      grepl("LARYO", assetId) ~ paste0("T_", gsub("O", "W", assetId)),
-      grepl("RAMP", assetId) ~ paste0("T_", gsub("RAMP", "RMPNO", assetId)),
-      # else
-      TRUE ~ NA
-    ),
-    inelexon = !is.na(elexonBmUnit)
-  ) %>%
-  left_join(
-    ref_catalog_2025 %>% select(bmUnit, tech_typ),
-    by = c("elexonBmUnit" = "bmUnit")
-  ) %>%
-  filter(
-    !is.na(elexonBmUnit)
-  ) %>%
-  unique() %>%
-  unnest(outageProfile, keep_empty = TRUE) %>%
-  mutate(
-    startTime = if_else(
-      is.na(startTime),
-      eventStartTime,
-      startTime %>%
-        ymd_hms(., format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
-    ),
-    endTime = if_else(
-      is.na(endTime),
-      eventEndTime,
-      endTime %>%
-        ymd_hms(., format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
-    ),
-    capacity = if_else(is.na(capacity), availableCapacity, capacity),
-  ) %>%
-  # mutate(
-  #   endTime = if_else(endTime < startTime, startTime + hours(1), endTime)
-  # ) %>%
-  filter(!is.na(capacity)) %>%
-  rename(outageCapacity = capacity) %>%
-  select(
-    startTime,
-    endTime,
-    elexonBmUnit,
-    normalCapacity,
-    outageCapacity
-  )
+# remit_df <- remit_df %>%
+#   filter(eventStatus == "Active") %>%
+#   mutate(
+#     elexonBmUnit = case_when(
+#       # asset matches bmUnit
+#       assetId %in% wind.bmus.alt$elexonBmUnit ~ assetId,
+#       # asset matches with T_
+#       paste0("T_", assetId) %in% wind.bmus.alt$elexonBmUnit ~ paste0(
+#         "T_",
+#         assetId
+#       ),
+#       # affected unit matches
+#       toupper(affectedUnit) %in% wind.bmus.alt$elexonBmUnit ~ affectedUnit,
+#       # affected unit matches with T_
+#       paste0("T_", toupper(affectedUnit)) %in%
+#         wind.bmus.alt$elexonBmUnit ~ paste0("T_", toupper(affectedUnit)),
+#       # special cases
+#       grepl("LARYO", assetId) ~ paste0("T_", gsub("O", "W", assetId)),
+#       grepl("RAMP", assetId) ~ paste0("T_", gsub("RAMP", "RMPNO", assetId)),
+#       # else
+#       TRUE ~ NA
+#     ),
+#     inelexon = !is.na(elexonBmUnit)
+#   ) %>%
+#   left_join(
+#     ref_catalog_2025 %>% select(bmUnit, tech_typ),
+#     by = c("elexonBmUnit" = "bmUnit")
+#   ) %>%
+#   filter(
+#     !is.na(elexonBmUnit)
+#   ) %>%
+#   unique() %>%
+#   unnest(outageProfile, keep_empty = TRUE) %>%
+#   mutate(
+#     startTime = if_else(
+#       is.na(startTime),
+#       eventStartTime,
+#       startTime %>%
+#         ymd_hms(., format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+#     ),
+#     endTime = if_else(
+#       is.na(endTime),
+#       eventEndTime,
+#       endTime %>%
+#         ymd_hms(., format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
+#     ),
+#     capacity = if_else(is.na(capacity), availableCapacity, capacity),
+#   ) %>%
+#   # mutate(
+#   #   endTime = if_else(endTime < startTime, startTime + hours(1), endTime)
+#   # ) %>%
+#   filter(!is.na(capacity)) %>%
+#   rename(outageCapacity = capacity) %>%
+#   select(
+#     startTime,
+#     endTime,
+#     elexonBmUnit,
+#     normalCapacity,
+#     outageCapacity
+#   )
 
 remit_wf <- read_parquet("~/Documents/elexon/remit_wind.parquet") %>%
   unnest(outageProfile, keep_empty = TRUE) %>%
