@@ -715,5 +715,46 @@ bmucurt0 %>%
   geom_line()
 ```
 ```{r}
-?g
+ref_catalog_2025 <- fread(
+  file.path("data/ref_catalog_wind_2025.csv.gz")
+)
+uk_ie <- ne_countries(scale = "medium", returnclass = "sf") %>%
+  filter(admin %in% c("United Kingdom", "Ireland")) %>%
+  st_transform(crs = 4326)
+p1 <- ref_catalog_2025 %>% 
+  filter(!is.na(lon)) %>% 
+  group_by(lon, lat, tech_typ) %>% 
+  summarise(
+    site_name = first(site_name),
+    generationCapacity = sum(generationCapacity)) %>% 
+  st_as_sf(coords = c("lon","lat"), crs = 4326) %>%
+  ggplot()+
+  geom_sf(data = uk_ie, fill = "gray95", color = "gray70") +  # map background
+  geom_sf(aes(
+    geometry = geometry, 
+    col = tech_typ, 
+    size = generationCapacity,
+    text = paste("Site:", site_name, "<br>Tech:", tech_typ)),
+    # size = 1
+    alpha = 0.7
+    )+
+#   coord_sf(datum = 4326, crs = 4326)+
+  scale_color_manual(values = mypalette)+
+  labs(col = "", size = "capacity")+
+#   x = "Longitude (\u00B0E)", y = "Latitude (\u00B0N)")+
+theme_map()+
+  theme(legend.position = "left")
+
+p1
+ggsave(
+    filename = "fig/wind_farms_elexon_size_2025.pdf",
+    plot = p1,
+    width = 4,
+    height = 4,
+    units = "in",
+    dpi = 300
+)
+
 ```
+
+
