@@ -54,7 +54,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FA
 
 - Curtailment data to obtain potential generation
 - Outage data to exclude periods where capacity is constrained
-- Power curve comparison to data
+- Updated power curve comparison to data
 - ERA 5 wind speed conversion to power
 
 
@@ -760,7 +760,15 @@ Offshore wind farm with high curtailment
 
 \end{columns}
 
-## ERA5 based estimates vs Elexon 2025
+## ERA5 based estimates vs Elexon 2024
+
+\begin{itemize}
+  \item Remove periods with outages
+  \item Vertical interpolation of ERA5 wind speed to turbine height
+  \item Apply generic power curve to get estimated power
+\end{itemize}
+
+## ERA5 based estimates vs Elexon 2024
 \begin{columns}[T, totalwidth=\textwidth]
 
   % Left column: Power curve
@@ -782,7 +790,7 @@ Offshore wind farm with high curtailment
 \end{columns}
 
 
-## ERA5 based estimates vs Elexon 2025
+## ERA5 based estimates vs Elexon 2024
 \begin{columns}[T, totalwidth=\textwidth]
 
   % Left column: Power curve
@@ -803,9 +811,27 @@ Offshore wind farm with high curtailment
 
 \end{columns}
 
+## Comparison for all wind farms
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small No. of events
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_nevents_map.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Unavailable capacity
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_all.pdf}
+:::
+
+:::
+
 ## Next Steps
 
 \begin{itemize}
    \item Learn power curve from history
+   \item Model for calibration 
    \item Quantile mapping calibration
 \end{itemize}
