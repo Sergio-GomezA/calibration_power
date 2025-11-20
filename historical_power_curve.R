@@ -208,6 +208,7 @@ saveRDS(
   lm_t_calib,
   file = file.path("~/Documents/elexon/model_objects", "lm_t_calib_v0.rds")
 )
+
 lm_t_calib[[5]]$model %>% summary()
 
 
@@ -229,6 +230,10 @@ mod1_t <- brm(
 # mod1_t %>% summary()
 lm_t_calib[[2]] <- list(data = vik_df, model = mod1_t)
 
+
+lm_t_calib <- readRDS(
+  file = file.path("~/Documents/elexon/model_objects", "lm_t_calib_v0.rds")
+)
 file_string <- "fig/pc_scatter_%s.pdf"
 lapply(
   seq_along(bmu_codes),
