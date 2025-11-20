@@ -25,11 +25,11 @@ Global Wind Atlas calibration to UK power
     - [x] Scatter for select BMUs (curtailment adjusted)
     - [x] Comparison with scaled generic curve
     - [ ] Curve matching
-  - [ ] outages statistics
+  - [x] outages statistics
     - [x] number of events
     - [x] duration
     - [x] capacity impact
-    - [ ] spatial distribution
+    - [x] spatial distribution
 
 - **Inputs and EDA**
   - [x] cleaning data code
