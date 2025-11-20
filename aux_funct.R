@@ -1061,16 +1061,27 @@ power_curve_data1f <- function(
     filter(minute(halfHourEndTime) == 0) %>%
     left_join(
       ref_catalog_2025 %>%
-        select(bmUnit, matches("lon|lat"), site_name, tech_typ, turb_class),
+        select(
+          bmUnit,
+          matches("lon|lat"),
+          site_name,
+          tech_typ,
+          turb_class,
+          height_turb_imp
+        ),
       by = c("bmUnit")
     ) %>%
     left_join(
-      era_df %>% select(time, longitude, latitude, ws100, wd100),
+      era_df %>% select(time, longitude, latitude, ws100, wd100, ws10, wd10),
       by = c(
         "halfHourEndTime" = "time",
         "era5lon" = "longitude",
         "era5lat" = "latitude"
       )
+    ) %>%
+    # wind speed vertical interpolation
+    mutate(
+      ws_h = log(height_turb_imp / 10) / log(100 / 10) * (ws100 - ws10) + ws10
     )
 
   scaled_pc <- generic_pc %>%
@@ -1079,7 +1090,7 @@ power_curve_data1f <- function(
 
   p_quant <- pwr_curv_1wf %>%
     filter(between(halfHourEndTime, t0, t1)) %>%
-    ggplot(aes(ws100, quantity, col = "observed")) +
+    ggplot(aes(ws_h, quantity, col = "observed")) +
     geom_point(alpha = 0.2) +
     geom_line(
       data = scaled_pc,
@@ -1095,7 +1106,7 @@ power_curve_data1f <- function(
 
   p_pot <- pwr_curv_1wf %>%
     filter(between(halfHourEndTime, t0, t1)) %>%
-    ggplot(aes(ws100, potential, col = "observed")) +
+    ggplot(aes(ws_h, potential, col = "observed")) +
     geom_point(alpha = 0.2) +
     geom_line(
       data = scaled_pc,
@@ -1111,10 +1122,10 @@ power_curve_data1f <- function(
 
   p_out <- pwr_curv_1wf %>%
     filter(between(halfHourEndTime, t0, t1)) %>%
-    ggplot(aes(ws100, potential, col = "observed")) +
+    ggplot(aes(ws_h, potential, col = "observed")) +
     geom_point(alpha = 0.2) +
     geom_point(
-      aes(ws100, potential, col = "outages"),
+      aes(ws_h, potential, col = "outages"),
       data = pwr_curv_1wf %>%
         filter(between(halfHourEndTime, t0, t1), !is.na(outageCapacity)),
       alpha = 0.2
@@ -1133,7 +1144,7 @@ power_curve_data1f <- function(
 
   p_nout <- pwr_curv_1wf %>%
     filter(between(halfHourEndTime, t0, t1), is.na(outageCapacity)) %>%
-    ggplot(aes(ws100, potential, col = "observed")) +
+    ggplot(aes(ws_h, potential, col = "observed")) +
     geom_point(alpha = 0.2) +
     geom_line(
       data = scaled_pc,
