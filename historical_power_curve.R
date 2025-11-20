@@ -31,7 +31,7 @@ gen_adj <- read_parquet(
 )
 # wind farm catalog based on 2025 data
 ref_catalog_2025 <- fread(
-  file.path("data/ref_catalog_wind_2025.csv.gz")
+  file.path("data/ref_catalog_wind_2025_era.csv.gz")
 )
 
 # era 5 coordinates list
@@ -149,17 +149,28 @@ pwr_curv_df <- gen_adj %>%
   filter(minute(halfHourEndTime) == 0) %>%
   left_join(
     ref_catalog_2025 %>%
-      select(bmUnit, matches("lon|lat"), site_name, tech_typ, turb_class),
+      select(
+        bmUnit,
+        matches("lon|lat"),
+        site_name,
+        tech_typ,
+        turb_class,
+        height_turb_imp
+      ),
     by = c("bmUnit")
   ) %>%
   filter(!is.na(lon)) %>%
   left_join(
-    era_df %>% select(time, longitude, latitude, ws100, wd100),
+    era_df %>% select(time, longitude, latitude, ws100, wd100, ws10, wd10),
     by = c(
       "halfHourEndTime" = "time",
       "era5lon" = "longitude",
       "era5lat" = "latitude"
     )
+  ) %>%
+  # wind speed vertical interpolation
+  mutate(
+    ws_h = log(height_turb_imp / 10) / log(100 / 10) * (ws100 - ws10) + ws10
   )
 
 class_curves <- fread("data/generic_powerCurves.csv.gz") %>%
@@ -176,7 +187,14 @@ for (class in classes) {
   pwr_curv_df$power_est0[class_ind] <- approx(
     x = class_curve$wind_speed,
     y = class_curve$power_scaled,
-    xout = pwr_curv_df$ws100[class_ind],
+    xout = pwr_curv_df$ws_h[class_ind],
+    rule = 2
+  )$y *
+    pwr_curv_df$capacity[class_ind]
+  pwr_curv_df$power_est_w100[class_ind] <- approx(
+    x = class_curve$wind_speed,
+    y = class_curve$power_scaled,
+    xout = pwr_curv_df$ws_h[class_ind],
     rule = 2
   )$y *
     pwr_curv_df$capacity[class_ind]
@@ -189,7 +207,8 @@ lm_t_calib <- lapply(
   \(bmu_code) {
     # filter data
     bmu_data <- pwr_curv_df %>%
-      filter(grepl(bmu_code, bmUnit))
+      filter(grepl(bmu_code, bmUnit)) %>%
+      filter(potential > 0 | power_est0 < 0.15 * capacity)
 
     # estimate lm calibration
     mod1_t <- brm(
@@ -206,30 +225,31 @@ lm_t_calib <- lapply(
 
 saveRDS(
   lm_t_calib,
-  file = file.path("~/Documents/elexon/model_objects", "lm_t_calib_v0.rds")
+  file = file.path("~/Documents/elexon/model_objects", "lm_t_calib_v1.rds")
 )
 
-lm_t_calib[[5]]$model %>% summary()
+lm_t_calib[[5]]
+lapply(lm_t_calib, \(x) fixef(x$model))
+lapply(lm_t_calib, \(x) summary(x$model))
 
 
-vik_df <- lm_t_calib[[2]]$data %>%
-  filter(potential > 0 | power_est0 < 0.1 * capacity)
+# vik_df <- lm_t_calib[[2]]$data %>%
+#   filter(potential > 0 | power_est0 < 0.1 * capacity)
 
-vik_df %>%
-  ggplot(aes(power_est0, potential)) +
-  geom_point(col = "darkblue", alpha = 0.5) +
-  geom_abline(intercept = 0, slope = 1, col = "red", linetype = 2)
-mod1_t <- brm(
-  formula = potential ~ -1 + power_est0,
-  data = vik_df,
-  family = student(), # <-- Student-t likelihood
-  chains = 4,
-  cores = 4,
-  iter = 5000
-)
-# mod1_t %>% summary()
-lm_t_calib[[2]] <- list(data = vik_df, model = mod1_t)
-
+# vik_df %>%
+#   ggplot(aes(power_est0, potential)) +
+#   geom_point(col = "darkblue", alpha = 0.5) +
+#   geom_abline(intercept = 0, slope = 1, col = "red", linetype = 2)
+# mod1_t <- brm(
+#   formula = potential ~ -1 + power_est0,
+#   data = vik_df,
+#   family = student(), # <-- Student-t likelihood
+#   chains = 4,
+#   cores = 4,
+#   iter = 5000
+# )
+# # mod1_t %>% summary()
+# lm_t_calib[[2]] <- list(data = vik_df, model = mod1_t)
 
 lm_t_calib <- readRDS(
   file = file.path("~/Documents/elexon/model_objects", "lm_t_calib_v0.rds")
