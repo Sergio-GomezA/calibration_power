@@ -252,7 +252,7 @@ lapply(lm_t_calib, \(x) summary(x$model))
 # lm_t_calib[[2]] <- list(data = vik_df, model = mod1_t)
 
 lm_t_calib <- readRDS(
-  file = file.path("~/Documents/elexon/model_objects", "lm_t_calib_v0.rds")
+  file = file.path("~/Documents/elexon/model_objects", "lm_t_calib_v1.rds")
 )
 file_string <- "fig/pc_scatter_%s.pdf"
 lapply(
@@ -297,16 +297,38 @@ lapply(
       units = "in",
       dpi = 300
     )
+
+    # autocorrelation
+    df <- lm_t_calib[[i]]$data %>%
+      mutate(est_err = potential - power_est0 * fixef(lm_t_calib[[i]]$model)[1])
+    acf_df <- acf(df$est_err, plot = FALSE)
+
+    acf_tidy <- tibble(
+      lag = acf_df$lag[, 1, 1],
+      acf = acf_df$acf[, 1, 1]
+    )
+    ggplot(acf_tidy, aes(x = lag, y = acf)) +
+      geom_col(width = 0.01) +
+      geom_hline(yintercept = 0, color = "black") +
+      theme_minimal() +
+      labs(x = "Lag", y = "ACF")
+    ggsave(
+      sprintf("fig/lcalib_err_acf_%s.pdf", bmu_codes[i]),
+      width = 6,
+      height = 4,
+      units = "in",
+      dpi = 300
+    )
   }
 )
 
 
 arrow::write_parquet(
   pwr_curv_df,
-  file.path(path, "power_curve.parquet")
+  file.path(gen_path, "power_curve.parquet")
 )
 
-
+## time series during curtailment ####
 gen_adj %>%
   filter(
     grepl("HOWAO-1", bmUnit),
@@ -388,3 +410,46 @@ gen_adj %>%
   geom_line(aes(halfHourEndTime, curtailment, col = "curt")) +
   geom_line(aes(halfHourEndTime, potential, col = "potential")) +
   scale_color_aaas()
+
+
+## whole data figures ####
+set.seed(0)
+pwr_curv_df %>%
+  filter(potential > 0 | power_est0 < 0.15 * capacity) %>%
+  slice_sample(n = 10000) %>%
+  mutate(across(c(power_est0, potential), ~ . / capacity * 100)) %>%
+  filter(power_est0 < 100, potential < 100) %>%
+  ggplot(aes(power_est0, potential)) +
+  geom_point(col = blues9[6], alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1, col = "black", linetype = 2) +
+  # geom_abline(
+  #   intercept = 0,
+  #   slope = fixef(lm_t_calib[[i]]$model)[1],
+  #   col = "darkred",
+  #   linetype = 2
+  # ) +
+  geom_smooth(method = 'gam', formula = y ~ s(x, bs = "cs")) +
+  annotate(
+    "label",
+    x = mean(pwr_curv_df$potential),
+    y = mean(pwr_curv_df$potential),
+    label = paste0("y = x"),
+    fill = "gray90",
+    color = "gray20",
+    hjust = 1.5
+  ) +
+  annotate(
+    "label",
+    x = 50,
+    y = 25,
+    label = paste0("y ~ splines(x)"),
+    fill = "gray90",
+    color = "gray20",
+    hjust = 0
+  ) +
+  labs(
+    x = "ERA5 derived capacity factor (%)",
+    y = "Elexon capacity factor"
+  )
+
+ggsave("fig/pc_scatter_all.pdf", width = 6, height = 4, units = "in", dpi = 300)
