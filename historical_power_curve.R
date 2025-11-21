@@ -172,7 +172,8 @@ pwr_curv_df <- gen_adj %>%
   ) %>%
   # wind speed vertical interpolation
   mutate(
-    ws_h = log(height_turb_imp / 10) / log(100 / 10) * (ws100 - ws10) + ws10
+    ws_log = log(height_turb_imp / 10) / log(100 / 10) * (ws100 - ws10) + ws10,
+    ws_h = ws100 * (height_turb_imp / 100)^(1 / 7)
   )
 
 class_curves <- fread("data/generic_powerCurves.csv.gz") %>%
