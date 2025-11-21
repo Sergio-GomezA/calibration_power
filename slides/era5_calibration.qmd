@@ -762,11 +762,17 @@ Offshore wind farm with high curtailment
 
 ## ERA5 based estimates vs Elexon 2024
 
-\begin{itemize}
+\begin{enumerate}
   \item Remove periods with outages
+  \begin{itemize}
+    \item Modelling loss due to expected outages could be future work
+  \end{itemize}
   \item Vertical interpolation of ERA5 wind speed to turbine height
   \item Apply generic power curve to get estimated power
-\end{itemize}
+  \begin{itemize}
+    \item Modelling power curve from data could be future work
+  \end{itemize}
+\end{enumerate}
 
 ## ERA5 based estimates vs Elexon 2024
 \begin{columns}[T, totalwidth=\textwidth]
@@ -815,9 +821,11 @@ Offshore wind farm with high curtailment
 ::: {.columns}
 
 ::: {.column width="50%"}
-\centering
-    \small No. of events
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_nevents_map.pdf}
+\begin{itemize}
+  \item Working with 2024 data only
+  \item Each point represents one hour and one location 
+  \item Showin a sample of points to simplify plotting
+\end{itemize}
 :::
 
 ::: {.column width="50%"}
