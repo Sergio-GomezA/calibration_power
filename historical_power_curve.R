@@ -1,6 +1,7 @@
 require(arrow)
 require(dplyr)
-# require(rnaturalearth)
+require(rnaturalearth)
+require(rnaturalearthdata)
 require(sf)
 require(ggplot2)
 require(ggthemes)
@@ -10,6 +11,7 @@ require(data.table)
 require(parallel)
 
 require(brms)
+
 
 # read Data ####
 data_path <- "~/Documents/ERA5_at_wf/"
@@ -428,7 +430,11 @@ pwr_curv_df %>%
   #   col = "darkred",
   #   linetype = 2
   # ) +
-  geom_smooth(method = 'gam', formula = y ~ s(x, bs = "cs")) +
+  geom_smooth(
+    method = 'gam',
+    formula = y ~ s(x, bs = "cs"),
+    color = "darkred"
+  ) +
   annotate(
     "label",
     x = mean(pwr_curv_df$potential),
@@ -453,3 +459,36 @@ pwr_curv_df %>%
   )
 
 ggsave("fig/pc_scatter_all.pdf", width = 6, height = 4, units = "in", dpi = 300)
+
+# map
+uk_ie <- ne_countries(scale = "medium", returnclass = "sf") %>%
+  filter(admin %in% c("United Kingdom", "Ireland")) %>%
+  st_transform(crs = 4326)
+errdat <- pwr_curv_df %>%
+  filter(potential > 0 | power_est0 < 0.15 * capacity) %>%
+  slice_sample(n = 10000) %>%
+  mutate(across(c(power_est0, potential), ~ . / capacity * 100)) %>%
+  filter(power_est0 < 100, potential < 100) %>%
+  group_by(lon, lat, tech_typ) %>%
+  summarise(
+    across(c(power_est0, potential), mean, na.rm = TRUE)
+  ) %>%
+  mutate(mape = abs(potential - power_est0) / potential) %>%
+  st_as_sf(
+    coords = c("lon", "lat"),
+    crs = 4326
+  )
+
+ggplot() +
+  geom_sf(data = uk_ie, fill = "gray95", color = "gray70") + # map background
+  geom_sf(
+    data = errdat,
+    aes(geometry = geometry, color = tech_typ, size = mape)
+  ) +
+  scale_color_manual(values = mypalette) +
+  theme_map() +
+  labs(col = "", size = "MAPE") +
+  theme(legend.position = "right")
+ggsave(
+  "fig/pc_mape_map.pdf",
+)
