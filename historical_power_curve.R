@@ -813,7 +813,10 @@ GB_df %>%
     alpha = 0.5
   ) +
   facet_wrap(~tech_typ, nrow = 2) +
-  scale_fill_manual(values = mypalette, labels = c("elexon", "era5 estimate")) +
+  scale_fill_manual(
+    values = pal_lancet()(2),
+    labels = c("elexon", "era5 estimate")
+  ) +
   labs(x = "Capacity factor", fill = "") +
   theme(
     legend.position = "inside",
@@ -837,7 +840,10 @@ GB_df %>%
     alpha = 0.5
   ) +
   facet_wrap(~month, ncol = 4) +
-  scale_fill_manual(values = mypalette, labels = c("elexon", "era5 estimate")) +
+  scale_fill_manual(
+    values = pal_lancet()(2),
+    labels = c("elexon", "era5 estimate")
+  ) +
   labs(x = "Capacity factor", fill = "") +
   theme(
     legend.position = "inside",
@@ -859,7 +865,10 @@ GB_df %>%
     alpha = 0.5
   ) +
   facet_wrap(~month, ncol = 4) +
-  scale_fill_manual(values = mypalette, labels = c("elexon", "era5 estimate")) +
+  scale_fill_manual(
+    values = pal_lancet()(2),
+    labels = c("elexon", "era5 estimate")
+  ) +
   labs(x = "Capacity factor", fill = "") +
   theme(
     legend.position = "inside",
@@ -883,7 +892,10 @@ GB_df %>%
     alpha = 0.5
   ) +
   facet_wrap(~hour, ncol = 6) +
-  scale_fill_manual(values = mypalette, labels = c("elexon", "era5 estimate")) +
+  scale_fill_manual(
+    values = pal_lancet()(2),
+    labels = c("elexon", "era5 estimate")
+  ) +
   labs(x = "Capacity factor", fill = "") +
   theme(
     legend.position = "inside",
@@ -905,7 +917,10 @@ GB_df %>%
     alpha = 0.5
   ) +
   facet_wrap(~hour, ncol = 6) +
-  scale_fill_manual(values = mypalette, labels = c("elexon", "era5 estimate")) +
+  scale_fill_manual(
+    values = pal_lancet()(2),
+    labels = c("elexon", "era5 estimate")
+  ) +
   labs(x = "Capacity factor", fill = "") +
   theme(
     legend.position = "inside",
