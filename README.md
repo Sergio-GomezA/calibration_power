@@ -69,7 +69,7 @@ Global Wind Atlas calibration to UK power
     - [x] compare with generation
   - [ ] Using turbine characteristics
     - [ ] find power curves for some models
-    - [ ] interpolate wind speed to turbine height  
+    - [x] interpolate wind speed to turbine height  
   - [ ] Using historical power data  
   - [ ] Bayesian approach (PC + data)
 
@@ -77,8 +77,9 @@ Global Wind Atlas calibration to UK power
   - [x] New set with era 5
   - [ ] Power curve updates 
   - [ ] Curtailment and Maintenance
-  - [ ] New comparison
+  - [x] New comparison
   - [ ] lm, QM, QR
+
 - **Loss factors**
   - Estimate using history
 
