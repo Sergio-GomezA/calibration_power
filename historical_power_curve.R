@@ -1,5 +1,6 @@
 require(arrow)
 require(dplyr)
+require(tidyr)
 require(rnaturalearth)
 require(rnaturalearthdata)
 require(sf)
@@ -493,3 +494,425 @@ ggplot() +
 ggsave(
   "fig/pc_mape_map.pdf",
 )
+
+
+# comparison after agregation ####
+
+GB_df <- pwr_curv_df %>%
+  group_by(tech_typ, halfHourEndTime) %>%
+  summarise(
+    across(
+      c(power_est0, potential, capacity),
+      sum
+    ),
+  ) %>%
+  mutate(
+    across(
+      c(power_est0, potential),
+      ~ . / capacity,
+      .names = "norm_{.col}"
+    ),
+    month = factor(month(halfHourEndTime)),
+    hour = factor(hour(halfHourEndTime))
+  )
+
+
+lm0 <- lm(
+  formula = norm_potential ~ norm_power_est0,
+  data = GB_df
+)
+summary(lm0)
+lm1 <- lm(
+  formula = norm_potential ~ tech_typ *
+    norm_power_est0,
+  data = GB_df
+)
+summary(lm1)
+lm1 <- lm(
+  formula = norm_potential ~ tech_typ +
+    norm_power_est0 *
+      month,
+  data = GB_df
+)
+summary(lm1)
+lm_t <- brm(
+  formula = norm_potential ~ +norm_power_est0,
+  data = GB_df,
+  family = student(), # <-- Student-t likelihood
+  chains = 4,
+  cores = 4,
+  iter = 5000
+)
+plot(lm_t)
+summary(lm_t)
+
+fixef(lm_t)[, 1]
+lm0$coefficients
+
+## scatter #####
+
+GB_df %>%
+  # slice_sample(n = 10000) %>%
+  ggplot() +
+  geom_point(
+    aes(norm_power_est0, norm_potential),
+    color = blues9[5],
+    # fill = NA,
+    alpha = 0.2,
+    pch = 16
+  ) +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  geom_abline(
+    aes(intercept = lm0$coefficients[1], slope = lm0$coefficients[2]),
+    linetype = 2,
+    col = "darkred"
+  ) +
+  annotate(
+    "label",
+    x = mean(GB_df$norm_potential),
+    y = mean(GB_df$norm_potential),
+    label = paste0("y = x"),
+    fill = "gray90",
+    color = "gray20",
+    hjust = 1.5
+  ) +
+  annotate(
+    "label",
+    x = mean(GB_df$norm_power_est0),
+    y = mean(GB_df$norm_power_est0) * lm0$coefficients[2] + lm0$coefficients[1],
+    label = sprintf(
+      "y = %0.2f + %0.2f x",
+      lm0$coefficients[1],
+      lm0$coefficients[2]
+    ),
+    fill = "gray90",
+    color = "gray20",
+    hjust = 0
+  ) +
+  labs(
+    x = "ERA5 derived capacity factor (%)",
+    y = "Elexon capacity factor"
+  )
+
+ggsave("fig/gb_aggr_scatter.pdf", width = 6, height = 4)
+### scatter plots by type #####
+line_df <- GB_df %>%
+  group_by(tech_typ) %>%
+  summarise(
+    intercept = coef(lm(norm_potential ~ norm_power_est0))[1],
+    slope = coef(lm(norm_potential ~ norm_power_est0))[2]
+  ) %>%
+  mutate(
+    x = mean(GB_df$norm_power_est0, na.rm = TRUE),
+    y = intercept + slope * x,
+    label = sprintf("y = %.2f + %.2f x", intercept, slope)
+  )
+GB_df %>%
+  # slice_sample(n = 10000) %>%
+  ggplot() +
+  geom_point(
+    aes(norm_power_est0, norm_potential, col = tech_typ),
+    # fill = NA,
+    alpha = 0.2,
+    pch = 16
+  ) +
+  facet_wrap(~tech_typ, nrow = 2) +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  geom_abline(
+    aes(intercept = intercept, slope = slope),
+    data = line_df,
+    linetype = 2,
+    col = "darkred"
+  ) +
+  geom_label(
+    data = line_df,
+    aes(x = x, y = y, label = label),
+    fill = "gray90",
+    color = "gray20",
+    hjust = 0
+  ) +
+  labs(
+    x = "ERA5 derived capacity factor (%)",
+    y = "Elexon capacity factor"
+  ) +
+  scale_color_manual(values = mypalette) +
+  theme(legend.position = "none")
+ggsave("fig/gb_aggr_scatter_typ.png", width = 6, height = 4)
+
+### scatter plots by month #####
+line_df <- GB_df %>%
+  group_by(tech_typ, month) %>%
+  summarise(
+    intercept = coef(lm(norm_potential ~ norm_power_est0))[1],
+    slope = coef(lm(norm_potential ~ norm_power_est0))[2]
+  ) %>%
+  mutate(
+    x = mean(GB_df$norm_power_est0, na.rm = TRUE),
+    y = intercept + slope * x,
+    label = sprintf("y = %.2f + %.2f x", intercept, slope)
+  )
+GB_df %>%
+  filter(tech_typ == "Wind Onshore") %>%
+  ggplot() +
+  geom_point(
+    aes(norm_power_est0, norm_potential, col = tech_typ),
+    # fill = NA,
+    alpha = 0.2,
+    pch = 16
+  ) +
+  facet_wrap(~month, ncol = 4) +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  geom_abline(
+    aes(intercept = intercept, slope = slope),
+    data = line_df %>% filter(tech_typ == "Wind Onshore"),
+    linetype = 2,
+    col = "darkred"
+  ) +
+  geom_text(
+    data = line_df %>% filter(tech_typ == "Wind Onshore"),
+    aes(x = 0.2, y = 0.05, label = label),
+    color = "gray20",
+    size = 3.5,
+    hjust = 0
+  ) +
+  labs(
+    x = "ERA5 derived capacity factor (%)",
+    y = "Elexon capacity factor"
+  ) +
+  scale_color_manual(values = mypalette[2]) +
+  theme(legend.position = "none", axis.text.x = element_text(size = 7))
+ggsave("fig/gb_aggr_scatter_on_month.png", width = 8, height = 6)
+
+GB_df %>%
+  filter(tech_typ == "Wind Offshore") %>%
+  ggplot() +
+  geom_point(
+    aes(norm_power_est0, norm_potential, col = tech_typ),
+    # fill = NA,
+    alpha = 0.2,
+    pch = 16
+  ) +
+  facet_wrap(~month, ncol = 4) +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  geom_abline(
+    aes(intercept = intercept, slope = slope),
+    data = line_df %>% filter(tech_typ == "Wind Offshore"),
+    linetype = 2,
+    col = "darkred"
+  ) +
+  geom_text(
+    data = line_df %>% filter(tech_typ == "Wind Offshore"),
+    aes(x = 0.2, y = 0.05, label = label),
+    color = "gray20",
+    size = 3.5,
+    hjust = 0
+  ) +
+  labs(
+    x = "ERA5 derived capacity factor (%)",
+    y = "Elexon capacity factor"
+  ) +
+  scale_color_manual(values = mypalette[1]) +
+  theme(legend.position = "none", axis.text.x = element_text(size = 7))
+ggsave("fig/gb_aggr_scatter_off_month.png", width = 8, height = 6)
+
+### scatter plots by hour #####
+line_df <- GB_df %>%
+  group_by(tech_typ, hour) %>%
+  summarise(
+    intercept = coef(lm(norm_potential ~ norm_power_est0))[1],
+    slope = coef(lm(norm_potential ~ norm_power_est0))[2]
+  ) %>%
+  mutate(
+    x = mean(GB_df$norm_power_est0, na.rm = TRUE),
+    y = intercept + slope * x,
+    label = sprintf("y = %.2f + %.2f x", intercept, slope)
+  )
+GB_df %>%
+  filter(tech_typ == "Wind Onshore") %>%
+  ggplot() +
+  geom_point(
+    aes(norm_power_est0, norm_potential, col = tech_typ),
+    # fill = NA,
+    alpha = 0.2,
+    pch = 16
+  ) +
+  facet_wrap(~hour, ncol = 6) +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  geom_abline(
+    aes(intercept = intercept, slope = slope),
+    data = line_df %>% filter(tech_typ == "Wind Onshore"),
+    linetype = 2,
+    col = "darkred"
+  ) +
+  geom_text(
+    data = line_df %>% filter(tech_typ == "Wind Onshore"),
+    aes(x = 0.2, y = 0.05, label = label),
+    color = "gray20",
+    size = 2,
+    hjust = 0
+  ) +
+  labs(
+    x = "ERA5 derived capacity factor (%)",
+    y = "Elexon capacity factor"
+  ) +
+  scale_color_manual(values = mypalette[2]) +
+  theme(legend.position = "none", axis.text.x = element_text(size = 5))
+ggsave("fig/gb_aggr_scatter_on_hour.png", width = 8, height = 6)
+
+GB_df %>%
+  filter(tech_typ == "Wind Offshore") %>%
+  ggplot() +
+  geom_point(
+    aes(norm_power_est0, norm_potential, col = tech_typ),
+    # fill = NA,
+    alpha = 0.2,
+    pch = 16
+  ) +
+  facet_wrap(~hour, ncol = 6) +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  geom_abline(
+    aes(intercept = intercept, slope = slope),
+    data = line_df %>% filter(tech_typ == "Wind Offshore"),
+    linetype = 2,
+    col = "darkred"
+  ) +
+  geom_text(
+    data = line_df %>% filter(tech_typ == "Wind Offshore"),
+    aes(x = 0.2, y = 0.05, label = label),
+    color = "gray20",
+    size = 2,
+    hjust = 0
+  ) +
+  labs(
+    x = "ERA5 derived capacity factor (%)",
+    y = "Elexon capacity factor"
+  ) +
+  scale_color_manual(values = mypalette[1]) +
+  theme(legend.position = "none", axis.text.x = element_text(size = 5))
+ggsave("fig/gb_aggr_scatter_off_hour.png", width = 8, height = 6)
+
+
+## densities ####
+GB_df %>%
+  # slice_sample(n = 10000) %>%
+  ggplot() +
+  geom_density2d_filled(
+    aes(norm_power_est0, norm_potential),
+    # color = blues9[5],
+    # alpha = 0.5
+  ) +
+  scale_fill_manual(values = blues9)
+
+GB_df %>%
+  # slice_sample(n = 10000) %>%
+  pivot_longer(cols = matches("norm_")) %>%
+  ggplot() +
+  geom_density(
+    aes(x = value, fill = name),
+    # color = blues9[5],
+    alpha = 0.5
+  ) +
+  facet_wrap(~tech_typ, nrow = 2) +
+  scale_fill_manual(values = mypalette, labels = c("elexon", "era5 estimate")) +
+  labs(x = "Capacity factor", fill = "") +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.5, 0.9),
+    # legend.box.background = element_rect(fill = "transparent", colour = NA),
+    legend.background = element_rect(fill = "transparent", colour = NA)
+  )
+
+ggsave("fig/density_comparison.pdf", width = 6, height = 4)
+
+### dens plots by season ####
+
+GB_df %>%
+  filter(tech_typ == "Wind Offshore") %>%
+  # slice_sample(n = 10000) %>%
+  pivot_longer(cols = matches("norm_")) %>%
+  ggplot() +
+  geom_density(
+    aes(x = value, fill = name),
+    # color = blues9[5],
+    alpha = 0.5
+  ) +
+  facet_wrap(~month, ncol = 4) +
+  scale_fill_manual(values = mypalette, labels = c("elexon", "era5 estimate")) +
+  labs(x = "Capacity factor", fill = "") +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.35, 0.95),
+    # legend.box.background = element_rect(fill = "transparent", colour = NA),
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    axis.text.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7)
+  )
+ggsave("fig/cf_density_comparison_off_month.pdf", width = 8, height = 6)
+GB_df %>%
+  filter(tech_typ == "Wind Onshore") %>%
+  # slice_sample(n = 10000) %>%
+  pivot_longer(cols = matches("norm_")) %>%
+  ggplot() +
+  geom_density(
+    aes(x = value, fill = name),
+    # color = blues9[5],
+    alpha = 0.5
+  ) +
+  facet_wrap(~month, ncol = 4) +
+  scale_fill_manual(values = mypalette, labels = c("elexon", "era5 estimate")) +
+  labs(x = "Capacity factor", fill = "") +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.35, 0.95),
+    # legend.box.background = element_rect(fill = "transparent", colour = NA),
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    axis.text.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7)
+  )
+ggsave("fig/cf_density_comparison_on_month.pdf", width = 8, height = 6)
+
+### dens by hour ####
+GB_df %>%
+  filter(tech_typ == "Wind Offshore") %>%
+  # slice_sample(n = 10000) %>%
+  pivot_longer(cols = matches("norm_")) %>%
+  ggplot() +
+  geom_density(
+    aes(x = value, fill = name),
+    # color = blues9[5],
+    alpha = 0.5
+  ) +
+  facet_wrap(~hour, ncol = 6) +
+  scale_fill_manual(values = mypalette, labels = c("elexon", "era5 estimate")) +
+  labs(x = "Capacity factor", fill = "") +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.35, 0.95),
+    # legend.box.background = element_rect(fill = "transparent", colour = NA),
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    axis.text.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7)
+  )
+ggsave("fig/cf_density_comparison_off_hour.pdf", width = 8, height = 6)
+GB_df %>%
+  filter(tech_typ == "Wind Onshore") %>%
+  # slice_sample(n = 10000) %>%
+  pivot_longer(cols = matches("norm_")) %>%
+  ggplot() +
+  geom_density(
+    aes(x = value, fill = name),
+    # color = blues9[5],
+    alpha = 0.5
+  ) +
+  facet_wrap(~hour, ncol = 6) +
+  scale_fill_manual(values = mypalette, labels = c("elexon", "era5 estimate")) +
+  labs(x = "Capacity factor", fill = "") +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.35, 0.95),
+    # legend.box.background = element_rect(fill = "transparent", colour = NA),
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    axis.text.y = element_text(size = 7),
+    axis.text.x = element_text(size = 7)
+  )
+ggsave("fig/cf_density_comparison_on_hour.pdf", width = 8, height = 6)
