@@ -84,7 +84,7 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FA
 \end{columns}
 \tiny Closest grid point to each wind farm location
 
-# Summary {#sec-appendix}
+# Overview {#sec-appendix}
 
 ## Data sources 
 ::: {.columns}
@@ -149,6 +149,8 @@ p_{it} &= \beta_0 + \beta \hat p_{it} + s_i + u_t,
 \end{align*}
 
 where $s_i$ and $u_t$ represent spatial and temporal effects.
+
+# Curtailment and outages in select wind farms
 
 ## Generic power curves vs observed data - Fallago Rig
 Onshore wind farm with moderate curtailment
@@ -352,19 +354,7 @@ Offshore wind farm with high curtailment
 
 \end{columns}
 
-## ERA5 based estimates vs Elexon 2024
-
-\begin{enumerate}
-  \item Remove periods with outages
-  \begin{itemize}
-    \item Modelling loss due to expected outages could be future work
-  \end{itemize}
-  \item Vertical interpolation of ERA5 wind speed to turbine height
-  \item Apply generic power curve to get estimated power
-  \begin{itemize}
-    \item Modelling power curve from data could be future work
-  \end{itemize}
-\end{enumerate}
+# Calibration with linear model
 
 ## ERA5 based estimates vs Elexon 2024
 \begin{columns}[T, totalwidth=\textwidth]
@@ -422,7 +412,7 @@ Offshore wind farm with high curtailment
 
 ::: {.column width="50%"}
 \centering
-    \small Unavailable capacity
+    \small Scatter all wind farms
     \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_all.pdf}
 :::
 
@@ -918,3 +908,16 @@ An initial estimate will require:
     \hat p_{it} = \widetilde \text{PC}_{k} (w_{it})
 \end{equation*}
 
+## ERA5 based estimates vs Elexon 2024
+
+\begin{enumerate}
+  \item Remove periods with outages
+  \begin{itemize}
+    \item Modelling loss due to expected outages could be future work
+  \end{itemize}
+  \item Vertical interpolation of ERA5 wind speed to turbine height
+  \item Apply generic power curve to get estimated power
+  \begin{itemize}
+    \item Modelling power curve from data could be future work
+  \end{itemize}
+\end{enumerate}
