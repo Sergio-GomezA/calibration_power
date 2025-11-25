@@ -13,7 +13,7 @@ Global Wind Atlas calibration to UK power
   - [ ] elexon time variability
   - [ ] elexon panel data characteristics
   - [ ] overall evolution generation
-  - [ ] Curtailment
+  - [x] Curtailment
     - [x] Seasonality
     - [x] Potential yield
     - [x] Double check curtailment days 
@@ -47,11 +47,11 @@ Global Wind Atlas calibration to UK power
   - [x] Data for previous years
   - [x] prepare wind speed for power conversion *
   - [x] Data capping at 0 and max capacity instead of removing *
-  - [ ] Combine BMUs with same coordinates *
+  - [x] Combine BMUs with same coordinates *
   - [x] remit messages download
   - [x] unwind remit outage profile
   - [x] merge with clean generation data
-  - [ ] wind vertical interpolation
+  - [x] wind vertical interpolation
 
 
 - **Power curve fitting**
@@ -75,10 +75,15 @@ Global Wind Atlas calibration to UK power
 
 - **Slides**
   - [x] New set with era 5
-  - [ ] Power curve updates 
-  - [ ] Curtailment and Maintenance
+  - [x] Power curve updates 
+  - [x] Curtailment and Maintenance
   - [x] New comparison
-  - [ ] lm, QM, QR
+  - [x] lm, 
+  - [ ] QM, QR
+
+- **Research topics**
+  -[ ] power curve estimation
+  -[ ] calibration of power curve estimates
 
 - **Loss factors**
   - Estimate using history
