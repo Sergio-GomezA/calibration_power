@@ -30,6 +30,8 @@ Global Wind Atlas calibration to UK power
     - [x] duration
     - [x] capacity impact
     - [x] spatial distribution
+  - [ ] Power curve scatter by season
+  - [ ] Time series of a segment before, after calibration
 
 - **Inputs and EDA**
   - [x] cleaning data code
