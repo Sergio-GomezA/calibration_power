@@ -1169,3 +1169,68 @@ power_curve_data1f <- function(
     p_nout = p_nout
   ))
 }
+
+
+est_pwr_curv <- function(
+  df,
+  ws_col = "ws_h_wmean",
+  power_col = "norm_potential",
+  avg_fun = mean,
+  n_bins = 20,
+  quantile_bins = FALSE,
+  plot = FALSE
+) {
+  # Check inputs
+  # browser()
+  stopifnot(is.data.frame(df))
+  stopifnot(all(c(ws_col, power_col) %in% names(df)))
+
+  ws <- df[[ws_col]]
+  power <- df[[power_col]]
+
+  # Create bins
+  if (quantile_bins) {
+    # quantile-based bins (equal number of points)
+    bins <- cut(
+      ws,
+      breaks = quantile(
+        ws,
+        probs = seq(0, 1, length.out = n_bins + 1),
+        na.rm = TRUE
+      ),
+      include.lowest = TRUE
+    )
+  } else {
+    # equal-width bins (default)
+    bins <- cut(ws, n_bins, include.lowest = TRUE)
+  }
+
+  # Compute mean wind speed & mean power in each bin
+  curve_df <- aggregate(
+    cbind(ws, power),
+    by = list(bin = bins),
+    FUN = avg_fun,
+    na.rm = TRUE
+  )
+
+  # Rename nicely
+  names(curve_df) <- c("bin", "ws_mean", "power_mean")
+
+  # Sort by wind speed
+  curve_df <- curve_df[order(curve_df$ws_mean), ]
+
+  # Optionally plot
+  if (plot) {
+    plot(
+      curve_df$ws_mean,
+      curve_df$power_mean,
+      type = "b",
+      pch = 19,
+      xlab = "Wind Speed (m/s)",
+      ylab = "Expected Power",
+      main = "Binned Power Curve Estimate"
+    )
+  }
+
+  return(curve_df)
+}

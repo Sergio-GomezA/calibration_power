@@ -332,6 +332,8 @@ arrow::write_parquet(
   file.path(gen_path, "power_curve.parquet")
 )
 
+pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
+
 ## time series during curtailment ####
 gen_adj %>%
   filter(
@@ -497,14 +499,16 @@ ggsave(
 
 
 # comparison after agregation ####
-
+pwr_curv_df %>% names()
 GB_df <- pwr_curv_df %>%
   group_by(tech_typ, halfHourEndTime) %>%
   summarise(
+    ws_h_wmean = sum(ws_h * capacity),
     across(
       c(power_est0, potential, capacity),
       sum
     ),
+    across(c(ws_h), mean, .names = "{.col}_mean")
   ) %>%
   mutate(
     across(
@@ -512,6 +516,7 @@ GB_df <- pwr_curv_df %>%
       ~ . / capacity,
       .names = "norm_{.col}"
     ),
+    ws_h_wmean = ws_h_wmean / capacity,
     month = factor(month(halfHourEndTime)),
     hour = factor(hour(halfHourEndTime))
   )
@@ -931,3 +936,88 @@ GB_df %>%
     axis.text.x = element_text(size = 7)
   )
 ggsave("fig/cf_density_comparison_on_hour.pdf", width = 8, height = 6)
+
+### power curve plots by season ####
+
+source("aux_funct.R")
+
+curve_GB <- est_pwr_curv(
+  GB_df,
+  avg_fun = median,
+  n_bins = 50,
+  quantile_bins = TRUE,
+  plot = FALSE
+)
+speeds <- seq(2, 25, length.out = 100)
+pc_GB <- data.frame(
+  ws_mean = speeds
+) %>%
+  mutate(
+    power_mean = approx(
+      x = curve_GB$ws_mean,
+      y = curve_GB$power_mean,
+      xout = ws_mean,
+      rule = 2 # flat extrapolation
+    )$y
+  )
+GB_df %>%
+  ggplot(aes(ws_h_wmean, norm_potential, col = "observed")) +
+  geom_point(alpha = 0.2) +
+  geom_line(
+    aes(ws_mean, power_mean, col = "power curve est."),
+    data = curve_GB
+  ) +
+  scale_color_manual(
+    values = c(
+      "observed" = blues9[7],
+      "power curve est." = "darkred",
+      "outages" = "darkorange"
+    )
+  ) +
+  theme(
+    legend.position = "bottom"
+  ) +
+  labs(col = "", x = "wind speed", y = "generation (MW)") +
+  scale_x_continuous(breaks = 5 * (0:5))
+ggsave("fig/pc_scatter_GB_valnout.png", width = 6, height = 4)
+
+curve_GB_month <- lapply(
+  1:12,
+  \(m) {
+    curve_month <- est_pwr_curv(
+      GB_df %>% filter(month == m),
+      avg_fun = median,
+      n_bins = 30,
+      quantile_bins = TRUE,
+      plot = FALSE
+    ) %>%
+      mutate(month = m)
+  }
+) %>%
+  bind_rows()
+
+GB_df %>%
+  ggplot(aes(ws_h_wmean, norm_potential, col = "observed")) +
+  geom_point(alpha = 0.2) +
+  geom_line(
+    aes(ws_mean, power_mean, col = "global pc. est."),
+    data = curve_GB
+  ) +
+  geom_line(
+    aes(ws_mean, power_mean, col = "monthly est."),
+    data = curve_GB_month
+  ) +
+  scale_color_manual(
+    values = c(
+      "observed" = blues9[7],
+      "global pc. est." = "darkred",
+      "monthly est." = "darkorange"
+    )
+  ) +
+  facet_wrap(~month) +
+  theme(
+    legend.position = "bottom"
+  ) +
+  labs(col = "", x = "wind speed", y = "generation (MW)") +
+  scale_x_continuous(breaks = 5 * (0:5))
+ggsave("fig/pc_scatter_GB_valnout_month.png", width = 8, height = 6)
