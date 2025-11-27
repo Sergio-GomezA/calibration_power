@@ -30,7 +30,8 @@ Global Wind Atlas calibration to UK power
     - [x] duration
     - [x] capacity impact
     - [x] spatial distribution
-  - [ ] Power curve scatter by season
+  - [x] Power curve scatter by season
+  - [ ] Full history plots
   - [ ] Time series of a segment before, after calibration
 
 - **Inputs and EDA**
@@ -82,6 +83,11 @@ Global Wind Atlas calibration to UK power
   - [x] New comparison
   - [x] lm, 
   - [ ] QM, QR
+  - [ ] Summary Research review
+    - [ ] Power curve
+    - [ ] Cannon/Brayshaw
+    - [ ] Potisomporn relevant
+    - [ ] Thornton relevant
 
 - **Research topics**
   -[ ] power curve estimation
@@ -95,4 +101,16 @@ Global Wind Atlas calibration to UK power
 - **Quantile mapping**
 
 - **Quantile regression**
+
+
+- **Expansion ideas**
+  - Estimate generation from locations without elexon data
+  - Power estimates for locations without elexon data
+  - WTG efficiency loss: type / time / weather / errors / maintenance events
+  - Extreme draughts
+  - Extreme low wind speed scenarios
+  - Extreme low wind power scenarios
+  - Solar energy calibration
+  - Renewable energy defict scenarios
+
 

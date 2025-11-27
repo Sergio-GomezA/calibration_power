@@ -136,7 +136,7 @@ lapply(
 )
 
 # apply to generic power curve to entire data ###
-t0 <- "2024-01-01"
+t0 <- "2019-01-01"
 t1 <- "2024-12-31"
 
 pwr_curv_df <- gen_adj %>%
@@ -329,7 +329,7 @@ lapply(
 
 arrow::write_parquet(
   pwr_curv_df,
-  file.path(gen_path, "power_curve.parquet")
+  file.path(gen_path, "power_curve_all.parquet")
 )
 
 pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
@@ -494,7 +494,7 @@ ggplot() +
   labs(col = "", size = "MAPE") +
   theme(legend.position = "right")
 ggsave(
-  "fig/pc_mape_map.pdf",
+  "fig/pc_mape_map_all.pdf",
 )
 
 
@@ -548,6 +548,14 @@ lm_t <- brm(
   cores = 4,
   iter = 5000
 )
+
+saveRDS(
+  lm_t,
+  file = file.path("~/Documents/elexon/model_objects", "lm_t_calib_all.rds")
+)
+lm_t <- readRDS(
+  file.path("~/Documents/elexon/model_objects", "lm_t_calib_all.rds")
+)
 plot(lm_t)
 summary(lm_t)
 
@@ -599,7 +607,7 @@ GB_df %>%
     y = "Elexon capacity factor"
   )
 
-ggsave("fig/gb_aggr_scatter.pdf", width = 6, height = 4)
+ggsave("fig/gb_aggr_scatter_all.png", width = 6, height = 4)
 ### scatter plots by type #####
 line_df <- GB_df %>%
   group_by(tech_typ) %>%
@@ -642,7 +650,7 @@ GB_df %>%
   ) +
   scale_color_manual(values = mypalette) +
   theme(legend.position = "none")
-ggsave("fig/gb_aggr_scatter_typ.png", width = 6, height = 4)
+ggsave("fig/gb_aggr_scatter_typ_all.png", width = 6, height = 4)
 
 ### scatter plots by month #####
 line_df <- GB_df %>%
@@ -686,7 +694,7 @@ GB_df %>%
   ) +
   scale_color_manual(values = mypalette[2]) +
   theme(legend.position = "none", axis.text.x = element_text(size = 7))
-ggsave("fig/gb_aggr_scatter_on_month.png", width = 8, height = 6)
+ggsave("fig/gb_aggr_scatter_on_month_all.png", width = 8, height = 6)
 
 GB_df %>%
   filter(tech_typ == "Wind Offshore") %>%
@@ -718,7 +726,7 @@ GB_df %>%
   ) +
   scale_color_manual(values = mypalette[1]) +
   theme(legend.position = "none", axis.text.x = element_text(size = 7))
-ggsave("fig/gb_aggr_scatter_off_month.png", width = 8, height = 6)
+ggsave("fig/gb_aggr_scatter_off_month_all.png", width = 8, height = 6)
 
 ### scatter plots by hour #####
 line_df <- GB_df %>%
@@ -762,7 +770,7 @@ GB_df %>%
   ) +
   scale_color_manual(values = mypalette[2]) +
   theme(legend.position = "none", axis.text.x = element_text(size = 5))
-ggsave("fig/gb_aggr_scatter_on_hour.png", width = 8, height = 6)
+ggsave("fig/gb_aggr_scatter_on_hour_all.png", width = 8, height = 6)
 
 GB_df %>%
   filter(tech_typ == "Wind Offshore") %>%
@@ -794,7 +802,7 @@ GB_df %>%
   ) +
   scale_color_manual(values = mypalette[1]) +
   theme(legend.position = "none", axis.text.x = element_text(size = 5))
-ggsave("fig/gb_aggr_scatter_off_hour.png", width = 8, height = 6)
+ggsave("fig/gb_aggr_scatter_off_hour_all.png", width = 8, height = 6)
 
 
 ## densities ####
@@ -830,7 +838,7 @@ GB_df %>%
     legend.background = element_rect(fill = "transparent", colour = NA)
   )
 
-ggsave("fig/density_comparison.pdf", width = 6, height = 4)
+ggsave("fig/density_comparison_all.pdf", width = 6, height = 4)
 
 ### dens plots by season ####
 
@@ -858,7 +866,7 @@ GB_df %>%
     axis.text.y = element_text(size = 7),
     axis.text.x = element_text(size = 7)
   )
-ggsave("fig/cf_density_comparison_off_month.pdf", width = 8, height = 6)
+ggsave("fig/cf_density_comparison_off_month_all.pdf", width = 8, height = 6)
 GB_df %>%
   filter(tech_typ == "Wind Onshore") %>%
   # slice_sample(n = 10000) %>%
@@ -883,7 +891,7 @@ GB_df %>%
     axis.text.y = element_text(size = 7),
     axis.text.x = element_text(size = 7)
   )
-ggsave("fig/cf_density_comparison_on_month.pdf", width = 8, height = 6)
+ggsave("fig/cf_density_comparison_on_month_all.pdf", width = 8, height = 6)
 
 ### dens by hour ####
 GB_df %>%
@@ -910,7 +918,7 @@ GB_df %>%
     axis.text.y = element_text(size = 7),
     axis.text.x = element_text(size = 7)
   )
-ggsave("fig/cf_density_comparison_off_hour.pdf", width = 8, height = 6)
+ggsave("fig/cf_density_comparison_off_hour_all.pdf", width = 8, height = 6)
 GB_df %>%
   filter(tech_typ == "Wind Onshore") %>%
   # slice_sample(n = 10000) %>%
@@ -935,7 +943,7 @@ GB_df %>%
     axis.text.y = element_text(size = 7),
     axis.text.x = element_text(size = 7)
   )
-ggsave("fig/cf_density_comparison_on_hour.pdf", width = 8, height = 6)
+ggsave("fig/cf_density_comparison_on_hour_all.pdf", width = 8, height = 6)
 
 ### power curve plots by season ####
 
@@ -979,7 +987,31 @@ GB_df %>%
   ) +
   labs(col = "", x = "wind speed", y = "generation (MW)") +
   scale_x_continuous(breaks = 5 * (0:5))
-ggsave("fig/pc_scatter_GB_valnout.png", width = 6, height = 4)
+
+
+ggsave("fig/pc_scatter_GB_valnout_all.png", width = 6, height = 4)
+
+GB_df %>%
+  ggplot(aes(ws_h_wmean, norm_potential)) +
+  stat_bin2d(aes(fill = (after_stat(count))), bins = 100) +
+  geom_line(
+    aes(ws_mean, power_mean, col = "power curve est."),
+    data = curve_GB
+  ) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    breaks = c(3, 30, 300)
+  ) +
+  scale_color_manual(values = c("power curve est." = "darkred")) +
+  labs(x = "wind speed", y = "capacity factor %", col = "") +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.2, 0.7),
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    legend.box.background = element_rect(fill = "transparent", colour = NA)
+  )
+ggsave("fig/pc_bindens_GB_valnout_all.png", width = 6, height = 4)
 
 curve_GB_month <- lapply(
   1:12,
@@ -1021,3 +1053,37 @@ GB_df %>%
   labs(col = "", x = "wind speed", y = "generation (MW)") +
   scale_x_continuous(breaks = 5 * (0:5))
 ggsave("fig/pc_scatter_GB_valnout_month.png", width = 8, height = 6)
+
+GB_df %>%
+  ggplot(aes(ws_h_wmean, norm_potential)) +
+  stat_bin2d(aes(fill = (after_stat(count))), bins = 100) +
+  geom_line(
+    aes(ws_mean, power_mean, col = "PC est."),
+    data = curve_GB
+  ) +
+  geom_line(
+    aes(ws_mean, power_mean, col = "monthly est."),
+    data = curve_GB_month
+  ) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "freq.",
+    breaks = c(1, 10, 50)
+  ) +
+  scale_color_manual(values = c("PC est." = "darkred")) +
+  facet_wrap(~month) +
+  labs(x = "wind speed", y = "capacity factor %", col = "") +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.2, 0.45),
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    legend.box.background = element_rect(fill = "transparent", colour = NA),
+    # shrink keys
+    legend.key.size = unit(0.4, "lines"),
+    legend.spacing.y = unit(0, "lines"), # reduce vertical gap between legends
+    legend.box.spacing = unit(0, "lines"), # reduce space around the legend box
+    # shrink text
+    legend.text = element_text(size = 7),
+    legend.title = element_text(size = 8)
+  )
+ggsave("fig/pc_bindens_GB_valnout_month_all.png", width = 8, height = 6)
