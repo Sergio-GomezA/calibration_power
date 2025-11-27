@@ -237,6 +237,8 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 :::
 
 :::
+
+
 ## Density of aggregated power
 ::: {.columns}
 
@@ -252,6 +254,25 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 :::
 
 :::
+## Power curve by season
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+\centering
+\small Onshore power
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_GB_valnout.png}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Power curve by season
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_GB_valnout_month.png}
+:::
+
+:::
+
 
 ## Linear calibration by season
 
@@ -328,6 +349,38 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 :::
 
 :::
+
+
+# Previous research {#sec:literature}
+
+## Power curve modelling
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+### Binning method
+\begin{equation*}
+  P_i = \frac{1}{n_i} \sum_{j=1}^{n_i} P_{ij}
+\end{equation*}
+where:
+- $P_{ij}$ is the $j$ th power observation in bin $i$
+- $n_i$ no. of observations in bin $i$
+
+### Logistic
+\begin{equation*}
+P(u) = a \frac{1+ m \exp(-u/\tau)}{1+ n \exp(-u/\tau)}
+\end{equation*}
+
+:::
+
+::: {.column width="50%"}
+
+:::
+
+:::
+
+
 
 ## Next Steps
 
