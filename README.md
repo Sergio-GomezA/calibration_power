@@ -1,5 +1,5 @@
-# GWAcalibration
-Global Wind Atlas calibration to UK power
+# Calibration of Reanalysis to GB wind power generation
+Started as a Global Wind Atlas calibration to UK power, however to keep working with spatiotemporal properties now we're calibrating ERA5.
 
 ## Next Steps
 
