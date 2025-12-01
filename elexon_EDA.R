@@ -7,6 +7,7 @@ require(ggsci)
 require(rnaturalearth)
 require(rnaturalearthdata)
 require(sf)
+require(data.table)
 
 
 # Data reading ####
