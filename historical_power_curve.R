@@ -48,6 +48,13 @@ pot_summary <- read.csv("data/hist_pot2024.csv")
 generic_pc <- fread("data/generic_powerCurves.csv.gz")
 # filter one wind farm ###
 
+class_curves <- fread("data/generic_powerCurves.csv.gz") %>%
+  group_by(class) %>%
+  mutate(power_scaled = power_kw / ratedPower) %>%
+  ungroup()
+
+pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
+
 ## Offshore no curtailment ####
 source("aux_funct.R")
 bmu_code <- "HOWAO-1"
@@ -177,10 +184,7 @@ pwr_curv_df <- gen_adj %>%
     ws_h = ws100 * (height_turb_imp / 100)^(1 / 7)
   )
 
-class_curves <- fread("data/generic_powerCurves.csv.gz") %>%
-  group_by(class) %>%
-  mutate(power_scaled = power_kw / ratedPower) %>%
-  ungroup()
+
 classes <- class_curves$class %>% unique()
 pwr_curv_df$power_est0 <- 0
 for (class in classes) {
@@ -332,7 +336,6 @@ arrow::write_parquet(
   file.path(gen_path, "power_curve_all.parquet")
 )
 
-pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
 
 ## time series during curtailment ####
 gen_adj %>%
@@ -369,8 +372,7 @@ ggplot() +
   geom_line(aes(halfHourEndTime, potential, col = "potential")) +
   scale_color_aaas()
 
-class(gen_adj$halfHourEndTime)
-lubridate::tz(gen_adj$halfHourEndTime)
+
 gen_adj %>%
   filter(
     grepl("HOWAO-1", bmUnit),
@@ -533,21 +535,21 @@ lm1 <- lm(
   data = GB_df
 )
 summary(lm1)
-lm1 <- lm(
-  formula = norm_potential ~ tech_typ +
+lm2 <- lm(
+  formula = norm_potential ~ tech_typ *
     norm_power_est0 *
-      month,
+    month,
   data = GB_df
 )
-summary(lm1)
-lm_t <- brm(
-  formula = norm_potential ~ +norm_power_est0,
-  data = GB_df,
-  family = student(), # <-- Student-t likelihood
-  chains = 4,
-  cores = 4,
-  iter = 5000
-)
+summary(lm2)
+# lm_t <- brm(
+#   formula = norm_potential ~ +norm_power_est0,
+#   data = GB_df,
+#   family = student(), # <-- Student-t likelihood
+#   chains = 4,
+#   cores = 4,
+#   iter = 5000
+# )
 
 saveRDS(
   lm_t,
@@ -608,6 +610,111 @@ GB_df %>%
   )
 
 ggsave("fig/gb_aggr_scatter_all.png", width = 6, height = 4)
+
+GB_df %>%
+  ggplot(aes(norm_power_est0, norm_potential)) +
+  stat_bin2d(aes(fill = (after_stat(count))), bins = 100) +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  geom_abline(
+    aes(intercept = lm0$coefficients[1], slope = lm0$coefficients[2]),
+    linetype = 2,
+    col = "darkred"
+  ) +
+  annotate(
+    "label",
+    x = mean(GB_df$norm_potential),
+    y = mean(GB_df$norm_potential),
+    label = paste0("y = x"),
+    fill = "gray90",
+    color = "gray20",
+    hjust = 1.5
+  ) +
+  annotate(
+    "label",
+    x = mean(GB_df$norm_power_est0),
+    y = mean(GB_df$norm_power_est0) * lm0$coefficients[2] + lm0$coefficients[1],
+    label = sprintf(
+      "y = %0.2f + %0.2f x",
+      lm0$coefficients[1],
+      lm0$coefficients[2]
+    ),
+    fill = "gray90",
+    color = "gray20",
+    hjust = 0
+  ) +
+  labs(
+    x = "ERA5 derived capacity factor (%)",
+    y = "Elexon capacity factor"
+  ) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    breaks = c(3, 30, 300)
+  ) +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.1, 0.78),
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    legend.box.background = element_rect(fill = "transparent", colour = NA)
+  )
+ggsave("fig/gb_aggr_bindens_all.png", width = 6, height = 4)
+
+GB_df %>%
+  ggplot(aes(
+    pmax(0, lm2$fitted.values),
+    norm_potential
+  )) +
+  stat_bin2d(aes(fill = (after_stat(count))), bins = 100) +
+  geom_abline(aes(intercept = 0, slope = 1), linetype = 2) +
+  annotate(
+    "label",
+    x = mean(GB_df$norm_potential),
+    y = mean(GB_df$norm_potential),
+    label = paste0("y = x"),
+    fill = "gray90",
+    color = "gray20",
+    hjust = 1.5
+  ) +
+  labs(
+    x = "ERA5 calibrated CF(%)",
+    y = "Elexon capacity factor"
+  ) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    breaks = c(3, 30, 300)
+  ) +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.1, 0.78),
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    legend.box.background = element_rect(fill = "transparent", colour = NA)
+  )
+ggsave("fig/gb_calib_bindens_all.png", width = 6, height = 4)
+
+
+with(GB_df, ModelMetrics::rmse(norm_potential, lm0$fitted.values))
+with(GB_df, ModelMetrics::rmse(norm_potential, lm2$fitted.values))
+
+
+### temporal correlation ####
+pdf("fig/lcalib_err_acf_offshore.pdf")
+acf_df <- acf(
+  lm2$residuals[GB_df$tech_typ == "Wind Offshore"],
+  plot = TRUE,
+  main = "Wind Offshore"
+)
+dev.off()
+
+pdf("fig/lcalib_err_acf_onshore.pdf")
+acf_df <- acf(
+  lm2$residuals[GB_df$tech_typ == "Wind Onshore"],
+  plot = TRUE,
+  main = "Wind Onshore"
+)
+dev.off()
+
+
 ### scatter plots by type #####
 line_df <- GB_df %>%
   group_by(tech_typ) %>%
@@ -1013,6 +1120,55 @@ GB_df %>%
   )
 ggsave("fig/pc_bindens_GB_valnout_all.png", width = 6, height = 4)
 
+curve_GB_typ <- lapply(
+  c("Wind Offshore", "Wind Onshore"),
+  \(typ) {
+    curve_month <- est_pwr_curv(
+      GB_df %>% filter(tech_typ == typ),
+      avg_fun = median,
+      n_bins = 30,
+      quantile_bins = TRUE,
+      plot = FALSE
+    ) %>%
+      mutate(tech_typ = typ)
+  }
+) %>%
+  bind_rows()
+GB_df %>%
+  ggplot(aes(ws_h_wmean, norm_potential)) +
+  stat_bin2d(aes(fill = (after_stat(count))), bins = 100) +
+  geom_line(
+    aes(ws_mean, power_mean, col = "power curve est."),
+    data = curve_GB
+  ) +
+  geom_line(
+    aes(ws_mean, power_mean, col = "type est."),
+    data = curve_GB_typ
+  ) +
+  facet_wrap(~tech_typ, nrow = 2) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    breaks = c(3, 30, 300)
+  ) +
+  scale_color_manual(
+    values = c("power curve est." = "darkred", "type est." = "darkorange")
+  ) +
+  labs(x = "wind speed", y = "capacity factor %", col = "") +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.15, 0.85),
+    legend.background = element_rect(fill = "transparent", colour = NA),
+    legend.box.background = element_rect(fill = "transparent", colour = NA),
+    # shrink keys
+    legend.key.size = unit(0.4, "lines"),
+    legend.spacing.y = unit(0, "lines"), # reduce vertical gap between legends
+    legend.box.spacing = unit(0, "lines"), # reduce space around the legend box
+    # shrink text
+    legend.text = element_text(size = 7),
+    legend.title = element_text(size = 8)
+  )
+ggsave("fig/pc_bindens_GB_valnout_all_typ.png", width = 6, height = 6)
 curve_GB_month <- lapply(
   1:12,
   \(m) {

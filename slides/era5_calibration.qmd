@@ -233,7 +233,33 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 ::: {.column width="50%"}
 \centering
 \small Scatter aggregated power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter.jpeg}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_all.png}
+:::
+
+:::
+
+## Calibration with linear model
+
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+Features of importance: 
+- month
+- Turbine type (offshore / onshore)
+
+\begin{equation*}
+p^{calib}_t = \alpha_{k,m} + \beta_{k,m} \hat p_{t},
+\end{equation*}
+where $\alpha_{k,m}$ and $\beta_{k,m}$ represent the intercept and slope, varying by type and month
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Scatter aggregated power
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_calib_bindens_all.png}
 :::
 
 :::
@@ -250,7 +276,7 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 ::: {.column width="50%"}
 \centering
 \small Density of Elexon and ERA5 based estimate
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/density_comparison.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/density_comparison_all.pdf}
 :::
 
 :::
@@ -261,14 +287,14 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 ::: {.column width="50%"}
 
 \centering
-\small Onshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_GB_valnout.png}
+\small Power curve
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_bindens_GB_valnout_all.png}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Power curve by season
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_GB_valnout_month.png}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_bindens_GB_valnout_month_all.png}
 :::
 
 :::
@@ -282,13 +308,13 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 
 \centering
 \small Onshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_on_month.png}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_on_month_all.png}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Offshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_off_month.png}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_off_month_all.png}
 :::
 
 :::
@@ -301,13 +327,13 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 
 \centering
 \small Onshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_on_month.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_on_month_all.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Offshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_off_month.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_off_month_all.pdf}
 :::
 
 :::
@@ -320,13 +346,13 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 
 \centering
 \small Onshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_on_hour.png}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_on_hour_all.png}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Offshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_off_hour.png}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_off_hour_all.png}
 :::
 
 :::
@@ -339,13 +365,13 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 
 \centering
 \small Onshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_on_hour.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_on_hour_all.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Offshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_off_hour.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_off_hour_all.pdf}
 :::
 
 :::
@@ -363,14 +389,32 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 \begin{equation*}
   P_i = \frac{1}{n_i} \sum_{j=1}^{n_i} P_{ij}
 \end{equation*}
-where:
-- $P_{ij}$ is the $j$ th power observation in bin $i$
-- $n_i$ no. of observations in bin $i$
+where: $P_{ij}$ is the $j$ th power observation in bin $i$ and
+$n_i$ no. of observations in bin $i$
 
+:::
+
+::: {.column width="50%"}
 ### Logistic
 \begin{equation*}
 P(u) = a \frac{1+ m \exp(-u/\tau)}{1+ n \exp(-u/\tau)}
 \end{equation*}
+where $a$ represents the upper asymptote, $n, m$ shape the lower asymptote, and $\tau$ controls the transition. 
+:::
+
+:::
+
+## Power curve modelling
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+### 5 parameter curve
+\begin{equation*}
+  P(u) = D+ \frac{A-D}{(1+(u/C)^B)^G} 
+\end{equation*}
+where: $A$ and $D$ are the upper and lower asymptotes, $C$ is the inflection point, $B$ the slope at inflection point, adn $G$ controls the asymmetry.
 
 :::
 
@@ -380,13 +424,78 @@ P(u) = a \frac{1+ m \exp(-u/\tau)}{1+ n \exp(-u/\tau)}
 
 :::
 
+## Reanalysis data to quantify extreme wind power statistics
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+
+D. Cannon, D. Brayshaw, et. al (2015)
+
+- MERRA wind speed validated with MIDAS
+- Vertical interpolation with a logarithmic change
+- Calibrated power curves based on manufacturers PC
+- Use that to analys extreme low and high levels, and ramps
+:::
+
+::: {.column width="50%"}
+\centering
+\small $\Delta$CF comparison 
+\includegraphics[width=\linewidth]{../fig_extra/2013_cannon_delta_comparison.png}
+:::
+
+:::
+
+## Balancing energy
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+H. Thornton, D. Brayshaw analyse the relationship between weather, energy demand, and wind power.
+
+- ERA Interim wind speed
+- Cubic power curve with air density correction
+- CF compared with GB average from other studies
+- Seasonal effects on Demand and 
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small $\Delta$CF comparison 
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2020_thornton_CF_vs_demand.png}
+:::
+
+:::
+
+## Analysis of extreme wind droughts
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+Panit Potisomporn, C. Vogel (2024) perform a extreme value analysis of wind droughts in GB.
+
+- Use ERA5 wind speeds calibrated to MIDAS with QM
+- Build a ML algorithm that learns how to extrapolate wind speed from 10m to hub height
+- Use a 5 parameter logistic function to model power curve
+- Model energy losses with factors by type.
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small CF calibration 
+\includegraphics[width=\linewidth]{../fig_extra/2024_potisomporn_CF_comparison.png}
+:::
+
+:::
 
 
 ## Next Steps
 
 \begin{itemize}
-   \item Learn power curve from history
-   \item Model for calibration 
+   \item Power curve parametric model from data
+   \item Check for spatial correlation 
    \item Quantile mapping calibration
 \end{itemize}
 
