@@ -84,9 +84,9 @@ Global Wind Atlas calibration to UK power
   - [x] lm, 
   - [ ] QM, QR
   - [ ] Summary Research review
-    - [ ] Power curve
-    - [ ] Cannon/Brayshaw
-    - [ ] Potisomporn relevant
+    - [x] Power curve
+    - [x] Cannon/Brayshaw
+    - [x] Potisomporn relevant
     - [ ] Thornton relevant
 
 - **Research topics**
