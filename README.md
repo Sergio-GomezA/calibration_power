@@ -97,11 +97,10 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - Estimate using history
 
 - **Linear regression**
-
+  - [ ]
 - **Quantile mapping**
 
 - **Quantile regression**
-
 
 - **Expansion ideas**
   - Estimate generation from locations without elexon data
