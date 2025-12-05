@@ -19,16 +19,16 @@ require(INLA)
 require(inlabru)
 
 source("aux_funct.R")
-local({
-  r <- c(
-    INLA = "https://inla.r-inla-download.org/R/testing",
-    CRAN = "https://cloud.r-project.org/",
-    inlabru_universe = "https://inlabru-org.r-universe.dev"
-  )
-  options(repos = r)
-})
+# local({
+#   r <- c(
+#     INLA = "https://inla.r-inla-download.org/R/testing",
+#     CRAN = "https://cloud.r-project.org/",
+#     inlabru_universe = "https://inlabru-org.r-universe.dev"
+#   )
+#   options(repos = r)
+# })
 
-install.packages(c("INLA", "inlabru"), dependencies = TRUE)
+# install.packages(c("INLA", "inlabru"), dependencies = TRUE)
 # install.packages(
 #   c("INLA", "inlabru"),
 #   "/exports/eddie/scratch/s2441782/calibration/lib",
@@ -350,13 +350,15 @@ library(nlme)
 full_model_ar1 <- gls(
   norm_potential ~ tech_typ *
     norm_power_est0 +
-    # norm_power_est0 * month +
+    norm_power_est0 * month +
     month +
     hour +
     poly(ws_h_wmean, 3),
   data = GB_df,
-  correlation = corAR1(form = ~ t | tech_typ) # AR1 per tech type
+  correlation = corAR1(form = ~ t | tech_typ), # AR1 per tech type
+  verbose = TRUE
 )
+saveRDS(full_model_ar1, file = file.path(model_objects, "gls_ar1.rds"))
 summary(full_model_ar1)
 anova(full_model_ar1)
 coef(full_model_ar1$modelStruct$corStruct)

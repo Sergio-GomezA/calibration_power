@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2025-11-04"
+date: "2025-12-05"
 format: 
   beamer:
     theme: Rochester
@@ -55,36 +55,16 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FA
 ## Updates {#sec-updates .unnumbered .nolink}
 
 ### New
-- Curtailment data to obtain potential generation
-- Outage data to exclude periods where capacity is constrained
-- Updated power curve comparison to data
-- ERA 5 wind speed conversion to power
+- Spatial correlation check
+- Updated linear models
+- Power curve modelling
 
 ### Next steps
-- Learn power curve from data
+- Combine PC model with calibration
 - Benchmark models: Quantile mapping, GAMs
 - Calibration spatiotemporal model
 
-## ERA5 vs Elexon generation
-\small Calibrate a ERA5 driven estimate to \textbf{potential generation} accounting for spatiotemporal properties.
 
-\vspace{0.2cm}
-\begin{columns}[T, totalwidth=\textwidth]
-  \begin{column}{0.5\textwidth}
-    \centering
-    \small{\small ERA5 at wind farms}\\[0.5em]
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/era5_at_windfarms.eps}
-   
-  \end{column}
-
-  \begin{column}{0.5\textwidth}
-    \centering
-    \small{\small Elexon wind farms map (2025)}\\[0.5em]
-    \vspace{-0.2cm}
-    \includegraphics[width=\linewidth,height=4cm,keepaspectratio]{../fig/wind_farms_elexon_size_2025.pdf}
-  \end{column}
-\end{columns}
-\tiny Closest grid point to each wind farm location
 
 # Overview {#sec-appendix}
 
@@ -154,70 +134,7 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 
 # Calibration with linear model
 
-## ERA5 based estimates vs Elexon 2024
-\begin{columns}[T, totalwidth=\textwidth]
-
-  % Left column: Power curve
-  \begin{column}{0.5\textwidth}
-    \centering
-    {\small Fallago Rig}
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_T_FALGW-1.pdf}
-    
-  \end{column}
-
-  % Right column: Expected power
-  \begin{column}{0.5\textwidth}
-    \centering
-    {\small Viking}
-
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_T_VKNGW-1.pdf}
-  \end{column}
-
-\end{columns}
-
-
-## ERA5 based estimates vs Elexon 2024
-\begin{columns}[T, totalwidth=\textwidth]
-
-  % Left column: Power curve
-  \begin{column}{0.5\textwidth}
-    \centering
-    {\small Hornsea 1}
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_T_HOWAO-1.pdf}
-    
-  \end{column}
-
-  % Right column: Expected power
-  \begin{column}{0.5\textwidth}
-    \centering
-    {\small Seagreen 1}
-
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_T_SGRWO-1.pdf}
-  \end{column}
-
-\end{columns}
-
-## Comparison for all wind farms
-::: {.columns}
-
-::: {.column width="50%"}
-\begin{itemize}
-  \item Working with 2024 data only
-  \item Each point represents one hour and one location 
-  \item Showin a sample of points to simplify plotting
-\end{itemize}
-:::
-
-::: {.column width="50%"}
-\centering
-    \small Scatter all wind farms
-    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_scatter_all.pdf}
-:::
-
-:::
-
-# GB level aggregation {#sec:gb_aggr}
-
+## GB level aggregation
 ::: {.columns}
 
 ::: {.column width="50%"}
@@ -238,8 +155,7 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 
 :::
 
-## Calibration with linear model
-
+## Initial linear model
 
 ::: {.columns}
 
@@ -263,119 +179,6 @@ where $\alpha_{k,m}$ and $\beta_{k,m}$ represent the intercept and slope, varyin
 :::
 
 :::
-
-
-## Density of aggregated power
-::: {.columns}
-
-::: {.column width="50%"}
-- Cut-off wind speed isn't capture well by generic power curves
-- This issue is markedly present in offshore data
-:::
-
-::: {.column width="50%"}
-\centering
-\small Density of Elexon and ERA5 based estimate
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/density_comparison_all.pdf}
-:::
-
-:::
-## Power curve by season
-
-::: {.columns}
-
-::: {.column width="50%"}
-
-\centering
-\small Power curve
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_bindens_GB_valnout_all.png}
-:::
-
-::: {.column width="50%"}
-\centering
-\small Power curve by season
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_bindens_GB_valnout_month_all.png}
-:::
-
-:::
-
-
-## Linear calibration by season
-
-::: {.columns}
-
-::: {.column width="50%"}
-
-\centering
-\small Onshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_on_month_all.png}
-:::
-
-::: {.column width="50%"}
-\centering
-\small Offshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_off_month_all.png}
-:::
-
-:::
-
-## Difference in density by season
-
-::: {.columns}
-
-::: {.column width="50%"}
-
-\centering
-\small Onshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_on_month_all.pdf}
-:::
-
-::: {.column width="50%"}
-\centering
-\small Offshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_off_month_all.pdf}
-:::
-
-:::
-
-## Linear calibration by time of day
-
-::: {.columns}
-
-::: {.column width="50%"}
-
-\centering
-\small Onshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_on_hour_all.png}
-:::
-
-::: {.column width="50%"}
-\centering
-\small Offshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_off_hour_all.png}
-:::
-
-:::
-
-## Difference in density by hour
-
-::: {.columns}
-
-::: {.column width="50%"}
-
-\centering
-\small Onshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_on_hour_all.pdf}
-:::
-
-::: {.column width="50%"}
-\centering
-\small Offshore power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cf_density_comparison_off_hour_all.pdf}
-:::
-
-:::
-
 
 # Previous research {#sec:literature}
 
