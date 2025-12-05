@@ -1234,3 +1234,57 @@ est_pwr_curv <- function(
 
   return(curve_df)
 }
+
+
+bru_fitted_exclude <- function(bru_fit, data, exclude = NULL) {
+  # bru_fit : inlabru model object
+  # data    : dataset used to fit the model
+  # exclude : vector of component names to remove (e.g. "u")
+
+  # 1. Start with fixed effects ---------------------------------------------
+  lp <- rep(0, nrow(data))
+
+  if (!is.null(bru_fit$summary.fixed)) {
+    for (nm in rownames(bru_fit$summary.fixed)) {
+      if (nm %in% names(data)) {
+        # classic fixed slope
+        lp <- lp + bru_fit$summary.fixed[nm, "mean"] * data[[nm]]
+      } else if (nm == "Intercept") {
+        lp <- lp + bru_fit$summary.fixed[nm, "mean"]
+      }
+    }
+  }
+
+  # 2. Add random/smooth components -----------------------------------------
+  comp_list <- bru_fit$summary.random
+
+  for (comp_name in names(comp_list)) {
+    if (comp_name %in% exclude) {
+      next
+    } # skip excluded components
+
+    comp_summary <- comp_list[[comp_name]]
+
+    # Component ID column may be name "ID" or the variable name
+    id_col <- if ("ID" %in% names(comp_summary)) {
+      "ID"
+    } else {
+      names(comp_summary)[1]
+    }
+
+    # Try to match to data column
+    if (comp_name %in% names(data)) {
+      idx <- match(data[[comp_name]], comp_summary[[id_col]])
+      lp <- lp + comp_summary$mean[idx]
+    } else {
+      # Try to guess replicated/random slope structure
+      # e.g., tech_power replicated on norm_power_est0
+      if (!is.null(data[[comp_name]])) {
+        idx <- match(data[[comp_name]], comp_summary[[id_col]])
+        lp <- lp + comp_summary$mean[idx]
+      }
+    }
+  }
+
+  return(lp)
+}
