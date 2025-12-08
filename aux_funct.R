@@ -8,6 +8,7 @@ require(stringr)
 require(httr)
 require(jsonlite)
 require(arrow)
+require(geosphere)
 
 theme_set(theme_bw())
 
@@ -1287,4 +1288,325 @@ bru_fitted_exclude <- function(bru_fit, data, exclude = NULL) {
   }
 
   return(lp)
+}
+
+
+# Function for multiple observations per site
+spatial_corr_by_distance <- function(
+  df,
+  value_col,
+  lon_col = "lon",
+  lat_col = "lat",
+  time_col = "halfHourEndTime",
+  n_bins = 10,
+  bin_type = c("equal", "quantile")
+) {
+  bin_type <- match.arg(bin_type)
+
+  # Unique sites
+  sites <- df %>%
+    select(site = site_name, lon = {{ lon_col }}, lat = {{ lat_col }}) %>%
+    distinct()
+
+  # All pairwise site combinations
+  site_pairs <- expand.grid(i = 1:nrow(sites), j = 1:nrow(sites)) %>%
+    filter(i < j) %>%
+    mutate(
+      lon1 = sites$lon[i],
+      lat1 = sites$lat[i],
+      lon2 = sites$lon[j],
+      lat2 = sites$lat[j],
+      site1 = sites$site[i],
+      site2 = sites$site[j],
+      dist_km = geosphere::distHaversine(cbind(lon1, lat1), cbind(lon2, lat2)) /
+        1000
+    )
+
+  # Compute correlation per pair, matching by time
+  cor_list <- site_pairs %>%
+    rowwise() %>%
+    mutate(
+      corr = {
+        x <- df %>%
+          filter(site_name == site1) %>%
+          select({{ time_col }}, {{ value_col }})
+        y <- df %>%
+          filter(site_name == site2) %>%
+          select({{ time_col }}, {{ value_col }})
+        paired <- inner_join(x, y, by = as.character(time_col))
+        # Use complete cases to avoid missing values
+        if (nrow(paired) < 2) NA else cor(paired[[2]], paired[[3]])
+      }
+    ) %>%
+    ungroup()
+
+  # Bin distances
+  if (bin_type == "equal") {
+    cor_list <- cor_list %>% mutate(bin = cut(dist_km, breaks = n_bins))
+  } else {
+    cor_list <- cor_list %>%
+      mutate(
+        bin = cut(
+          dist_km,
+          breaks = quantile(
+            dist_km,
+            probs = seq(0, 1, length.out = n_bins + 1),
+            na.rm = TRUE
+          ),
+          include.lowest = TRUE
+        )
+      )
+  }
+
+  # Aggregate correlations by distance bin
+  df_corr <- cor_list %>%
+    group_by(bin) %>%
+    summarise(
+      dist_mean = mean(dist_km),
+      corr_mean = mean(corr, na.rm = TRUE),
+      n_pairs = n(),
+      .groups = "drop"
+    )
+
+  return(df_corr)
+}
+
+
+spatial_corr_by_distance_time <- function(
+  df,
+  value_col,
+  lon_col = "lon",
+  lat_col = "lat",
+  time_col = "halfHourEndTime",
+  n_bins = 10,
+  bin_type = c("equal", "quantile")
+) {
+  bin_type <- match.arg(bin_type)
+
+  # Unique sites
+  sites <- df %>%
+    select(site = site_name, lon = {{ lon_col }}, lat = {{ lat_col }}) %>%
+    distinct()
+
+  # All pairwise site combinations
+  site_pairs <- expand.grid(i = 1:nrow(sites), j = 1:nrow(sites)) %>%
+    filter(i < j) %>%
+    mutate(
+      lon1 = sites$lon[i],
+      lat1 = sites$lat[i],
+      lon2 = sites$lon[j],
+      lat2 = sites$lat[j],
+      site1 = sites$site[i],
+      site2 = sites$site[j],
+      dist_km = distHaversine(cbind(lon1, lat1), cbind(lon2, lat2)) / 1000
+    )
+
+  # Compute correlation per pair, matching by time
+  cor_list <- site_pairs %>%
+    rowwise() %>%
+    mutate(
+      corr = {
+        x <- df %>%
+          filter(site_name == site1) %>%
+          select({{ time_col }}, {{ value_col }})
+        y <- df %>%
+          filter(site_name == site2) %>%
+          select({{ time_col }}, {{ value_col }})
+        paired <- inner_join(x, y, by = as.character(time_col))
+        # Use complete cases to avoid missing values
+        if (nrow(paired) < 2) NA else cor(paired[[2]], paired[[3]])
+      }
+    ) %>%
+    ungroup()
+
+  # Bin distances
+  if (bin_type == "equal") {
+    cor_list <- cor_list %>% mutate(bin = cut(dist_km, breaks = n_bins))
+  } else {
+    cor_list <- cor_list %>%
+      mutate(
+        bin = cut(
+          dist_km,
+          breaks = quantile(
+            dist_km,
+            probs = seq(0, 1, length.out = n_bins + 1),
+            na.rm = TRUE
+          ),
+          include.lowest = TRUE
+        )
+      )
+  }
+
+  # Aggregate correlations by distance bin
+  df_corr <- cor_list %>%
+    group_by(bin) %>%
+    summarise(
+      dist_mean = mean(dist_km),
+      corr_mean = mean(corr, na.rm = TRUE),
+      n_pairs = n(),
+      .groups = "drop"
+    )
+
+  return(df_corr)
+}
+
+spatial_corr_by_distance_fast <- function(
+  df,
+  value_col,
+  lon_col = "lon",
+  lat_col = "lat",
+  time_col = "halfHourEndTime",
+  n_bins = 10,
+  bin_type = c("equal", "quantile")
+) {
+  bin_type <- match.arg(bin_type)
+
+  # 1. Pivot data to wide format: each site is a column, rows are timestamps
+  df_wide <- df %>%
+    select(site_name, {{ time_col }}, {{ value_col }}) %>%
+    pivot_wider(names_from = site_name, values_from = {{ value_col }})
+
+  # 2. Compute correlation matrix (pairwise correlations ignoring NAs)
+  cor_mat <- cor(df_wide[-1], use = "pairwise.complete.obs") # remove time_col column
+
+  # 3. Get site coordinates
+  sites <- df %>%
+    select(site = site_name, lon = {{ lon_col }}, lat = {{ lat_col }}) %>%
+    distinct()
+
+  # 4. Get pairwise distances and correlations
+  site_names <- sites$site
+  pair_idx <- which(upper.tri(cor_mat), arr.ind = TRUE)
+
+  cor_list <- data.frame(
+    site1 = site_names[pair_idx[, 1]],
+    site2 = site_names[pair_idx[, 2]],
+    corr = cor_mat[upper.tri(cor_mat)]
+  ) %>%
+    left_join(sites, by = c("site1" = "site")) %>%
+    rename(lon1 = lon, lat1 = lat) %>%
+    left_join(sites, by = c("site2" = "site")) %>%
+    rename(lon2 = lon, lat2 = lat) %>%
+    mutate(dist_km = distHaversine(cbind(lon1, lat1), cbind(lon2, lat2)) / 1000)
+
+  # 5. Bin distances
+  if (bin_type == "equal") {
+    cor_list <- cor_list %>% mutate(bin = cut(dist_km, breaks = n_bins))
+  } else {
+    cor_list <- cor_list %>%
+      mutate(
+        bin = cut(
+          dist_km,
+          breaks = quantile(
+            dist_km,
+            probs = seq(0, 1, length.out = n_bins + 1),
+            na.rm = TRUE
+          ),
+          include.lowest = TRUE
+        )
+      )
+  }
+
+  # 6. Aggregate correlations by distance bin
+  df_corr <- cor_list %>%
+    group_by(bin) %>%
+    summarise(
+      dist_mean = mean(dist_km),
+      corr_mean = mean(corr, na.rm = TRUE),
+      corr_lower = quantile(corr, 0.25, na.rm = TRUE),
+      corr_upper = quantile(corr, 0.75, na.rm = TRUE),
+      n_pairs = n(),
+      .groups = "drop"
+    )
+
+  return(df_corr)
+}
+
+spatial_corr_by_distance_fast <- function(
+  df,
+  value_col,
+  lon_col = "lon",
+  lat_col = "lat",
+  time_col = "halfHourEndTime",
+  n_bins = 10,
+  bin_type = c("equal", "quantile")
+) {
+  bin_type <- match.arg(bin_type)
+
+  # 1. Pivot data to wide format: each site is a column, rows are timestamps
+  df_wide <- df %>%
+    select(site_name, {{ time_col }}, {{ value_col }}) %>%
+    pivot_wider(names_from = site_name, values_from = {{ value_col }})
+
+  site_names <- colnames(df_wide)[-1] # all site columns
+
+  # 2. Correlation matrix
+  cor_mat <- cor(df_wide[-1], use = "pairwise.complete.obs")
+
+  # 3. n_obs_per_pair: number of overlapping non-missing observations
+  n_obs_mat <- outer(
+    site_names,
+    site_names,
+    Vectorize(function(x, y) {
+      sum(!is.na(df_wide[[x]]) & !is.na(df_wide[[y]]))
+    })
+  )
+
+  # 4. Get site coordinates
+  sites <- df %>%
+    select(site = site_name, lon = {{ lon_col }}, lat = {{ lat_col }}) %>%
+    distinct()
+
+  # 5. Build cor_list with distances and n_obs_per_pair
+  pair_idx <- which(upper.tri(cor_mat), arr.ind = TRUE)
+
+  cor_list <- data.frame(
+    site1 = site_names[pair_idx[, 1]],
+    site2 = site_names[pair_idx[, 2]],
+    corr = cor_mat[upper.tri(cor_mat)],
+    n_obs_per_pair = n_obs_mat[upper.tri(n_obs_mat)]
+  ) %>%
+    left_join(sites, by = c("site1" = "site")) %>%
+    rename(lon1 = lon, lat1 = lat) %>%
+    left_join(sites, by = c("site2" = "site")) %>%
+    rename(lon2 = lon, lat2 = lat) %>%
+    mutate(dist_km = distHaversine(cbind(lon1, lat1), cbind(lon2, lat2)) / 1000)
+
+  # 6. Bin distances
+  if (bin_type == "equal") {
+    cor_list <- cor_list %>% mutate(bin = cut(dist_km, breaks = n_bins))
+  } else {
+    cor_list <- cor_list %>%
+      mutate(
+        bin = cut(
+          dist_km,
+          breaks = quantile(
+            dist_km,
+            probs = seq(0, 1, length.out = n_bins + 1),
+            na.rm = TRUE
+          ),
+          include.lowest = TRUE
+        )
+      )
+  }
+
+  # 7. Aggregate correlations by distance bin
+  df_corr <- cor_list %>%
+    group_by(bin) %>%
+    summarise(
+      dist_mean = mean(dist_km),
+      corr_mean = mean(corr, na.rm = TRUE),
+      corr_lower = quantile(corr, 0.25, na.rm = TRUE),
+      corr_upper = quantile(corr, 0.75, na.rm = TRUE),
+      n_pairs = n(),
+      n_obs_mean = mean(n_obs_per_pair, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    # 8. Compute approximate significance thresholds under null hypothesis
+    mutate(
+      se_null = 1 / sqrt(n_obs_mean - 3),
+      threshold_95 = 1.96 * se_null
+    )
+
+  return(df_corr)
 }
