@@ -31,7 +31,7 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
     - [x] capacity impact
     - [x] spatial distribution
   - [x] Power curve scatter by season
-  - [ ] Full history plots
+  - [x] Full history plots
   - [ ] Time series of a segment before, after calibration
 
 - **Inputs and EDA**
@@ -97,19 +97,32 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - Estimate using history
 
 - **Linear regression**
-  - [ ]
+  - [x]
 - **Quantile mapping**
+  - [ ] Uncertainty around bias correction
+  - [ ] Varying parameters through time or space
 
 - **Quantile regression**
+- **Spatial properties**
+  - [ ] Variogram through time
+- **Model validation**
+  - [ ] out-of-sample validation
+  - [ ] UQ and error metrics
+  - [ ] Extreme value properties?
+  - [ ] Sequences of low wind power
 
 - **Expansion ideas**
+  - Model QM through hierarchical model
+  - Model vertical interp. / PC / calibration jointly
+  - Add spatial component
   - Estimate generation from locations without elexon data
-  - Power estimates for locations without elexon data
+  - UQ of Power estimates for locations without elexon data
   - WTG efficiency loss: type / time / weather / errors / maintenance events
   - Extreme draughts
   - Extreme low wind speed scenarios
   - Extreme low wind power scenarios
   - Solar energy calibration
   - Renewable energy defict scenarios
+
 
 

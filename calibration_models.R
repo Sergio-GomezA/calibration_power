@@ -188,6 +188,7 @@ model_AIC <- step(
 anova(model_AIC)
 
 plot(model_BIC)
+summary(model_AIC)
 
 GB_df$nlin.fit <- pmax(0, model_AIC$fitted.values)
 
@@ -199,7 +200,9 @@ GB_df %>%
     trans = "log10",
     name = "frequency"
   ) +
-  coord_fixed()
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon", y = "Calibrated ERA5 CF %")
+ggsave("fig/gb_calib_lm_hexbin_all.pdf", width = 6, height = 4)
 
 
 GB_df %>%
@@ -358,7 +361,8 @@ full_model_ar1 <- gls(
   correlation = corAR1(form = ~ t | tech_typ), # AR1 per tech type
   verbose = TRUE
 )
-saveRDS(full_model_ar1, file = file.path(model_objects, "gls_ar1.rds"))
+saveRDS(full_model_ar1, file = file.path(model_path, "gls_ar1.rds"))
+full_model_ar1 <- readRDS(file = file.path(model_path, "gls_ar1.rds"))
 summary(full_model_ar1)
 anova(full_model_ar1)
 coef(full_model_ar1$modelStruct$corStruct)
@@ -367,7 +371,7 @@ phi_est <- 2 / (1 + exp(-phi)) - 1 # inverse logit to [-1, 1]
 phi_est
 
 
-saveRDS(full_model_ar1, file = file.path(model_path, "lm_ar1.rds"))
+# saveRDS(full_model_ar1, file = file.path(model_path, "lm_ar1.rds"))
 
 ModelMetrics::rmse(
   full_model_ar1$fitted,
@@ -414,7 +418,9 @@ GB_df %>%
     name = "frequency",
     limits = c(1, NA)
   ) +
-  coord_fixed()
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon CF", y = "ERA5 calibrated CF with AR1")
+ggsave("fig/gb_calib_lar1_hexbin_all.pdf", width = 6, height = 4)
 
 
 GB_df %>%
@@ -425,3 +431,87 @@ GB_df %>%
   geom_line(aes(t, lar1.fit, col = "ar1 fit")) +
   facet_wrap(~tech_typ, nrow = 2) +
   scale_color_aaas()
+
+
+# Spatial correlation ####
+
+pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
+head(pwr_curv_df)
+
+
+library(spdep)
+library(sf)
+library(gstat)
+library(sp)
+set.seed(0)
+sample_hour <- sample(unique(pwr_curv_df$halfHourEndTime), 1)
+hour_df <- pwr_curv_df %>%
+  filter(halfHourEndTime == sample_hour) %>%
+  mutate(
+    norm_potential = potential / capacity,
+    norm_power_est0 = power_est0 / capacity,
+    error0 = norm_potential - norm_power_est0
+  ) %>%
+  group_by(lon, lat) %>%
+  summarise(
+    across(c(norm_potential, norm_power_est0, error0), sum),
+    .groups = "drop"
+  )
+
+hour_df <- pwr_curv_df %>%
+  filter(between(halfHourEndTime, "2024-01-01", "2024-12-31")) %>%
+  group_by(lon, lat, )
+mutate(
+  norm_potential = potential / capacity,
+  norm_power_est0 = power_est0 / capacity,
+  error0 = norm_potential - norm_power_est0
+) %>%
+  group_by(lon, lat) %>%
+  summarise(
+    across(c(norm_potential, norm_power_est0, error0), sum),
+    .groups = "drop"
+  )
+
+# Convert to sf object
+hour_sf <- st_as_sf(hour_df, coords = c("lon", "lat"), crs = 4326)
+
+# Create neighbors (k-nearest, k=4)
+coords <- st_coordinates(hour_sf)
+nb <- knn2nb(knearneigh(coords, k = 4))
+lw <- nb2listw(nb, style = "W")
+
+# Moran's I
+moran.test(hour_sf$norm_potential, lw)
+moran.test(hour_sf$error0, lw)
+
+
+coordinates(hour_df) <- ~ lon + lat
+vgram <- variogram(norm_potential ~ 1, data = hour_df)
+plot(vgram)
+
+hour_sf_proj <- st_transform(hour_sf, 27700)
+# gstat variogram works with sf objects directly
+vgram <- variogram(norm_potential ~ 1, data = hour_sf_proj)
+vgram$dist_km <- vgram$dist / 1000
+pdf("fig/variogram_norm_power.pdf", width = 5, height = 4)
+plot(
+  vgram$dist_km,
+  vgram$gamma,
+  type = "b",
+  xlab = "Distance (km)",
+  ylab = "Semivariance"
+)
+dev.off()
+
+
+vgram <- variogram(norm_power_est0 ~ 1, data = hour_sf_proj)
+vgram$dist_km <- vgram$dist / 1000
+pdf("fig/variogram_norm_power_est.pdf", width = 5, height = 4)
+plot(
+  vgram$dist_km,
+  vgram$gamma,
+  type = "b",
+  xlab = "Distance (km)",
+  ylab = "Semivariance"
+)
+dev.off()
