@@ -138,7 +138,7 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 ::: {.columns}
 
 ::: {.column width="50%"}
-
+\small
 - Power aggregated at GB level
   \begin{align*}
   p_{\text{tot},t} &= \sum_i p_{it} / \sum_i C_i 
@@ -160,27 +160,134 @@ where $s_i$ and $u_t$ represent spatial and temporal effects.
 ::: {.columns}
 
 ::: {.column width="50%"}
-
-Features of importance: 
-- month
-- Turbine type (offshore / onshore)
+\footnotesize
+- Features of importance: 
+  - $m$: month
+  - $k$: Type (offshore / onshore)
 
 \begin{equation*}
 p^{calib}_t = \alpha_{k,m} + \beta_{k,m} \hat p_{t},
 \end{equation*}
+
 where $\alpha_{k,m}$ and $\beta_{k,m}$ represent the intercept and slope, varying by type and month
 
 :::
 
 ::: {.column width="50%"}
 \centering
-\small Scatter aggregated power
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_calib_bindens_all.png}
+\small Calibration comparison
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_calib_lm0_hexbin_all.pdf}
 :::
 
 :::
 
-# Previous research {#sec:literature}
+## Updated linear model
+
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Using step AIC criteria selection: 
+  - $k$: Type (offshore / onshore)
+  - $m$: month, $h$: hour
+  - $w_t$: wind speed
+
+
+\begin{equation*}
+p^{calib}_t = \alpha_{k,m,h} + \beta_{k,m} \hat p_{t} + \sum_{j=1}^3 \phi_j w_t^3
+\end{equation*}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Calibration comparison
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_calib_lm_hexbin_all.pdf}
+:::
+
+:::
+
+## Autoregressive error
+
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Using step AIC criteria selection: 
+  - $k$: Type (offshore / onshore)
+  - $m$: month, $h$: hour
+  - $w_t$: wind speed
+  - $u_t$: AR1
+
+\begin{equation*}
+p^{calib}_t = \alpha_0 + \sum \alpha_e + \beta_{k} \hat p_{t} + f_w(w_t) + u_t
+\end{equation*}
+
+where $\alpha_0$ is the intercept, the $\alpha_e$ $e \in {k,m,h}$ represent random effects (cyclic for month and hour), $\beta_k$ is a random slope, $f_w$ is smooth effect (RW2). 
+:::
+
+::: {.column width="50%"}
+\centering
+\small Calibration comparison
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_calib_lar1_hexbin_all.pdf}
+:::
+
+:::
+
+
+## Spatial correlation
+::: {.columns}
+
+::: {.column width="50%"}
+\small Variogram for Elexon generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/variogram_norm_power.pdf}
+:::
+
+::: {.column width="50%"}
+\small Variogram for ERA5 uncalibrated estimate
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/variogram_norm_power_est.pdf}
+:::
+
+:::
+
+## Power curve modelling
+::: {.columns}
+
+::: {.column width="50%" }
+
+Using a two-likelihood approach for power curve estimation:
+
+- **1st likelihood:** Observed power is modelled as a smooth function of wind speed
+  - Random walk of order 2
+  - Beta with logit link for output [0,1]  
+
+
+:::
+
+::: {.column width="50%"}
+- **2nd likelihood:** Penalisation towards a generic PC
+  - Gaussian noise; strength controlled via precision
+  - Estimate is pulled to typical turbine behaviour  
+
+- **Cut-off speed estimation?** 
+
+- **Outcome:** Smooth, physically realistic power curve informed by both data and prior knowledge
+
+:::
+
+:::
+
+## Next Steps
+
+\begin{itemize}
+   \item Power curve parametric model from data
+   \item Check for spatial correlation 
+   \item Quantile mapping calibration
+\end{itemize}
+
+# Appendix 
+# Previous research {-}
 
 ## Power curve modelling
 
@@ -294,13 +401,6 @@ Panit Potisomporn, C. Vogel (2024) perform a extreme value analysis of wind drou
 :::
 
 
-## Next Steps
-
-\begin{itemize}
-   \item Power curve parametric model from data
-   \item Check for spatial correlation 
-   \item Quantile mapping calibration
-\end{itemize}
 
 
 <!-- 

@@ -131,7 +131,7 @@ bruar1 <- bru(
   )
 )
 saveRDS(bruar1, file.path(model_path, "bru_ar1_full_v2.rds"))
-
+bruar1 <- readRDS(file.path(model_path, "bru_ar1_full_v2.rds"))
 
 componentsar2 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   norm_power_est0(norm_power_est0, model = "linear") + # fixed slope
@@ -182,6 +182,8 @@ ModelMetrics::rmse(
 
 bru_ar1_fit <- bruar1$summary.fitted.values$mean[1:nrow(GB_df)] -
   bruar1$summary.random$u$mean
+bru_ar1_fit = bru_fitted_exclude(bruar1, GB_df, exclude = "u")
+bru_ar1_fit = bru_fitted_exclude(bruar1, GB_df)
 GB_df$bar1_fit <- bru_ar1_fit
 GB_df$bar1_u <- bruar1$summary.random$u$mean
 GB_df %>%
@@ -193,9 +195,9 @@ GB_df %>%
     name = "frequency",
     limits = c(1, NA)
   ) +
-  coord_fixed() +
-  labs(x = "Elexon", y = "Calibration with ar1")
-ggsave("fig/gb_calib_bar1_hexbin_all_test.png", width = 6, height = 4)
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon CF", y = "ERA5 calibrated CF with AR1")
+ggsave("fig/gb_calib_bar1_hexbin_all_test.pdf", width = 6, height = 4)
 
 GB_df %>%
   filter(between(
@@ -227,7 +229,7 @@ GB_df %>%
     limits = c(1, NA)
   ) +
   coord_fixed()
-ggsave("fig/gb_calib_bar1_hexbin_all_test.png", width = 6, height = 4)
+ggsave("fig/gb_calib_bar1_hexbin_all_test.pdf", width = 6, height = 4)
 
 
 # penalised u term ####
@@ -289,7 +291,7 @@ GB_df %>%
   ) +
   coord_fixed() +
   labs(x = "Elexon", y = "Calibration with ar1")
-ggsave("fig/gb_calib_bar1s_hexbin_all_test.png", width = 6, height = 4)
+ggsave("fig/gb_calib_bar1s_hexbin_all_test.pdf", width = 6, height = 4)
 
 GB_df %>%
   filter(between(
