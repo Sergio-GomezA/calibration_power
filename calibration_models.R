@@ -83,15 +83,16 @@ pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
 
 ## aggregated to GB level ####
 GB_df <- pwr_curv_df %>%
-  filter(halfHourEndTime > "2023-01-01") %>%
+  filter(halfHourEndTime >= "2023-01-01", halfHourEndTime < "2025-01-01") %>%
   group_by(tech_typ, halfHourEndTime) %>%
   summarise(
-    ws_h_wmean = sum(ws_h * capacity),
+    # ws_h_wmean = sum(ws_h * capacity),
+    across(c(ws_h, wd10, wd100), ~ sum(. * capacity), .names = "{.col}_wmean"),
     across(
       c(power_est0, potential, capacity),
       sum
     ),
-    across(c(ws_h), mean, .names = "{.col}_mean")
+    across(c(ws_h, wd10, wd100), mean, .names = "{.col}_mean")
   ) %>%
   mutate(
     across(
@@ -99,7 +100,8 @@ GB_df <- pwr_curv_df %>%
       ~ . / capacity,
       .names = "norm_{.col}"
     ),
-    ws_h_wmean = ws_h_wmean / capacity,
+    # ws_h_wmean = ws_h_wmean / capacity,
+    across(matches("_wmean"), ~ . / capacity),
     month = factor(month(halfHourEndTime)),
     hour = factor(hour(halfHourEndTime))
   ) %>%
@@ -109,10 +111,10 @@ GB_df <- pwr_curv_df %>%
   mutate(t = row_number()) %>%
   ungroup()
 
-write_parquet(GB_df, file.path(gen_path, "GB_aggr.parquet"))
+# write_parquet(GB_df, file.path(gen_path, "GB_aggr.parquet"))
 GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet"))
 
-write_parquet(GB_df, file.path(gen_path, "GB_aggr_frag.parquet"))
+# write_parquet(GB_df, file.path(gen_path, "GB_aggr_frag.parquet"))
 GB_df <- read_parquet(file.path(gen_path, "GB_aggr_frag.parquet"))
 
 # Linear ####
@@ -515,3 +517,5 @@ plot(
   ylab = "Semivariance"
 )
 dev.off()
+
+# Spatial correlation ####
