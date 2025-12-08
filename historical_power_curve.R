@@ -144,7 +144,7 @@ lapply(
 
 # apply to generic power curve to entire data ###
 t0 <- "2019-01-01"
-t1 <- "2024-12-31"
+t1 <- "2025-12-31"
 
 pwr_curv_df <- gen_adj %>%
   filter(
@@ -207,6 +207,11 @@ for (class in classes) {
   )$y *
     pwr_curv_df$capacity[class_ind]
 }
+
+arrow::write_parquet(
+  pwr_curv_df,
+  file.path(gen_path, "power_curve_all.parquet")
+)
 
 bmu_codes <- c("T_FALGW-1", "T_VKNGW-1", "T_SGRWO-1", "T_HOWAO-1", "T_HOWAO-2")
 
@@ -328,12 +333,6 @@ lapply(
       dpi = 300
     )
   }
-)
-
-
-arrow::write_parquet(
-  pwr_curv_df,
-  file.path(gen_path, "power_curve_all.parquet")
 )
 
 

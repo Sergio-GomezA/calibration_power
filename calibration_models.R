@@ -12,7 +12,7 @@ require(ggsci)
 # require(FNN)
 require(data.table)
 require(parallel)
-
+library(purrr)
 require(brms)
 require(INLA)
 
@@ -518,4 +518,170 @@ plot(
 )
 dev.off()
 
-# Spatial correlation ####
+# Spatial correlation more times ####
+n.days <- 7
+time_skips <- 29
+# slice data to 12 hour time steps
+gb_thin <- pwr_curv_df %>%
+  group_by(bmUnit) %>%
+  arrange(halfHourEndTime) %>%
+  mutate(hour = row_number()) %>%
+  # filter(hour %% (24 * n.days) == 9) %>%
+  filter(hour %% time_skips == 0) %>%
+  mutate(
+    norm_potential = potential / capacity,
+    norm_power_est0 = power_est0 / capacity,
+    error0 = norm_potential - norm_power_est0
+  ) %>%
+  group_by(lon, lat, halfHourEndTime) %>%
+  summarise(
+    site_name = first(site_name),
+    across(c(norm_potential, norm_power_est0, error0), sum),
+    .groups = "drop"
+  )
+
+
+max_lag <- 20
+
+pacf_df <- gb_thin %>%
+  group_by(site_name) %>%
+  summarise(
+    n = sum(!is.na(norm_potential)),
+    pacf = list(
+      pacf(norm_potential, lag.max = max_lag, plot = FALSE)$acf
+    ),
+    lag = list(
+      seq_along(pacf(norm_potential, lag.max = max_lag, plot = FALSE)$acf)
+    ),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    ci = 1.96 / sqrt(n)
+  ) %>%
+  unnest(c(lag, pacf)) %>%
+  mutate(
+    significant = abs(pacf) >= ci
+  )
+ggplot(pacf_df, aes(lag, site_name, fill = significant)) +
+  geom_tile() +
+  scale_fill_manual(values = c("grey90", "red")) +
+  theme_minimal()
+
+
+ggplot(pacf_df, aes(lag, site_name, fill = pacf)) +
+  geom_tile() +
+  scale_fill_gradient2(
+    midpoint = 0,
+    low = "blue",
+    mid = "white",
+    high = "red",
+    na.value = "grey90"
+  ) +
+  theme_minimal() +
+  labs(x = "Lag", y = "Time series", fill = "PACF")
+
+
+library(spdep)
+library(sf)
+library(gstat)
+library(sp)
+gb_thin <- st_as_sf(gb_thin, coords = c("lon", "lat"), crs = 4326)
+gb_thin_proj <- st_transform(gb_thin, 27700)
+# gstat variogram works with sf objects directly
+vgram <- variogram(norm_potential ~ 1, data = gb_thin_proj)
+vgram$dist_km <- vgram$dist / 1000
+pdf("fig/variogram_norm_power_thin.pdf", width = 5, height = 4)
+plot(
+  vgram$dist_km,
+  vgram$gamma,
+  type = "b",
+  xlab = "Distance (km)",
+  ylab = "Semivariance"
+)
+dev.off()
+
+
+vgram <- variogram(norm_power_est0 ~ 1, data = gb_thin_proj)
+vgram$dist_km <- vgram$dist / 1000
+pdf("fig/variogram_norm_power_est_thin.pdf", width = 5, height = 4)
+plot(
+  vgram$dist_km,
+  vgram$gamma,
+  type = "b",
+  xlab = "Distance (km)",
+  ylab = "Semivariance"
+)
+dev.off()
+
+source("aux_funct.R")
+
+corr_df <- spatial_corr_by_distance_fast(
+  gb_thin,
+  value_col = "norm_potential",
+  n_bins = 15,
+  bin_type = "quantile"
+)
+
+
+ggplot(corr_df, aes(x = dist_mean, y = corr_mean)) +
+  geom_ribbon(
+    aes(ymin = corr_lower, ymax = corr_upper),
+    # alpha = 0.2,
+    fill = "lightblue"
+  ) +
+  geom_line(color = "blue") +
+  # geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
+  # geom_line(aes(y = -threshold_95), linetype = "dashed", color = "red") +
+  labs(
+    x = "Distance (km)",
+    y = "Correlation",
+    # title = "Spatial correlation vs distance with variability and significance"
+  ) +
+  theme_minimal()
+ggsave("fig/norm_pot_corr_dist.pdf", width = 6, height = 4)
+
+corr_df_e <- spatial_corr_by_distance_fast(
+  gb_thin,
+  value_col = "error0",
+  n_bins = 20,
+  bin_type = "quantile"
+)
+ggplot(corr_df_e, aes(x = dist_mean, y = corr_mean)) +
+  geom_ribbon(
+    aes(ymin = corr_lower, ymax = corr_upper),
+    # alpha = 0.2,
+    fill = "lightblue"
+  ) +
+  geom_line(color = "blue") +
+  geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
+  # geom_line(aes(y = -threshold_95), linetype = "dashed", color = "red") +
+  labs(
+    x = "Distance (km)",
+    y = "Correlation",
+    # title = "Spatial correlation vs distance with variability and significance"
+  ) +
+  theme_minimal()
+ggsave("fig/error0_corr_dist.pdf", width = 6, height = 4)
+
+
+spatial_corr_by_distance_fast(
+  gb_thin,
+  value_col = "norm_power_est0",
+  n_bins = 20,
+  bin_type = "quantile"
+) %>%
+  ggplot(aes(x = dist_mean, y = corr_mean)) +
+  geom_ribbon(
+    aes(ymin = corr_lower, ymax = corr_upper),
+    # alpha = 0.2,
+    fill = "lightblue"
+  ) +
+  geom_line(color = "blue") +
+  geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
+  # geom_line(aes(y = -threshold_95), linetype = "dashed", color = "red") +
+  labs(
+    x = "Distance (km)",
+    y = "Correlation",
+    # title = "Spatial correlation vs distance with variability and significance"
+  ) +
+  theme_minimal()
