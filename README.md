@@ -115,6 +115,7 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - Model QM through hierarchical model
   - Model vertical interp. / PC / calibration jointly
   - Add spatial component
+  - add loss due to outages model
   - Estimate generation from locations without elexon data
   - UQ of Power estimates for locations without elexon data
   - WTG efficiency loss: type / time / weather / errors / maintenance events
