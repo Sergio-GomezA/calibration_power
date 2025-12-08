@@ -505,12 +505,13 @@ pwr_curv_df %>% names()
 GB_df <- pwr_curv_df %>%
   group_by(tech_typ, halfHourEndTime) %>%
   summarise(
-    ws_h_wmean = sum(ws_h * capacity),
+    # ws_h_wmean = sum(ws_h * capacity),
+    across(c(ws_h, wd10, wd100), ~ sum(. * capacity), .names = "{.col}_wmean"),
     across(
       c(power_est0, potential, capacity),
       sum
     ),
-    across(c(ws_h), mean, .names = "{.col}_mean")
+    across(c(ws_h, wd10, wd100), mean, .names = "{.col}_mean")
   ) %>%
   mutate(
     across(
@@ -518,7 +519,8 @@ GB_df <- pwr_curv_df %>%
       ~ . / capacity,
       .names = "norm_{.col}"
     ),
-    ws_h_wmean = ws_h_wmean / capacity,
+    # ws_h_wmean = ws_h_wmean / capacity,
+    across(matches("_wmean"), ~ . / capacity),
     month = factor(month(halfHourEndTime)),
     hour = factor(hour(halfHourEndTime))
   )
@@ -692,6 +694,17 @@ GB_df %>%
   )
 ggsave("fig/gb_calib_bindens_all.png", width = 6, height = 4)
 
+GB_df %>%
+  ggplot(aes(norm_potential, pmax(0, lm2$fitted.values))) +
+  geom_hex() +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon", y = "Calibrated ERA5 CF %")
+ggsave("fig/gb_calib_lm0_hexbin_all.pdf", width = 6, height = 4)
 
 with(GB_df, ModelMetrics::rmse(norm_potential, lm0$fitted.values))
 with(GB_df, ModelMetrics::rmse(norm_potential, lm2$fitted.values))
