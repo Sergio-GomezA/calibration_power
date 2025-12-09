@@ -379,3 +379,6 @@ plot(
   ylab = "Semivariance"
 )
 dev.off()
+
+
+print()
