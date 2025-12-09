@@ -320,6 +320,8 @@ ggsave("fig/gb_calib_bar1s_ts_2401_test.png", width = 6, height = 4)
 ## variograms
 
 setwd("/exports/eddie/scratch/s2441782/calibration_power")
+"/exports/eddie/scratch/s2441782/calibration_power"
+
 
 source("aux_funct.R")
 gen_path <- "../calibration/data"
@@ -379,6 +381,3 @@ plot(
   ylab = "Semivariance"
 )
 dev.off()
-
-
-print()
