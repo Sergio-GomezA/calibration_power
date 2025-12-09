@@ -26,7 +26,14 @@ install.packages(
 )
 install.packages('R.utils', temp_lib, dependencies = TRUE)
 
+dir.create("/export/eddie/scratch/s2441782/Rtmp", showWarnings = FALSE)
+Sys.setenv(TMPDIR = "/export/eddie/scratch/s2441782/Rtmp")
 
+install.packages(
+  c("rnaturalearth", "rnaturalearthdata", "ggthemes", "brms", "geosphere"),
+  temp_lib,
+  dependencies = TRUE
+)
 require(arrow)
 require(dplyr)
 require(tidyr)
@@ -42,7 +49,7 @@ require(parallel)
 
 require(brms)
 require(INLA)
-inla.binary.install()
+# inla.binary.install()
 
 require(inlabru)
 
@@ -308,3 +315,67 @@ GB_df %>%
   labs(x = "date", y = "Capacity factor %", col = "") +
   theme(legend.position = "bottom")
 ggsave("fig/gb_calib_bar1s_ts_2401_test.png", width = 6, height = 4)
+
+
+## variograms
+
+setwd("/exports/eddie/scratch/s2441782/calibration_power")
+
+source("aux_funct.R")
+gen_path <- "../calibration/data"
+
+pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
+
+n.days <- 7
+time_skips <- 29
+# slice data to 12 hour time steps
+gb_thin <- pwr_curv_df %>%
+  group_by(bmUnit) %>%
+  arrange(halfHourEndTime) %>%
+  mutate(hour = row_number()) %>%
+  # filter(hour %% (24 * n.days) == 9) %>%
+  filter(hour %% time_skips == 0) %>%
+  mutate(
+    norm_potential = potential / capacity,
+    norm_power_est0 = power_est0 / capacity,
+    error0 = norm_potential - norm_power_est0
+  ) %>%
+  group_by(lon, lat, halfHourEndTime) %>%
+  summarise(
+    site_name = first(site_name),
+    across(c(norm_potential, norm_power_est0, error0), sum),
+    .groups = "drop"
+  )
+
+
+library(spdep)
+library(sf)
+library(gstat)
+library(sp)
+gb_thin_sf <- st_as_sf(gb_thin, coords = c("lon", "lat"), crs = 4326)
+gb_thin_proj <- st_transform(gb_thin_sf, 27700)
+# gstat variogram works with sf objects directly
+vgram_obs <- variogram(norm_potential ~ 1, data = gb_thin_proj, cutoff = 900e3)
+vgram_obs$dist_km <- vgram_obs$dist / 1000
+pdf("fig/variogram_norm_power_thin.pdf", width = 5, height = 4)
+plot(
+  vgram_obs$dist_km,
+  vgram_obs$gamma,
+  type = "b",
+  xlab = "Distance (km)",
+  ylab = "Semivariance"
+)
+dev.off()
+
+
+vgram_est <- variogram(norm_power_est0 ~ 1, data = gb_thin_proj, cutoff = 900e3)
+vgram_est$dist_km <- vgram_est$dist / 1000
+pdf("fig/variogram_norm_power_est_thin.pdf", width = 5, height = 4)
+plot(
+  vgram_est$dist_km,
+  vgram_est$gamma,
+  type = "b",
+  xlab = "Distance (km)",
+  ylab = "Semivariance"
+)
+dev.off()
