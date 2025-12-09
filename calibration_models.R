@@ -585,15 +585,15 @@ library(spdep)
 library(sf)
 library(gstat)
 library(sp)
-gb_thin <- st_as_sf(gb_thin, coords = c("lon", "lat"), crs = 4326)
-gb_thin_proj <- st_transform(gb_thin, 27700)
+gb_thin_sf <- st_as_sf(gb_thin, coords = c("lon", "lat"), crs = 4326)
+gb_thin_proj <- st_transform(gb_thin_sf, 27700)
 # gstat variogram works with sf objects directly
-vgram <- variogram(norm_potential ~ 1, data = gb_thin_proj)
-vgram$dist_km <- vgram$dist / 1000
+vgram_obs <- variogram(norm_potential ~ 1, data = gb_thin_proj, cutoff = 600e3)
+vgram_obs$dist_km <- vgram_obs$dist / 1000
 pdf("fig/variogram_norm_power_thin.pdf", width = 5, height = 4)
 plot(
-  vgram$dist_km,
-  vgram$gamma,
+  vgram_obs$dist_km,
+  vgram_obs$gamma,
   type = "b",
   xlab = "Distance (km)",
   ylab = "Semivariance"
@@ -601,12 +601,12 @@ plot(
 dev.off()
 
 
-vgram <- variogram(norm_power_est0 ~ 1, data = gb_thin_proj)
-vgram$dist_km <- vgram$dist / 1000
+vgram_est <- variogram(norm_power_est0 ~ 1, data = gb_thin_proj, cutoff = 600e3)
+vgram_est$dist_km <- vgram_est$dist / 1000
 pdf("fig/variogram_norm_power_est_thin.pdf", width = 5, height = 4)
 plot(
-  vgram$dist_km,
-  vgram$gamma,
+  vgram_est$dist_km,
+  vgram_est$gamma,
   type = "b",
   xlab = "Distance (km)",
   ylab = "Semivariance"
@@ -622,14 +622,14 @@ corr_df <- spatial_corr_by_distance_fast(
   bin_type = "quantile"
 )
 
-
 ggplot(corr_df, aes(x = dist_mean, y = corr_mean)) +
   geom_ribbon(
     aes(ymin = corr_lower, ymax = corr_upper),
     # alpha = 0.2,
-    fill = "lightblue"
+    fill = blues9[3]
   ) +
-  geom_line(color = "blue") +
+  geom_line(color = blues9[5]) +
+  geom_point(color = blues9[7]) +
   # geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
   # geom_line(aes(y = -threshold_95), linetype = "dashed", color = "red") +
   labs(
@@ -650,9 +650,10 @@ ggplot(corr_df_e, aes(x = dist_mean, y = corr_mean)) +
   geom_ribbon(
     aes(ymin = corr_lower, ymax = corr_upper),
     # alpha = 0.2,
-    fill = "lightblue"
+    fill = blues9[3]
   ) +
-  geom_line(color = "blue") +
+  geom_line(color = blues9[5]) +
+  geom_point(color = blues9[7]) +
   geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
   # geom_line(aes(y = -threshold_95), linetype = "dashed", color = "red") +
   labs(
@@ -674,9 +675,10 @@ spatial_corr_by_distance_fast(
   geom_ribbon(
     aes(ymin = corr_lower, ymax = corr_upper),
     # alpha = 0.2,
-    fill = "lightblue"
+    fill = blues9[3]
   ) +
-  geom_line(color = "blue") +
+  geom_line(color = blues9[5]) +
+  geom_point(color = blues9[7]) +
   geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
   # geom_line(aes(y = -threshold_95), linetype = "dashed", color = "red") +
   labs(
@@ -685,3 +687,74 @@ spatial_corr_by_distance_fast(
     # title = "Spatial correlation vs distance with variability and significance"
   ) +
   theme_minimal()
+ggsave("fig/power_est_corr_dist.pdf", width = 6, height = 4)
+
+
+# regression of spatial prop ###
+lm_spatial <- lm(
+  norm_potential ~ lon + lat + I(lon^2) + I(lat^2) + lon:lat,
+  data = gb_thin
+)
+gb_thin$resid <- resid(lm_spatial)
+
+spatial_corr_by_distance_fast(
+  gb_thin,
+  value_col = "resid",
+  n_bins = 20,
+  bin_type = "quantile"
+) %>%
+  ggplot(aes(x = dist_mean, y = corr_mean)) +
+  geom_ribbon(
+    aes(ymin = corr_lower, ymax = corr_upper),
+    # alpha = 0.2,
+    fill = blues9[3]
+  ) +
+  geom_line(color = blues9[5]) +
+  geom_point(color = blues9[7]) +
+  geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
+  # geom_line(aes(y = -threshold_95), linetype = "dashed", color = "red") +
+  labs(
+    x = "Distance (km)",
+    y = "Correlation",
+    # title = "Spatial correlation vs distance with variability and significance"
+  ) +
+  theme_minimal()
+
+gb_thin_proj <- gb_thin %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  st_transform(27700)
+
+set.seed(1)
+
+vgram_res <- variogram(
+  resid ~ 1,
+  data = gb_thin_proj,
+  cutoff = 900e3,
+  # width = 20e3,
+  # maxlag = 15e3,
+)
+vgram_res$dist_km <- vgram_res$dist / 1000
+pdf("fig/variogram_resid_thin.pdf", width = 5, height = 4)
+plot(
+  vgram_res$dist_km,
+  vgram_res$gamma,
+  type = "b",
+  xlab = "Distance (km)",
+  ylab = "Semivariance"
+)
+dev.off()
+
+
+gb_sites <- gb_thin_proj %>%
+  group_by(site_name) %>%
+  summarise(resid = mean(resid, na.rm = TRUE), .groups = "drop")
+
+vg_sites <- variogram(resid ~ 1, gb_sites, cutoff = 1e6)
+vg_sites$dist_km <- vg_sites$dist / 1000
+plot(
+  vg_sites$dist_km,
+  vg_sites$gamma,
+  type = "b",
+  xlab = "Distance (km)",
+  ylab = "Semivariance"
+)

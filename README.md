@@ -104,7 +104,9 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
 
 - **Quantile regression**
 - **Spatial properties**
-  - [ ] Variogram through time
+  - [x] Correlation decay
+  - [x] Non-stationary spatial patterns
+
 - **Model validation**
   - [ ] out-of-sample validation
   - [ ] UQ and error metrics
