@@ -1,5 +1,20 @@
 # Power curve model ####
 
+# read Data ####
+if (grepl("exports", getwd())) {
+  # running in cluster
+  cluster_run <- TRUE
+  data_path <- gen_path <- "data"
+  model_path <- "model_objects"
+  temp_lib <- "/exports/eddie/scratch/s2441782/calibration/lib"
+  .libPaths(temp_lib)
+} else {
+  cluster_run <- FALSE
+  data_path <- "~/Documents/ERA5_at_wf/"
+  gen_path <- "~/Documents/elexon/"
+  model_path <- "~/Documents/elexon/model_objects"
+}
+
 require(arrow)
 require(dplyr)
 require(tidyr)
@@ -19,31 +34,16 @@ require(INLA)
 require(inlabru)
 require(patchwork)
 
-n.cores <- detectCores() - 2
-
-# read Data ####
-if (grepl("exports", getwd())) {
-  # running in cluster
-  cluster_run <- TRUE
-  data_path <- gen_path <- "data"
-  model_path <- "model_objects"
-} else {
-  cluster_run <- FALSE
-  data_path <- "~/Documents/ERA5_at_wf/"
-  gen_path <- "~/Documents/elexon/"
-  model_path <- "~/Documents/elexon/model_objects"
-}
-
-source("aux_funct.R")
-
 if (cluster_run) {
-  inla.setOption(num.threads = paste0("0:", parallel::detectCores()))
+  n.cores <- detectCores()
   pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
+  setwd("/exports/eddie/scratch/s2441782/calibration")
 } else {
-  inla.setOption(num.threads = paste0("0:", parallel::detectCores() - 2))
+  n.cores <- detectCores() - 2
   pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
 }
-
+source("aux_funct.R")
+inla.setOption(num.threads = paste0("0:", n.cores))
 # pc model : norm_power ~ pc(ws_h, group = site_name)
 # penalty :  replicate = pc
 
@@ -102,6 +102,11 @@ df$ws_group <- cut(
 )
 ws_midpoints <- (brks[-1] + brks[-length(brks)]) / 2
 
+model_name <- "RW2"
+print(
+  sprintf("%s model --- initialisation", model_name)
+)
+
 components <- ~ Intercept(1) +
   curve(
     ws_group,
@@ -126,6 +131,14 @@ fit_rw2 <- bru(
     control.compute = list(config = TRUE) # if you later want posterior samples
   )
 )
+
+print(
+  sprintf("%s model --- estimation finished", model_name)
+)
+saveRDS(
+  fit_rw2,
+  file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+)
 summary(fit_rw2)
 
 ws_grid <- seq(min(df$ws_h), max(df$ws_h), length.out = 25)
@@ -138,6 +151,10 @@ pred_df$ws_group <- sapply(pred_df$ws_h, function(x) {
 })
 # head(pred_df)
 # class(df$ws_group)
+
+print(
+  sprintf("%s model --- sampling and plotting", model_name)
+)
 n_samp <- 1000 # number of posterior samples
 # predict linear predictor (logit mean)
 pred_lp <- predict(
@@ -156,6 +173,10 @@ plot(fit_rw2, "Intercept")
 ggsave("fig/rw2_24_wfsamp_intercept.pdf")
 
 ## Smooth 1D SPDE beta model ####
+model_name <- "1D SPDE"
+print(
+  sprintf("%s model --- initialisation", model_name)
+)
 
 x <- seq(-5, 35, length.out = 20) # this sets mesh points - try others if you like
 (mesh1D <- fm_mesh_1d(x, degree = 2, boundary = "dirichlet"))
@@ -189,8 +210,18 @@ fit_spde <- bru(
     control.compute = list(config = TRUE) # if you later want posterior samples
   )
 )
+print(
+  sprintf("%s model --- estimation finished", model_name)
+)
+saveRDS(
+  fit_spde,
+  file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+)
 summary(fit_spde)
 
+print(
+  sprintf("%s model --- sampling and plotting", model_name)
+)
 pred_spde <- predict(
   fit_spde,
   pred_df,
@@ -216,6 +247,10 @@ ggsave("fig/spde_24_wfsamp_pars.pdf")
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
+model_name <- "ZIB SPDE"
+print(
+  sprintf("%s model --- initialisation", model_name)
+)
 spde_beta <- inla.spde2.pcmatern(
   mesh1D,
   prior.range = c(1, 0.01),
@@ -263,8 +298,19 @@ fit_zib <- bru(
     control.compute = list(config = TRUE)
   )
 )
+print(
+  sprintf("%s model --- estimation finished", model_name)
+)
+saveRDS(
+  fit_zib,
+  file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+)
 summary(fit_zib)
 
+
+print(
+  sprintf("%s model --- sampling and plotting", model_name)
+)
 plot(fit_zib, "Intercept_bern")
 ggsave("fig/ZIBspde_24_wfsamp_interZero.pdf")
 plot(fit_zib, "Intercept_pc")
@@ -299,6 +345,10 @@ ggsave("fig/ZIBspde_24_wfsamp_curve.pdf")
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
+model_name <- "Penalised ZIB SPDE"
+print(
+  sprintf("%s model --- initialisation", model_name)
+)
 pseudo_precision <- 100
 like_pseudo <- bru_obs(
   generic_logit ~ Intercept_pc + power_curve,
@@ -320,9 +370,17 @@ fit_with_penalty <- bru(
     control.compute = list(config = TRUE)
   )
 )
-
+print(
+  sprintf("%s model --- estimation finished", model_name)
+)
+saveRDS(
+  fit_with_penalty,
+  file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+)
 summary(fit_with_penalty)
-
+print(
+  sprintf("%s model --- sampling and plotting", model_name)
+)
 plot(fit_with_penalty, "Intercept_bern")
 ggsave("fig/ZIBspdePen_24_wfsamp_interZero.pdf")
 plot(fit_with_penalty, "Intercept_pc")
