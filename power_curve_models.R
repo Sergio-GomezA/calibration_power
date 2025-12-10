@@ -17,9 +17,9 @@ require(brms)
 require(INLA)
 
 require(inlabru)
+require(patchwork)
 
-source("aux_funct.R")
-
+n.cores <- detectCores() - 2
 
 # read Data ####
 if (grepl("exports", getwd())) {
@@ -41,11 +41,10 @@ if (cluster_run) {
   inla.setOption(num.threads = paste0("0:", parallel::detectCores()))
   pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
 } else {
+  inla.setOption(num.threads = paste0("0:", parallel::detectCores() - 2))
   pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
 }
 
-sum(pwr_curv_df$norm_potential <= 0) / nrow(pwr_curv_df) * 100
-sum(pwr_curv_df$norm_potential >= 1) / nrow(pwr_curv_df) * 100
 
 # pc model : norm_power ~ pc(ws_h, group = site_name)
 # penalty :  replicate = pc
@@ -54,17 +53,17 @@ sum(pwr_curv_df$norm_potential >= 1) / nrow(pwr_curv_df) * 100
 ## Smooth RW beta model #####
 
 pwr_curv_df <- pwr_curv_df %>%
-  mutate(
-    norm_potential = potential / capacity,
-    norm_power_est0 = power_est0 / capacity,
-    error0 = norm_potential - norm_power_est0
-  ) %>%
   group_by(lon, lat, halfHourEndTime) %>%
   summarise(
     site_name = first(site_name),
     ws_h = mean(ws_h),
-    across(c(norm_potential, norm_power_est0, error0), sum),
+    across(c(potential, power_est0, capacity), sum),
     .groups = "drop"
+  ) %>%
+  mutate(
+    norm_potential = pmin(1, potential / capacity),
+    norm_power_est0 = power_est0 / capacity,
+    error0 = norm_potential - norm_power_est0
   ) %>%
   mutate(
     site_id = as.integer(factor(site_name)),
@@ -72,20 +71,43 @@ pwr_curv_df <- pwr_curv_df %>%
       norm_potential > 0 & norm_potential < 1,
       pmin(pmax(norm_potential, 1e-6), 1 - 1e-6),
       NA_real_
-    )
+    ),
+    is_zero = as.integer(norm_potential == 0),
+    generic_logit = qlogis(
+      pmin(pmax(norm_power_est0, 1e-6), 1 - 1e-6)
   )
 
-df <- pwr_curv_df %>%
-  filter(!is.na(pos_val)) # keep only rows used in beta model
+sum(pwr_curv_df$norm_potential <= 0) / nrow(pwr_curv_df) * 100
+sum(pwr_curv_df$norm_potential >= 1) / nrow(pwr_curv_df) * 100
 
+set.seed(0)
+sites_vec <- pwr_curv_df$site_name %>% unique()
+n_sites <- 12
+sites_samp <- sample(sites_vec, n_sites)
+df <- pwr_curv_df %>%
+  filter(site_name %in% sites_samp) #%>%
+# filter(!is.na(pos_val)) %>% # keep only rows used in beta model
+# slice_sample(n = 100000)
 n_groups <- 20 # start here; increase if you want a finer curve
-df$ws_group <- inla.group(df$ws_h, n = n_groups, method = "quantile")
-ws_breaks <- df$ws_group %>% unique() %>% sort()
+brks <- seq(
+  min(df$ws_h, na.rm = TRUE),
+  max(df$ws_h, na.rm = TRUE),
+  length.out = n_groups + 1
+)
+
+df$ws_group <- cut(
+  df$ws_h,
+  breaks = brks,
+  include.lowest = TRUE,
+  labels = FALSE
+)
+ws_midpoints <- (brks[-1] + brks[-length(brks)]) / 2
 
 components <- ~ Intercept(1) +
   curve(
     ws_group,
     model = "rw2",
+    group = site_name,
     constr = TRUE,
     hyper = list(prec = list(prior = "pc.prec", param = c(1, 0.01)))
   )
@@ -107,73 +129,191 @@ fit_rw2 <- bru(
 )
 summary(fit_rw2)
 
-ws_grid <- seq(min(df$ws_h), max(df$ws_h), length.out = 400)
-pred_df <- data.frame(ws_h = ws_grid)
+ws_grid <- seq(min(df$ws_h), max(df$ws_h), length.out = 25)
+pred_df <- expand.grid(
+  ws_h = ws_grid,
+  site_name = sites_samp
+)
 pred_df$ws_group <- sapply(pred_df$ws_h, function(x) {
-  ws_breaks[which.min(abs(ws_breaks - x))]
+  which.min(abs(ws_midpoints - x))
 })
 # head(pred_df)
 # class(df$ws_group)
+n_samp <- 1000 # number of posterior samples
 # predict linear predictor (logit mean)
 pred_lp <- predict(
   fit_rw2,
   pred_df,
-  ~ Intercept + curve
+  ~ plogis(Intercept + curve),
+  num.threads = n.cores,
+  n.samples <- n_samp
 )
-n_samp <- 1000 # number of posterior samples
-samples <- predict(fit_rw2, pred_df, ~ Intercept + curve, n.samples = n_samp)
-# predict() returns a list with $mean and $sd for the linear predictor
-?predict.bru
-eta_mat <- samples$latent # or samples$sample depending on bru version
-p_mat <- plogis(eta_mat) # transform each sample to [0,1]
-pred_df$mean_p <- rowMeans(p_mat)
-pred_df$lower_p <- apply(p_mat, 1, quantile, probs = 0.025)
-pred_df$upper_p <- apply(p_mat, 1, quantile, probs = 0.975)
 
 ggplot() +
-  geom_line(data = pred_df, aes(x = ws_h, y = mean_p), lwd = 1) +
-  geom_ribbon(
-    data = pred_df,
-    aes(x = ws_h, ymin = lower_p, ymax = upper_p),
-    alpha = 0.2
-  ) +
-  labs(
-    x = "Wind speed (m/s)",
-    y = "Normalized power",
-    title = "RW2 Beta model fit with posterior samples"
-  )
+  gg(pred_lp) +
+  facet_wrap(~site_name)
 
-
-pred_df$eta_mean <- pred_lp$mean
-pred_df$eta_sd <- pred_lp$sd
-pred_df$mean_p <- plogis(pred_df$eta_mean)
-# approximate 95% band on link scale -> transform endpoints (delta approx)
-pred_df$lower_p <- plogis(pred_df$eta_mean - 1.96 * pred_df$eta_sd)
-pred_df$upper_p <- plogis(pred_df$eta_mean + 1.96 * pred_df$eta_sd)
-
-# quick ggplot
-ggplot() +
-  # geom_point(data = df, aes(x = ws_h, y = pos_val), alpha = 0.3, size = 0.8) +
-  geom_line(data = pred_df, aes(x = ws_h, y = mean_p), lwd = 1) +
-  geom_ribbon(
-    data = pred_df,
-    aes(x = ws_h, ymin = lower_p, ymax = upper_p),
-    alpha = 0.2
-  ) +
-  labs(
-    x = "Wind speed (m/s)",
-    y = "Normalized power",
-    title = "RW2 Beta model fit"
-  )
+plot(fit_rw2, "Intercept")
 
 ## Smooth 1D SPDE beta model ####
+
+x <- seq(-5, 35, length.out = 20) # this sets mesh points - try others if you like
+(mesh1D <- fm_mesh_1d(x, degree = 2, boundary = "dirichlet"))
+ggplot() +
+  geom_fm(data = mesh1D)
+
+the_spde <- inla.spde2.pcmatern(
+  mesh1D,
+  prior.range = c(1, 0.01),
+  prior.sigma = c(1, 0.01)
+)
+
+components_spde <- ~ Intercept(1) +
+  curve(
+    ws_group,
+    model = the_spde,
+    group = site_name
+  )
+like_beta <- bru_obs(
+  formula = pos_val ~ Intercept + curve,
+  family = "beta", # or "betar" - check your INLA version
+  data = df,
+  control.family = list(link = "logit")
+)
+fit_spde <- bru(
+  components_spde,
+  like_beta,
+  options = list(
+    control.inla = list(int.strategy = "auto"),
+    verbose = TRUE,
+    control.compute = list(config = TRUE) # if you later want posterior samples
+  )
+)
+summary(fit_spde)
+
+pred_spde <- predict(
+  fit_spde,
+  pred_df,
+  ~ plogis(Intercept + curve),
+  num.threads = n.cores,
+  n.samples <- n_samp
+)
+
+ggplot() +
+  gg(pred_spde) +
+  facet_wrap(~site_name)
+
+plot(fit_spde, "Intercept")
+
+spde.range <- spde.posterior(fit_spde, "curve", what = "range")
+spde.logvar <- spde.posterior(fit_spde, "curve", what = "variance")
+range.plot <- plot(spde.range)
+var.plot <- plot(spde.logvar)
+(range.plot | var.plot)
 
 # Models with zero inflated properties ####
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
+spde_beta <- inla.spde2.pcmatern(
+  mesh1D,
+  prior.range = c(1, 0.01),
+  prior.sigma = c(1, 0.01)
+)
+spde_bern <- inla.spde2.pcmatern(
+  mesh1D,
+  prior.range = c(1, 0.01),
+  prior.sigma = c(1, 0.01)
+)
+
+components_zero <- ~ Intercept_pc(1) +
+  power_curve(
+    ws_group,
+    model = spde_beta,
+    group = site_name
+  ) +
+  Intercept_bern(1) +
+  bern_curve(
+    ws_group,
+    model = spde_bern,
+    group = site_name
+  )
+like_beta <- bru_obs(
+  formula = pos_val ~ Intercept_pc + power_curve,
+  family = "beta",
+  data = df %>% filter(!is_zero),
+  control.family = list(link = "logit")
+)
+
+like_zero <- bru_obs(
+  formula = is_zero ~ Intercept_bern + bern_curve,
+  family = "binomial",
+  data = df,
+  control.family = list(link = "logit")
+)
+
+fit_zib <- bru(
+  components_zero,
+  like_beta,
+  like_zero,
+  options = list(
+    control.inla = list(int.strategy = "auto"),
+    verbose = TRUE,
+    control.compute = list(config = TRUE)
+  )
+)
+summary(fit_zib)
+
+plot(fit_zib, "Intercept_bern")
+plot(fit_zib, "Intercept_pc")
+# plot(fit_zib, "bern_curve")
+# plot(fit_zib, "power_curve")
+# ?plot.bru
+
+pp_zero <- predict(
+  fit_zib,
+  newdata = pred_df,
+  formula = ~ plogis(Intercept_bern + bern_curve),
+  n.samples = n_samp,
+  num.threads = n.cores
+)
+ggplot() +
+  gg(pp_zero) +
+  facet_wrap(~site_name)
+
+pp_beta <- predict(
+  fit_zib,
+  newdata = pred_df,
+  formula = ~ plogis(Intercept_pc + power_curve),
+  n.samples = n_samp,
+  num.threads = n.cores
+)
+ggplot() +
+  gg(pp_beta) +
+  facet_wrap(~site_name)
 
 # Models with penalty to generic curves ####
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
+pseudo_precision <- 100
+like_pseudo <- bru_obs(
+  power_est0 ~ Intercept_pc + power_curve,
+  family = "gaussian",
+  data = df %>% filter(!is_zero),
+  control.family = list(
+    hyper = list(prec = list(initial = log(pseudo_precision), fixed = TRUE))
+  )
+)
+
+fit_with_penalty <- bru(
+  components_zero,
+  like_beta,
+  like_zero,
+  like_pseudo,
+  options = list(
+    control.inla = list(int.strategy = "auto"),
+    verbose = TRUE,
+    control.compute = list(config = TRUE)
+  )
+)
