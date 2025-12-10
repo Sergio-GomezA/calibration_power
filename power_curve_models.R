@@ -36,7 +36,6 @@ if (grepl("exports", getwd())) {
 
 source("aux_funct.R")
 
-
 if (cluster_run) {
   inla.setOption(num.threads = paste0("0:", parallel::detectCores()))
   pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
@@ -44,7 +43,6 @@ if (cluster_run) {
   inla.setOption(num.threads = paste0("0:", parallel::detectCores() - 2))
   pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
 }
-
 
 # pc model : norm_power ~ pc(ws_h, group = site_name)
 # penalty :  replicate = pc
@@ -75,6 +73,7 @@ pwr_curv_df <- pwr_curv_df %>%
     is_zero = as.integer(norm_potential == 0),
     generic_logit = qlogis(
       pmin(pmax(norm_power_est0, 1e-6), 1 - 1e-6)
+    )
   )
 
 sum(pwr_curv_df$norm_potential <= 0) / nrow(pwr_curv_df) * 100
@@ -152,8 +151,9 @@ pred_lp <- predict(
 ggplot() +
   gg(pred_lp) +
   facet_wrap(~site_name)
-
+ggsave("fig/rw2_24_wfsamp_curve.pdf")
 plot(fit_rw2, "Intercept")
+ggsave("fig/rw2_24_wfsamp_intercept.pdf")
 
 ## Smooth 1D SPDE beta model ####
 
@@ -202,15 +202,16 @@ pred_spde <- predict(
 ggplot() +
   gg(pred_spde) +
   facet_wrap(~site_name)
-
+ggsave("fig/spde_24_wfsamp_curve.pdf")
 plot(fit_spde, "Intercept")
+ggsave("fig/spde_24_wfsamp_intercept.pdf")
 
 spde.range <- spde.posterior(fit_spde, "curve", what = "range")
 spde.logvar <- spde.posterior(fit_spde, "curve", what = "variance")
 range.plot <- plot(spde.range)
 var.plot <- plot(spde.logvar)
 (range.plot | var.plot)
-
+ggsave("fig/spde_24_wfsamp_pars.pdf")
 # Models with zero inflated properties ####
 ## Smooth RW beta model #####
 
@@ -265,7 +266,9 @@ fit_zib <- bru(
 summary(fit_zib)
 
 plot(fit_zib, "Intercept_bern")
+ggsave("fig/ZIBspde_24_wfsamp_interZero.pdf")
 plot(fit_zib, "Intercept_pc")
+ggsave("fig/ZIBspde_24_wfsamp_interCurve.pdf")
 # plot(fit_zib, "bern_curve")
 # plot(fit_zib, "power_curve")
 # ?plot.bru
@@ -280,7 +283,7 @@ pp_zero <- predict(
 ggplot() +
   gg(pp_zero) +
   facet_wrap(~site_name)
-
+ggsave("fig/ZIBspde_24_wfsamp_zeroProb.pdf")
 pp_beta <- predict(
   fit_zib,
   newdata = pred_df,
@@ -291,14 +294,14 @@ pp_beta <- predict(
 ggplot() +
   gg(pp_beta) +
   facet_wrap(~site_name)
-
+ggsave("fig/ZIBspde_24_wfsamp_curve.pdf")
 # Models with penalty to generic curves ####
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
 pseudo_precision <- 100
 like_pseudo <- bru_obs(
-  power_est0 ~ Intercept_pc + power_curve,
+  generic_logit ~ Intercept_pc + power_curve,
   family = "gaussian",
   data = df %>% filter(!is_zero),
   control.family = list(
@@ -317,3 +320,37 @@ fit_with_penalty <- bru(
     control.compute = list(config = TRUE)
   )
 )
+
+summary(fit_with_penalty)
+
+plot(fit_with_penalty, "Intercept_bern")
+ggsave("fig/ZIBspdePen_24_wfsamp_interZero.pdf")
+plot(fit_with_penalty, "Intercept_pc")
+ggsave("fig/ZIBspdePen_24_wfsamp_interCurve.pdf")
+# plot(fit_zib, "bern_curve")
+# plot(fit_zib, "power_curve")
+# ?plot.bru
+
+pp_zero <- predict(
+  fit_with_penalty,
+  newdata = pred_df,
+  formula = ~ plogis(Intercept_bern + bern_curve),
+  n.samples = n_samp,
+  num.threads = n.cores
+)
+ggplot() +
+  gg(pp_zero) +
+  facet_wrap(~site_name)
+ggsave("fig/ZIBspdePen_24_wfsamp_zeroProb.pdf")
+
+pp_beta <- predict(
+  fit_with_penalty,
+  newdata = pred_df,
+  formula = ~ plogis(Intercept_pc + power_curve),
+  n.samples = n_samp,
+  num.threads = n.cores
+)
+ggplot() +
+  gg(pp_beta) +
+  facet_wrap(~site_name)
+ggsave("fig/ZIBspdePen_24_wfsamp_curve.pdf")
