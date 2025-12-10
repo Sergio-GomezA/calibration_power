@@ -109,12 +109,40 @@ summary(fit_rw2)
 
 ws_grid <- seq(min(df$ws_h), max(df$ws_h), length.out = 400)
 pred_df <- data.frame(ws_h = ws_grid)
-pred_df$ws_group <- inla.group(pred_df$ws_h, cut = ws_breaks)
-pred_df$ws_group <- as.integer(pred_df$ws_group)
-
+pred_df$ws_group <- sapply(pred_df$ws_h, function(x) {
+  ws_breaks[which.min(abs(ws_breaks - x))]
+})
+# head(pred_df)
+# class(df$ws_group)
 # predict linear predictor (logit mean)
-pred_lp <- predict(fit_rw2, pred_df, ~ Intercept + f(ws_group), n.samples = 0)
+pred_lp <- predict(
+  fit_rw2,
+  pred_df,
+  ~ Intercept + curve
+)
+n_samp <- 1000 # number of posterior samples
+samples <- predict(fit_rw2, pred_df, ~ Intercept + curve, n.samples = n_samp)
 # predict() returns a list with $mean and $sd for the linear predictor
+?predict.bru
+eta_mat <- samples$latent # or samples$sample depending on bru version
+p_mat <- plogis(eta_mat) # transform each sample to [0,1]
+pred_df$mean_p <- rowMeans(p_mat)
+pred_df$lower_p <- apply(p_mat, 1, quantile, probs = 0.025)
+pred_df$upper_p <- apply(p_mat, 1, quantile, probs = 0.975)
+
+ggplot() +
+  geom_line(data = pred_df, aes(x = ws_h, y = mean_p), lwd = 1) +
+  geom_ribbon(
+    data = pred_df,
+    aes(x = ws_h, ymin = lower_p, ymax = upper_p),
+    alpha = 0.2
+  ) +
+  labs(
+    x = "Wind speed (m/s)",
+    y = "Normalized power",
+    title = "RW2 Beta model fit with posterior samples"
+  )
+
 
 pred_df$eta_mean <- pred_lp$mean
 pred_df$eta_sd <- pred_lp$sd
@@ -125,8 +153,8 @@ pred_df$upper_p <- plogis(pred_df$eta_mean + 1.96 * pred_df$eta_sd)
 
 # quick ggplot
 ggplot() +
-  geom_point(data = df, aes(x = ws_h, y = pos_val), alpha = 0.3, size = 0.8) +
-  geom_line(data = pred_df, aes(x = ws_h, y = mean_p), size = 1) +
+  # geom_point(data = df, aes(x = ws_h, y = pos_val), alpha = 0.3, size = 0.8) +
+  geom_line(data = pred_df, aes(x = ws_h, y = mean_p), lwd = 1) +
   geom_ribbon(
     data = pred_df,
     aes(x = ws_h, ymin = lower_p, ymax = upper_p),
