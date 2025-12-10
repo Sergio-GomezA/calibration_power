@@ -6,8 +6,10 @@ if (grepl("exports", getwd())) {
   cluster_run <- TRUE
   data_path <- gen_path <- "data"
   model_path <- "model_objects"
+  gen_path <- "../calibration/data"
   temp_lib <- "/exports/eddie/scratch/s2441782/calibration/lib"
   .libPaths(temp_lib)
+  setwd("/exports/eddie/scratch/s2441782/calibration_power")
 } else {
   cluster_run <- FALSE
   data_path <- "~/Documents/ERA5_at_wf/"
@@ -37,13 +39,12 @@ require(patchwork)
 if (cluster_run) {
   n.cores <- detectCores()
   pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
-  setwd("/exports/eddie/scratch/s2441782/calibration")
 } else {
   n.cores <- detectCores() - 2
   pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
 }
 source("aux_funct.R")
-inla.setOption(num.threads = paste0("0:", n.cores))
+inla.setOption(num.threads = paste0(n.cores, ":1"))
 # pc model : norm_power ~ pc(ws_h, group = site_name)
 # penalty :  replicate = pc
 
@@ -345,9 +346,47 @@ ggsave("fig/ZIBspde_24_wfsamp_curve.pdf")
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
-model_name <- "Penalised ZIB SPDE"
+model_name <- "PenalisedF ZIB SPDE"
 print(
   sprintf("%s model --- initialisation", model_name)
+)
+x <- seq(-5, 35, length.out = 20) # this sets mesh points - try others if you like
+(mesh1D <- fm_mesh_1d(x, degree = 2, boundary = "dirichlet"))
+spde_beta <- inla.spde2.pcmatern(
+  mesh1D,
+  prior.range = c(1, 0.01),
+  prior.sigma = c(1, 0.01)
+)
+spde_bern <- inla.spde2.pcmatern(
+  mesh1D,
+  prior.range = c(1, 0.01),
+  prior.sigma = c(1, 0.01)
+)
+
+components_zero <- ~ Intercept_pc(1) +
+  power_curve(
+    ws_group,
+    model = spde_beta,
+    group = site_name
+  ) +
+  Intercept_bern(1) +
+  bern_curve(
+    ws_group,
+    model = spde_bern,
+    group = site_name
+  )
+like_beta <- bru_obs(
+  formula = pos_val ~ Intercept_pc + power_curve,
+  family = "beta",
+  data = df %>% filter(!is_zero),
+  control.family = list(link = "logit")
+)
+
+like_zero <- bru_obs(
+  formula = is_zero ~ Intercept_bern + bern_curve,
+  family = "binomial",
+  data = df,
+  control.family = list(link = "logit")
 )
 pseudo_precision <- 100
 like_pseudo <- bru_obs(
@@ -382,9 +421,9 @@ print(
   sprintf("%s model --- sampling and plotting", model_name)
 )
 plot(fit_with_penalty, "Intercept_bern")
-ggsave("fig/ZIBspdePen_24_wfsamp_interZero.pdf")
+ggsave("fig/ZIBspdePenF_24_wfsamp_interZero.pdf")
 plot(fit_with_penalty, "Intercept_pc")
-ggsave("fig/ZIBspdePen_24_wfsamp_interCurve.pdf")
+ggsave("fig/ZIBspdePenF_24_wfsamp_interCurve.pdf")
 # plot(fit_zib, "bern_curve")
 # plot(fit_zib, "power_curve")
 # ?plot.bru
@@ -399,7 +438,7 @@ pp_zero <- predict(
 ggplot() +
   gg(pp_zero) +
   facet_wrap(~site_name)
-ggsave("fig/ZIBspdePen_24_wfsamp_zeroProb.pdf")
+ggsave("fig/ZIBspdePenF_24_wfsamp_zeroProb.pdf")
 
 pp_beta <- predict(
   fit_with_penalty,
@@ -411,4 +450,5 @@ pp_beta <- predict(
 ggplot() +
   gg(pp_beta) +
   facet_wrap(~site_name)
-ggsave("fig/ZIBspdePen_24_wfsamp_curve.pdf")
+ggsave("fig/ZIBspdePenF_24_wfsamp_curve.pdf")
+print("Process finished")
