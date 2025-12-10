@@ -88,6 +88,9 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
     - [x] Cannon/Brayshaw
     - [x] Potisomporn relevant
     - [ ] Thornton relevant
+    - [ ] Carter
+  - [ ] Calibration method inlabru with plotted effects
+  - [ ] Power curve effect method with plotted effects
 
 - **Research topics**
   -[ ] power curve estimation
