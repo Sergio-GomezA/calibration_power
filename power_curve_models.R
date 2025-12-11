@@ -348,7 +348,10 @@ ggsave("fig/ZIBspde_24_wfsamp_curve.pdf")
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
-model_name <- "PenalisedF ZIB SPDE"
+pseudo_precision <- 3
+model_name <- sprintf("Penalised%d ZIB SPDE", pseudo_precision)
+model_code <- sprintf("ZIBspdePen%d", pseudo_precision)
+
 print(
   sprintf("%s model --- initialisation", model_name)
 )
@@ -390,7 +393,7 @@ like_zero <- bru_obs(
   data = df,
   control.family = list(link = "logit")
 )
-pseudo_precision <- 100
+
 like_pseudo <- bru_obs(
   generic_logit ~ Intercept_pc + power_curve,
   family = "gaussian",
@@ -432,12 +435,12 @@ print(
   sprintf("%s model --- sampling and plotting", model_name)
 )
 plot(fit_with_penalty, "Intercept_bern")
-ggsave("fig/ZIBspdePenF_24_wfsamp_interZero.pdf")
+ggsave(sprintf("fig/%s_24_wfsamp_interZero.pdf", model_code))
 plot(fit_with_penalty, "Intercept_pc")
-ggsave("fig/ZIBspdePenF_24_wfsamp_interCurve.pdf")
+ggsave(sprintf("fig/%s_24_wfsamp_interCurve.pdf", model_code))
 
 plot.hyper.dens(fit_with_penalty)
-ggsave("fig/ZIBspdePenF_24_wfsamp_hyper.pdf")
+ggsave(sprintf("fig/%s_24_wfsamp_hyper.pdf", model_code))
 # plot(fit_zib, "bern_curve")
 # plot(fit_zib, "power_curve")
 # ?plot.bru
@@ -452,8 +455,7 @@ pp_zero <- predict(
 ggplot() +
   gg(pp_zero) +
   facet_wrap(~site_name)
-ggsave("fig/ZIBspdePenF_24_wfsamp_zeroProb.pdf")
-
+ggsave(sprintf("fig/%s_24_wfsamp_zeroProb.pdf", model_code))
 pp_beta <- predict(
   fit_with_penalty,
   newdata = pred_df,
@@ -464,5 +466,5 @@ pp_beta <- predict(
 ggplot() +
   gg(pp_beta) +
   facet_wrap(~site_name)
-ggsave("fig/ZIBspdePenF_24_wfsamp_curve.pdf")
+ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code))
 print("Process finished")
