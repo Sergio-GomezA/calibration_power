@@ -38,7 +38,7 @@ require(patchwork)
 
 if (cluster_run) {
   n.cores <- detectCores()
-  pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
+  pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
 } else {
   n.cores <- detectCores() - 2
   pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
@@ -74,6 +74,9 @@ pwr_curv_df <- pwr_curv_df %>%
     generic_logit = qlogis(
       pmin(pmax(norm_power_est0, 1e-6), 1 - 1e-6)
     )
+  ) %>%
+  mutate(
+    site_name = ifelse(grepl("Dogger", site_name), "Dogger Bank", site_name)
   )
 
 sum(pwr_curv_df$norm_potential <= 0) / nrow(pwr_curv_df) * 100
@@ -93,7 +96,11 @@ brks <- seq(
   max(df$ws_h, na.rm = TRUE),
   length.out = n_groups + 1
 )
-
+# sites_samp <- c("Dogger Bank", sites_samp[-1])
+# df <- df %>%
+#   mutate(
+#     site_name = ifelse(grepl("Dogger", site_name), "Dogger Bank", site_name)
+#   )
 df$ws_group <- cut(
   df$ws_h,
   breaks = brks,
@@ -457,7 +464,8 @@ pp_zero <- predict(
 )
 ggplot() +
   gg(pp_zero) +
-  facet_wrap(~site_name)
+  facet_wrap(~site_name) +
+  labs(x = "ERA 5 wind speed", y = "Probability of zero generation")
 ggsave(
   sprintf("fig/%s_24_wfsamp_zeroProb.pdf", model_code),
   width = 8,
@@ -472,7 +480,8 @@ pp_beta <- predict(
 )
 ggplot() +
   gg(pp_beta) +
-  facet_wrap(~site_name)
+  facet_wrap(~site_name) +
+  labs(x = "ERA 5 wind speed", y = "Power curve estimate (P>0)")
 ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code), width = 8, height = 6)
 
 pp_EPC <- predict(
@@ -485,6 +494,7 @@ pp_EPC <- predict(
 )
 ggplot() +
   gg(pp_EPC) +
-  facet_wrap(~site_name)
+  facet_wrap(~site_name) +
+  labs(x = "ERA 5 wind speed", y = "Expected normalised power %")
 ggsave(sprintf("fig/%s_24_wfsamp_EPC.pdf", model_code), width = 8, height = 6)
 print("Process finished")
