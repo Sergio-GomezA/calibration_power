@@ -110,6 +110,7 @@ pred_df <- expand.grid(
 pred_df$ws_group <- sapply(pred_df$ws_h, function(x) {
   which.min(abs(ws_midpoints - x))
 })
+n_samp <- 1000 # number of posterior samples
 ## Smooth RW beta model #####
 
 model_name <- "RW2"
@@ -158,7 +159,7 @@ summary(fit_rw2)
 print(
   sprintf("%s model --- sampling and plotting", model_name)
 )
-n_samp <- 1000 # number of posterior samples
+
 # predict linear predictor (logit mean)
 pred_lp <- predict(
   fit_rw2,
@@ -350,7 +351,7 @@ ggsave("fig/ZIBspde_24_wfsamp_curve.pdf")
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
-pseudo_precision <- 3
+pseudo_precision <- 1
 model_name <- sprintf("Penalised%d ZIB SPDE", pseudo_precision)
 model_code <- sprintf("ZIBspdePen%d", pseudo_precision)
 
