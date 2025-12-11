@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2025-12-05"
+date: "2025-12-11"
 format: 
   beamer:
     theme: Rochester
@@ -55,13 +55,13 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FA
 ## Updates {#sec-updates .unnumbered .nolink}
 
 ### New
-- Spatial correlation check
 - Updated linear models
 - Power curve modelling
+- Spatial correlation check
 
 ### Next steps
 - Combine PC model with calibration
-- Benchmark models: Quantile mapping, GAMs
+- Compare model against benchmarks: Quantile mapping, GAMs
 - Calibration spatiotemporal model
 
 
@@ -237,49 +237,103 @@ where $\alpha_0$ is the intercept, the $\alpha_e$ $e \in {k,m,h}$ represent rand
 ::: {.columns}
 
 ::: {.column width="50%" }
+### Components
+
 - Power curve estimate from data
 - Probability of zero generation
-- Penalisation to make power curve resemble
-
-Using a three-likelihood approach for power curve estimation:
-
-- **1st likelihood:** Observed power is modelled as a smooth function of wind speed
-  - Random walk of order 2
-  - Beta with logit link for output [0,1]  
+- Penalisation to make power curve resemble manufaturer's PC
 
 :::
 
 ::: {.column width="50%"}
-- **2nd likelihood:** Penalisation towards a generic PC
-  - Gaussian noise; strength controlled via precision
-  - Estimate is pulled to typical turbine behaviour  
+Using a three-likelihood approach for power curve estimation:
 
-- **Cut-off speed estimation** 
-  - Zero inflate model
-:::
+- **1st likelihood:** Observed power is modelled as a smooth function of wind speed
+- **2nd likelihood:** Zero inflated component
+- **3rd likelihood** Penalisation towards a generic PC
 
 :::
 
-## Power curve model
+:::
+
+## Power curve model equations
+\tiny
+\begin{align}
+%%
+&\textbf{Zero--probability model (Bernoulli)} \nonumber \\[4pt]
+\eta^{(0)}_{i}
+  &= \alpha_{\mathrm{bern}}
+     + f_{\mathrm{bern}}\!\left(w_i;\,\mathbf{s}(i)\right), \\[4pt]
+Z_i \mid \eta^{(0)}_{i} 
+  &\sim \mathrm{Bernoulli}(p_i),
+  \qquad 
+  p_i = \operatorname{logit}^{-1}\!\left(\eta^{(0)}_{i}\right),
+\\[10pt]
+%%
+&\textbf{Positive--output model (Beta)} \nonumber \\[4pt]
+\eta^{(\beta)}_{i}
+  &= \alpha_{\mathrm{pc}}
+     + f_{\mathrm{pc}}\!\left(w_i;\,\mathbf{s}(i)\right), \\[4pt]
+P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
+  &\sim \mathrm{Beta}(\mu_i,\phi),
+  \qquad
+  \mu_i = \operatorname{logit}^{-1}\!\left(\eta^{(\beta)}_{i}\right),
+\\[10pt]
+%%
+&\textbf{Pseudo--likelihood model (Gaussian)} \nonumber \\[4pt]
+\tilde{P}_i \mid \eta^{(\beta)}_{i}
+  &\sim \mathcal{N}\!\left(
+      \eta^{(\beta)}_{i},
+      \tau_{\mathrm{ps}}^{-1}
+    \right),
+  \qquad
+    \tau_{\mathrm{ps}} = \texttt{pseudo\_precision}.
+\end{align}
+
+## Power curve model estimates
 
 ::: {.columns}
 
-::: {.column width="30%" }
+::: {.column width="50%" }
 
-
-:::
-
-::: {.column width="70%"}
-
-\small Correlation for Elexon generation
-
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
-:::
+- Starting models with 
+  - 1Y of data (2024)
+  - 12 wind farms
+  - Hourly data
+  - Excluding outages listed in REMIT
 
 :::
 
+::: {.column width="50%"}
+\centering
+\small Power curve estimate
 
-## Spatial correlation
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_curve.pdf}
+:::
+
+:::
+## Power curve model estimates
+
+::: {.columns}
+
+::: {.column width="50%" }
+\centering
+\small Probability of zero generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_zeroProb.pdf}
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Hyperparameters
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_hyper.pdf}
+:::
+
+:::
+
+# Spatial correlation
 ::: {.columns}
 
 ::: {.column width="50%"}
@@ -295,6 +349,8 @@ Using a three-likelihood approach for power curve estimation:
 :::
 
 :::
+
+
 ## Next Steps
 
 \begin{itemize}
