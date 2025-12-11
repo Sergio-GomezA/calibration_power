@@ -5,7 +5,7 @@ if (grepl("exports", getwd())) {
   # running in cluster
   cluster_run <- TRUE
   data_path <- gen_path <- "data"
-  model_path <- "model_objects"
+  model_path <- "../calibration/model_objects"
   gen_path <- "../calibration/data"
   temp_lib <- "/exports/eddie/scratch/s2441782/calibration/lib"
   .libPaths(temp_lib)
@@ -398,24 +398,33 @@ like_pseudo <- bru_obs(
   )
 )
 
-fit_with_penalty <- bru(
-  components_zero,
-  like_beta,
-  like_zero,
-  like_pseudo,
-  options = list(
-    control.inla = list(int.strategy = "auto"),
-    verbose = TRUE,
-    control.compute = list(config = TRUE)
+model_fname <- file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+if (!file.exists(model_fname)) {
+  fit_with_penalty <- bru(
+    components_zero,
+    like_beta,
+    like_zero,
+    like_pseudo,
+    options = list(
+      control.inla = list(int.strategy = "auto"),
+      verbose = TRUE,
+      control.compute = list(config = TRUE)
+    )
   )
-)
-print(
-  sprintf("%s model --- estimation finished", model_name)
-)
-saveRDS(
-  fit_with_penalty,
-  file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
-)
+
+  print(
+    sprintf("%s model --- estimation finished", model_name)
+  )
+  saveRDS(
+    fit_with_penalty,
+    file = model_fname
+  )
+} else {
+  print(
+    sprintf("%s model file found --- loading file", model_name)
+  )
+  fit_with_penalty <- readRDS(model_fname)
+}
 summary(fit_with_penalty)
 print(
   sprintf("%s model --- sampling and plotting", model_name)
@@ -424,6 +433,9 @@ plot(fit_with_penalty, "Intercept_bern")
 ggsave("fig/ZIBspdePenF_24_wfsamp_interZero.pdf")
 plot(fit_with_penalty, "Intercept_pc")
 ggsave("fig/ZIBspdePenF_24_wfsamp_interCurve.pdf")
+
+plot.hyper.dens(fit_with_penalty)
+ggsave("fig/ZIBspdePenF_24_wfsamp_hyper.pdf")
 # plot(fit_zib, "bern_curve")
 # plot(fit_zib, "power_curve")
 # ?plot.bru
