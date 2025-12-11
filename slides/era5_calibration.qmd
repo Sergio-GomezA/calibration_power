@@ -233,24 +233,6 @@ where $\alpha_0$ is the intercept, the $\alpha_e$ $e \in {k,m,h}$ represent rand
 
 :::
 
-
-## Spatial correlation
-::: {.columns}
-
-::: {.column width="50%"}
-\small Correlation for Elexon generation
-
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
-:::
-
-::: {.column width="50%"}
-\small Correlation for ERA5 uncalibrated estimate
-
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_est_corr_dist.pdf}
-:::
-
-:::
-
 ## Power curve modelling
 ::: {.columns}
 
@@ -278,8 +260,41 @@ Using a two-likelihood approach for power curve estimation:
 
 :::
 
-## 
+## Power curve model
 
+::: {.columns}
+
+::: {.column width="30%" }
+
+
+:::
+
+::: {.column width="70%"}
+
+\small Correlation for Elexon generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
+:::
+
+:::
+
+
+## Spatial correlation
+::: {.columns}
+
+::: {.column width="50%"}
+\small Correlation for Elexon generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
+:::
+
+::: {.column width="50%"}
+\small Correlation for ERA5 uncalibrated estimate
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_est_corr_dist.pdf}
+:::
+
+:::
 ## Next Steps
 
 \begin{itemize}
