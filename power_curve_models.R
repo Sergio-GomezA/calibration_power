@@ -316,6 +316,8 @@ plot(fit_zib, "Intercept_bern")
 ggsave("fig/ZIBspde_24_wfsamp_interZero.pdf")
 plot(fit_zib, "Intercept_pc")
 ggsave("fig/ZIBspde_24_wfsamp_interCurve.pdf")
+plot.hyper.dens(fit_zib)
+ggsave("fig/ZIBspde_24_wfsamp_hyper.pdf")
 # plot(fit_zib, "bern_curve")
 # plot(fit_zib, "power_curve")
 # ?plot.bru
