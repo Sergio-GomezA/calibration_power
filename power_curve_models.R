@@ -49,7 +49,6 @@ inla.setOption(num.threads = paste0(n.cores, ":1"))
 # penalty :  replicate = pc
 
 # Basic models ####
-## Smooth RW beta model #####
 
 pwr_curv_df <- pwr_curv_df %>%
   group_by(lon, lat, halfHourEndTime) %>%
@@ -103,6 +102,16 @@ df$ws_group <- cut(
 )
 ws_midpoints <- (brks[-1] + brks[-length(brks)]) / 2
 
+ws_grid <- seq(min(df$ws_h), max(df$ws_h), length.out = 25)
+pred_df <- expand.grid(
+  ws_h = ws_grid,
+  site_name = sites_samp
+)
+pred_df$ws_group <- sapply(pred_df$ws_h, function(x) {
+  which.min(abs(ws_midpoints - x))
+})
+## Smooth RW beta model #####
+
 model_name <- "RW2"
 print(
   sprintf("%s model --- initialisation", model_name)
@@ -142,14 +151,7 @@ saveRDS(
 )
 summary(fit_rw2)
 
-ws_grid <- seq(min(df$ws_h), max(df$ws_h), length.out = 25)
-pred_df <- expand.grid(
-  ws_h = ws_grid,
-  site_name = sites_samp
-)
-pred_df$ws_group <- sapply(pred_df$ws_h, function(x) {
-  which.min(abs(ws_midpoints - x))
-})
+
 # head(pred_df)
 # class(df$ws_group)
 
