@@ -458,7 +458,11 @@ pp_zero <- predict(
 ggplot() +
   gg(pp_zero) +
   facet_wrap(~site_name)
-ggsave(sprintf("fig/%s_24_wfsamp_zeroProb.pdf", model_code))
+ggsave(
+  sprintf("fig/%s_24_wfsamp_zeroProb.pdf", model_code),
+  width = 8,
+  height = 6
+)
 pp_beta <- predict(
   fit_with_penalty,
   newdata = pred_df,
@@ -469,5 +473,18 @@ pp_beta <- predict(
 ggplot() +
   gg(pp_beta) +
   facet_wrap(~site_name)
-ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code))
+ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code), width = 8, height = 6)
+
+pp_EPC <- predict(
+  fit_with_penalty,
+  newdata = pred_df,
+  formula = ~ (1 - plogis(Intercept_bern + bern_curve)) *
+    plogis(Intercept_pc + power_curve),
+  n.samples = n_samp,
+  num.threads = n.cores
+)
+ggplot() +
+  gg(pp_EPC) +
+  facet_wrap(~site_name)
+ggsave(sprintf("fig/%s_24_wfsamp_EPC.pdf", model_code), width = 8, height = 6)
 print("Process finished")
