@@ -1611,3 +1611,66 @@ spatial_corr_by_distance_fast <- function(
 
   return(df_corr)
 }
+inherits()
+
+plot.hyper.dens <- function(
+  inla_model,
+  facet.cols = 2,
+  logx = FALSE,
+  ...
+) {
+  # Extract the hyperparameter densities into a data frame for plotting
+  # browser()
+
+  # if(inherits(inla_model,"bru")){
+  #   marginals <- inla_model$internal.margina
+  # }
+
+  hyperpar_densities <- do.call(
+    rbind,
+    lapply(names(inla_model$marginals.hyperpar), function(param) {
+      data.frame(
+        x = inla_model$marginals.hyperpar[[param]][, "x"],
+        y = inla_model$marginals.hyperpar[[param]][, "y"],
+        parameter = param
+      )
+    })
+    # mapply(function(param, logtrans) {
+    #   data.frame(
+    #     x = inla_model$marginals.hyperpar[[param]][, "x"],
+    #     y = inla_model$marginals.hyperpar[[param]][, "y"],
+    #     parameter = param
+    #   ) #%>%
+    #     # mutate(logx = ifelse(logtrans, log(x), x))
+    # },
+    # names(inla_model$marginals.hyperpar),
+    # logx,
+    # SIMPLIFY = FALSE
+    # )
+  )
+  # browser()
+  # hyperpar_densities <- hyperpar_densities %>%
+  #   mutate(
+  #     x = ifelse(logx, log(x), x)
+  #   )
+
+  # Plot the densities using ggplot2
+  p.dens <- ggplot(hyperpar_densities, aes(x = x, y = y)) +
+    geom_line() +
+    facet_wrap(~parameter, scales = "free", ncol = facet.cols) +
+    {
+      if (logx) {
+        scale_x_log10() # Apply log scale to the x-axis
+      } else {
+        NULL
+      }
+    } +
+    labs(
+      title = "Density of Hyperparameters",
+      x = "Value",
+      y = "Density"
+    ) +
+    theme_minimal()
+
+  print(p.dens)
+}
