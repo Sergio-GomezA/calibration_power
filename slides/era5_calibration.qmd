@@ -238,15 +238,15 @@ where $\alpha_0$ is the intercept, the $\alpha_e$ $e \in {k,m,h}$ represent rand
 ::: {.columns}
 
 ::: {.column width="50%"}
-\small Variogram for Elexon generation
+\small Correlation for Elexon generation
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/variogram_norm_power.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
 :::
 
 ::: {.column width="50%"}
-\small Variogram for ERA5 uncalibrated estimate
+\small Correlation for ERA5 uncalibrated estimate
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/variogram_norm_power_est.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_est_corr_dist.pdf}
 :::
 
 :::
@@ -278,12 +278,14 @@ Using a two-likelihood approach for power curve estimation:
 
 :::
 
+## 
+
 ## Next Steps
 
 \begin{itemize}
-   \item Power curve parametric model from data
-   \item Check for spatial correlation 
-   \item Quantile mapping calibration
+   \item Combine updated power curve model with calibration
+   \item Benefits of including spatial correlation  
+   \item Model validation against benchmarks
 \end{itemize}
 
 # Appendix 
