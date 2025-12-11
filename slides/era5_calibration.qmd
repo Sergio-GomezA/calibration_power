@@ -237,13 +237,15 @@ where $\alpha_0$ is the intercept, the $\alpha_e$ $e \in {k,m,h}$ represent rand
 ::: {.columns}
 
 ::: {.column width="50%" }
+- Power curve estimate from data
+- Probability of zero generation
+- Penalisation to make power curve resemble
 
-Using a two-likelihood approach for power curve estimation:
+Using a three-likelihood approach for power curve estimation:
 
 - **1st likelihood:** Observed power is modelled as a smooth function of wind speed
   - Random walk of order 2
   - Beta with logit link for output [0,1]  
-
 
 :::
 
@@ -252,10 +254,8 @@ Using a two-likelihood approach for power curve estimation:
   - Gaussian noise; strength controlled via precision
   - Estimate is pulled to typical turbine behaviour  
 
-- **Cut-off speed estimation?** 
-
-- **Outcome:** Smooth, physically realistic power curve informed by both data and prior knowledge
-
+- **Cut-off speed estimation** 
+  - Zero inflate model
 :::
 
 :::

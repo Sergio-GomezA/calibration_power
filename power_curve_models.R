@@ -104,7 +104,7 @@ ws_midpoints <- (brks[-1] + brks[-length(brks)]) / 2
 
 ws_grid <- seq(min(df$ws_h), max(df$ws_h), length.out = 25)
 pred_df <- expand.grid(
-  ws_h = ws_grid,
+  ws_h = ws_midpoints,
   site_name = sites_samp
 )
 pred_df$ws_group <- sapply(pred_df$ws_h, function(x) {
