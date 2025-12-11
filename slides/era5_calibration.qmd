@@ -21,6 +21,7 @@ header-includes:
 fontsize: 12pt
 aspectratio: 169
 editor: source
+bibliography: calib_pow_ref.bib
 nocite: "@*"
 ---
 
@@ -287,7 +288,7 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
       \tau_{\mathrm{ps}}^{-1}
     \right),
   \qquad
-    \tau_{\mathrm{ps}} = \texttt{pseudo\_precision}.
+    \tau_{\mathrm{ps}} = \texttt{precision or penalisation}.
 \end{align}
 
 ## Power curve model estimates
@@ -306,9 +307,9 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 
 ::: {.column width="50%"}
 \centering
-\small Power curve estimate
+\small Expected Power curve
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_curve.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_EPC.pdf}
 :::
 
 :::
@@ -318,17 +319,17 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 
 ::: {.column width="50%" }
 \centering
-\small Probability of zero generation
+\small Power curve estimate
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_zeroProb.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_curve.pdf}
 
 :::
 
 ::: {.column width="50%"}
 \centering
-\small Hyperparameters
+\small Probability of zero generation
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_hyper.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_zeroProb.pdf}
 :::
 
 :::
@@ -434,7 +435,7 @@ D. Cannon, D. Brayshaw, et. al (2015)
 
 ::: {.column width="50%"}
 \footnotesize
-H. Thornton, D. Brayshaw analyse the relationship between weather, energy demand, and wind power.
+H. Thornton, D. Brayshaw (2020) analyse the relationship between weather, energy demand, and wind power.
 
 - ERA Interim wind speed
 - Cubic power curve with air density correction
@@ -473,7 +474,7 @@ Panit Potisomporn, C. Vogel (2024) perform a extreme value analysis of wind drou
 
 :::
 
-
+## References
 
 
 <!-- 
