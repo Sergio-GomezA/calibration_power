@@ -1611,7 +1611,7 @@ spatial_corr_by_distance_fast <- function(
 
   return(df_corr)
 }
-inherits()
+
 
 plot.hyper.dens <- function(
   inla_model,

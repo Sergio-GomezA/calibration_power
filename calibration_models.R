@@ -79,7 +79,7 @@ class_curves <- fread("data/generic_powerCurves.csv.gz") %>%
   mutate(power_scaled = power_kw / ratedPower) %>%
   ungroup()
 
-pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
+pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
 
 ## aggregated to GB level ####
 GB_df <- pwr_curv_df %>%
@@ -632,6 +632,7 @@ ggplot(corr_df, aes(x = dist_mean, y = corr_mean)) +
   geom_point(color = blues9[7]) +
   # geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
   # geom_line(aes(y = -threshold_95), linetype = "dashed", color = "red") +
+  coord_cartesian(ylim = c(0, 1)) +
   labs(
     x = "Distance (km)",
     y = "Correlation",
@@ -654,8 +655,9 @@ ggplot(corr_df_e, aes(x = dist_mean, y = corr_mean)) +
   ) +
   geom_line(color = blues9[5]) +
   geom_point(color = blues9[7]) +
-  geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
+  # geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
   # geom_line(aes(y = -threshold_95), linetype = "dashed", color = "red") +
+  coord_cartesian(ylim = c(0, 1)) +
   labs(
     x = "Distance (km)",
     y = "Correlation",
@@ -679,8 +681,9 @@ spatial_corr_by_distance_fast(
   ) +
   geom_line(color = blues9[5]) +
   geom_point(color = blues9[7]) +
-  geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
+  # geom_line(aes(y = threshold_95), linetype = "dashed", color = "red") +
   # geom_line(aes(y = -threshold_95), linetype = "dashed", color = "red") +
+  coord_cartesian(ylim = c(0, 1)) +
   labs(
     x = "Distance (km)",
     y = "Correlation",
