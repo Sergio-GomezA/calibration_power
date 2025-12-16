@@ -91,6 +91,8 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
     - [ ] Carter
   - [ ] Calibration method inlabru with plotted effects
   - [ ] Power curve effect method with plotted effects
+  - [ ] Wind direction effects (cut_off)
+  
 
 - **Research topics**
   -[ ] power curve estimation
