@@ -427,9 +427,18 @@ ggsave(sprintf("fig/%s_24_wfsamp_EPC.pdf", model_code), width = 8, height = 6)
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
-pseudo_precision <- 0.3
-model_name <- sprintf("Penalised%0.2f ZIB SPDE", pseudo_precision)
-model_code <- sprintf("ZIBspdePen%0.2f", pseudo_precision)
+pseudo_precision <- 0.1
+fixed_penalty <- FALSE
+model_name <- sprintf(
+  "Penalised%0.2f%s ZIB SPDE",
+  pseudo_precision,
+  ifelse(fixed_penalty, "", "free")
+)
+model_code <- sprintf(
+  "ZIBspdePen%0.2f%s",
+  pseudo_precision,
+  ifelse(fixed_penalty, "", "free")
+)
 
 print(
   sprintf("%s model --- initialisation", model_name)
@@ -478,7 +487,9 @@ like_pseudo <- bru_obs(
   family = "gaussian",
   data = df %>% filter(!is_zero),
   control.family = list(
-    hyper = list(prec = list(initial = log(pseudo_precision), fixed = TRUE))
+    hyper = list(
+      prec = list(initial = log(pseudo_precision), fixed = fixed_penalty)
+    )
   )
 )
 
