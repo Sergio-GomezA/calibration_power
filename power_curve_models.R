@@ -74,10 +74,10 @@ pwr_curv_df <- pwr_curv_df %>%
     generic_logit = qlogis(
       pmin(pmax(norm_power_est0, 1e-6), 1 - 1e-6)
     )
-  ) %>%
-  mutate(
-    site_name = ifelse(grepl("Dogger", site_name), "Dogger Bank", site_name)
-  )
+  ) #%>%
+# mutate(
+#   site_name = ifelse(grepl("Dogger", site_name), "Dogger Bank", site_name)
+# )
 
 sum(pwr_curv_df$norm_potential <= 0) / nrow(pwr_curv_df) * 100
 sum(pwr_curv_df$norm_potential >= 1) / nrow(pwr_curv_df) * 100
@@ -86,6 +86,13 @@ set.seed(0)
 sites_vec <- pwr_curv_df$site_name %>% unique()
 n_sites <- 12
 sites_samp <- sample(sites_vec, n_sites)
+sites_labels <- gsub(
+  "Dogger Bank A & B (was Creyke Beck A & B)",
+  "Dogger Bank",
+  sites_samp,
+  fixed = TRUE
+)
+names(sites_labels) <- sites_samp
 df <- pwr_curv_df %>%
   filter(site_name %in% sites_samp) #%>%
 # filter(!is.na(pos_val)) %>% # keep only rows used in beta model
@@ -121,6 +128,7 @@ n_samp <- 1000 # number of posterior samples
 ## Smooth RW beta model #####
 
 model_name <- "RW2"
+model_code <- ("rw2")
 print(
   sprintf("%s model --- initialisation", model_name)
 )
@@ -140,23 +148,32 @@ like_beta <- bru_obs(
   data = df,
   control.family = list(link = "logit")
 )
-fit_rw2 <- bru(
-  components,
-  like_beta,
-  options = list(
-    control.inla = list(int.strategy = "auto"),
-    verbose = TRUE,
-    control.compute = list(config = TRUE) # if you later want posterior samples
-  )
-)
 
-print(
-  sprintf("%s model --- estimation finished", model_name)
-)
-saveRDS(
-  fit_rw2,
-  file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
-)
+model_fname <- file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+if (!file.exists(model_fname)) {
+  fit_rw2 <- bru(
+    components,
+    like_beta,
+    options = list(
+      control.inla = list(int.strategy = "auto"),
+      verbose = TRUE,
+      control.compute = list(config = TRUE) # if you later want posterior samples
+    )
+  )
+
+  print(
+    sprintf("%s model --- estimation finished", model_name)
+  )
+  saveRDS(
+    fit_rw2,
+    file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+  )
+} else {
+  print(
+    sprintf("%s model file found --- loading file", model_name)
+  )
+  fit_rw2 <- readRDS(model_fname)
+}
 summary(fit_rw2)
 
 
@@ -177,14 +194,23 @@ pred_lp <- predict(
 )
 
 ggplot() +
+  # geom_point(data = df, aes(x = ws_h, norm_potential), alpha = 0.2) +
+  geom_hex(data = df, aes(x = ws_h, norm_potential)) +
   gg(pred_lp) +
-  facet_wrap(~site_name)
-ggsave("fig/rw2_24_wfsamp_curve.pdf")
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels))
+ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code))
 plot(fit_rw2, "Intercept")
-ggsave("fig/rw2_24_wfsamp_intercept.pdf")
+ggsave(sprintf("fig/%s_24_wfsamp_intercept.pdf", model_code))
+plot.hyper.dens(fit_rw2)
+ggsave(sprintf("fig/%s_24_wfsamp_hyper.pdf", model_code))
 
 ## Smooth 1D SPDE beta model ####
 model_name <- "1D SPDE"
+model_code <- ("spde")
 print(
   sprintf("%s model --- initialisation", model_name)
 )
@@ -212,22 +238,30 @@ like_beta <- bru_obs(
   data = df,
   control.family = list(link = "logit")
 )
-fit_spde <- bru(
-  components_spde,
-  like_beta,
-  options = list(
-    control.inla = list(int.strategy = "auto"),
-    verbose = TRUE,
-    control.compute = list(config = TRUE) # if you later want posterior samples
+model_fname <- file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+if (!file.exists(model_fname)) {
+  fit_spde <- bru(
+    components_spde,
+    like_beta,
+    options = list(
+      control.inla = list(int.strategy = "auto"),
+      verbose = TRUE,
+      control.compute = list(config = TRUE) # if you later want posterior samples
+    )
   )
-)
-print(
-  sprintf("%s model --- estimation finished", model_name)
-)
-saveRDS(
-  fit_spde,
-  file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
-)
+  print(
+    sprintf("%s model --- estimation finished", model_name)
+  )
+  saveRDS(
+    fit_spde,
+    file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+  )
+} else {
+  print(
+    sprintf("%s model file found --- loading file", model_name)
+  )
+  fit_spde <- readRDS(model_fname)
+}
 summary(fit_spde)
 
 print(
@@ -243,22 +277,25 @@ pred_spde <- predict(
 
 ggplot() +
   gg(pred_spde) +
-  facet_wrap(~site_name)
-ggsave("fig/spde_24_wfsamp_curve.pdf")
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels))
+ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code))
 plot(fit_spde, "Intercept")
-ggsave("fig/spde_24_wfsamp_intercept.pdf")
+ggsave(sprintf("fig/%s_24_wfsamp_intercept.pdf", model_code))
 
 spde.range <- spde.posterior(fit_spde, "curve", what = "range")
 spde.logvar <- spde.posterior(fit_spde, "curve", what = "variance")
 range.plot <- plot(spde.range)
 var.plot <- plot(spde.logvar)
 (range.plot | var.plot)
-ggsave("fig/spde_24_wfsamp_pars.pdf")
+ggsave(sprintf("fig/%s_24_wfsamp_pars.pdf", model_code))
+plot.hyper.dens(fit_spde)
+ggsave(sprintf("fig/%s_24_wfsamp_hyper.pdf", model_code))
 # Models with zero inflated properties ####
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
 model_name <- "ZIB SPDE"
+model_code <- ("ZIBspde")
 print(
   sprintf("%s model --- initialisation", model_name)
 )
@@ -299,35 +336,48 @@ like_zero <- bru_obs(
   control.family = list(link = "logit")
 )
 
-fit_zib <- bru(
-  components_zero,
-  like_beta,
-  like_zero,
-  options = list(
-    control.inla = list(int.strategy = "auto"),
-    verbose = TRUE,
-    control.compute = list(config = TRUE)
+model_fname <- file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+if (!file.exists(model_fname)) {
+  fit_zib <- bru(
+    components_zero,
+    like_beta,
+    like_zero,
+    options = list(
+      control.inla = list(int.strategy = "auto"),
+      verbose = TRUE,
+      control.compute = list(config = TRUE)
+    )
   )
-)
-print(
-  sprintf("%s model --- estimation finished", model_name)
-)
-saveRDS(
-  fit_zib,
-  file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
-)
+  print(
+    sprintf("%s model --- estimation finished", model_name)
+  )
+  saveRDS(
+    fit_zib,
+    file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+  )
+} else {
+  print(
+    sprintf("%s model file found --- loading file", model_name)
+  )
+  fit_zib <- readRDS(model_fname)
+}
 summary(fit_zib)
-
 
 print(
   sprintf("%s model --- sampling and plotting", model_name)
 )
 plot(fit_zib, "Intercept_bern")
-ggsave("fig/ZIBspde_24_wfsamp_interZero.pdf")
+ggsave(sprintf("fig/%s_24_wfsamp_interZero.pdf", model_code))
 plot(fit_zib, "Intercept_pc")
-ggsave("fig/ZIBspde_24_wfsamp_interCurve.pdf")
+ggsave(sprintf("fig/%s_24_wfsamp_interCurve.pdf", model_code))
+# spde.range <- spde.posterior(fit_zib, "curve", what = "range")
+# spde.logvar <- spde.posterior(fit_zib, "curve", what = "variance")
+# range.plot <- plot(spde.range)
+# var.plot <- plot(spde.logvar)
+# (range.plot | var.plot)
+# ggsave(sprintf("fig/%s_24_wfsamp_pars.pdf", model_code))
 plot.hyper.dens(fit_zib)
-ggsave("fig/ZIBspde_24_wfsamp_hyper.pdf")
+ggsave(sprintf("fig/%s_24_wfsamp_hyper.pdf", model_code))
 # plot(fit_zib, "bern_curve")
 # plot(fit_zib, "power_curve")
 # ?plot.bru
@@ -341,8 +391,12 @@ pp_zero <- predict(
 )
 ggplot() +
   gg(pp_zero) +
-  facet_wrap(~site_name)
-ggsave("fig/ZIBspde_24_wfsamp_zeroProb.pdf")
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels))
+ggsave(
+  sprintf("fig/%s_24_wfsamp_zeroProb.pdf", model_code),
+  width = 8,
+  height = 6
+)
 pp_beta <- predict(
   fit_zib,
   newdata = pred_df,
@@ -352,15 +406,30 @@ pp_beta <- predict(
 )
 ggplot() +
   gg(pp_beta) +
-  facet_wrap(~site_name)
-ggsave("fig/ZIBspde_24_wfsamp_curve.pdf")
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels))
+ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code), width = 8, height = 6)
+
+pp_EPC <- predict(
+  fit_zib,
+  newdata = pred_df,
+  formula = ~ (1 - plogis(Intercept_bern + bern_curve)) *
+    plogis(Intercept_pc + power_curve),
+  n.samples = n_samp,
+  num.threads = n.cores
+)
+ggplot() +
+  gg(pp_EPC) +
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels)) +
+  labs(x = "ERA 5 wind speed", y = "Expected normalised power %")
+ggsave(sprintf("fig/%s_24_wfsamp_EPC.pdf", model_code), width = 8, height = 6)
+
 # Models with penalty to generic curves ####
 ## Smooth RW beta model #####
 
 ## Smooth 1D SPDE beta model ####
-pseudo_precision <- 1
-model_name <- sprintf("Penalised%d ZIB SPDE", pseudo_precision)
-model_code <- sprintf("ZIBspdePen%d", pseudo_precision)
+pseudo_precision <- 0.3
+model_name <- sprintf("Penalised%0.2f ZIB SPDE", pseudo_precision)
+model_code <- sprintf("ZIBspdePen%0.2f", pseudo_precision)
 
 print(
   sprintf("%s model --- initialisation", model_name)
@@ -448,7 +517,12 @@ plot(fit_with_penalty, "Intercept_bern")
 ggsave(sprintf("fig/%s_24_wfsamp_interZero.pdf", model_code))
 plot(fit_with_penalty, "Intercept_pc")
 ggsave(sprintf("fig/%s_24_wfsamp_interCurve.pdf", model_code))
-
+# spde.range <- spde.posterior(fit_with_penalty, "curve", what = "range")
+# spde.logvar <- spde.posterior(fit_with_penalty, "curve", what = "variance")
+# range.plot <- plot(spde.range)
+# var.plot <- plot(spde.logvar)
+# (range.plot | var.plot)
+# ggsave(sprintf("fig/%s_24_wfsamp_pars.pdf", model_code))
 plot.hyper.dens(fit_with_penalty)
 ggsave(sprintf("fig/%s_24_wfsamp_hyper.pdf", model_code))
 # plot(fit_zib, "bern_curve")
@@ -464,7 +538,7 @@ pp_zero <- predict(
 )
 ggplot() +
   gg(pp_zero) +
-  facet_wrap(~site_name) +
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels)) +
   labs(x = "ERA 5 wind speed", y = "Probability of zero generation")
 ggsave(
   sprintf("fig/%s_24_wfsamp_zeroProb.pdf", model_code),
@@ -480,7 +554,7 @@ pp_beta <- predict(
 )
 ggplot() +
   gg(pp_beta) +
-  facet_wrap(~site_name) +
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels)) +
   labs(x = "ERA 5 wind speed", y = "Power curve estimate (P>0)")
 ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code), width = 8, height = 6)
 
