@@ -82,9 +82,9 @@ pwr_curv_df <- pwr_curv_df %>%
 sum(pwr_curv_df$norm_potential <= 0) / nrow(pwr_curv_df) * 100
 sum(pwr_curv_df$norm_potential >= 1) / nrow(pwr_curv_df) * 100
 
-set.seed(0)
+set.seed(1)
 sites_vec <- pwr_curv_df$site_name %>% unique()
-n_sites <- 12
+n_sites <- 25
 sites_samp <- sample(sites_vec, n_sites)
 sites_labels <- gsub(
   "Dogger Bank A & B (was Creyke Beck A & B)",
@@ -97,7 +97,7 @@ df <- pwr_curv_df %>%
   filter(site_name %in% sites_samp) #%>%
 # filter(!is.na(pos_val)) %>% # keep only rows used in beta model
 # slice_sample(n = 100000)
-n_groups <- 20 # start here; increase if you want a finer curve
+n_groups <- 40
 brks <- seq(
   min(df$ws_h, na.rm = TRUE),
   max(df$ws_h, na.rm = TRUE),
@@ -194,14 +194,15 @@ pred_lp <- predict(
 )
 
 ggplot() +
-  # geom_point(data = df, aes(x = ws_h, norm_potential), alpha = 0.2) +
-  geom_hex(data = df, aes(x = ws_h, norm_potential)) +
-  gg(pred_lp) +
+  # geom_point(data = df, aes(x = ws_h, pos_val), alpha = 0.2) +
+  geom_hex(data = df, aes(x = ws_h, pos_val)) +
+  # gg(pred_lp) +
   scale_fill_viridis_c(
     trans = "log10",
     name = "frequency"
   ) +
-  facet_wrap(~site_name, labeller = as_labeller(sites_labels))
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels)) +
+  labs(x = "ERA 5 wind speed", y = "Normalised power output (P>0)")
 ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code))
 plot(fit_rw2, "Intercept")
 ggsave(sprintf("fig/%s_24_wfsamp_intercept.pdf", model_code))
@@ -215,7 +216,7 @@ print(
   sprintf("%s model --- initialisation", model_name)
 )
 
-x <- seq(-5, 35, length.out = 20) # this sets mesh points - try others if you like
+x <- seq(-5, 35, length.out = n_groups) # this sets mesh points - try others if you like
 (mesh1D <- fm_mesh_1d(x, degree = 2, boundary = "dirichlet"))
 ggplot() +
   geom_fm(data = mesh1D)
@@ -276,8 +277,14 @@ pred_spde <- predict(
 )
 
 ggplot() +
+  geom_hex(data = df, aes(x = ws_h, norm_potential)) +
   gg(pred_spde) +
-  facet_wrap(~site_name, labeller = as_labeller(sites_labels))
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels)) +
+  labs(x = "ERA 5 wind speed", y = "Normalised power output (P>0)")
 ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code))
 plot(fit_spde, "Intercept")
 ggsave(sprintf("fig/%s_24_wfsamp_intercept.pdf", model_code))
@@ -390,8 +397,23 @@ pp_zero <- predict(
   num.threads = n.cores
 )
 ggplot() +
+  geom_col(
+    data = df %>%
+      group_by(site_name, ws_group) %>%
+      summarise(
+        prop_zero = mean(is_zero, na.rm = TRUE),
+        n = n(),
+        .groups = "drop"
+      ),
+    aes(x = ws_group, prop_zero, fill = n)
+  ) +
   gg(pp_zero) +
-  facet_wrap(~site_name, labeller = as_labeller(sites_labels))
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels)) +
+  labs(x = "ERA 5 wind speed", y = "Probability of zero generation")
 ggsave(
   sprintf("fig/%s_24_wfsamp_zeroProb.pdf", model_code),
   width = 8,
@@ -405,8 +427,14 @@ pp_beta <- predict(
   num.threads = n.cores
 )
 ggplot() +
+  geom_hex(data = df, aes(x = ws_h, pos_val)) +
   gg(pp_beta) +
-  facet_wrap(~site_name, labeller = as_labeller(sites_labels))
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
+  facet_wrap(~site_name, labeller = as_labeller(sites_labels)) +
+  labs(x = "ERA 5 wind speed", y = "Normalised power output (P>0)")
 ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code), width = 8, height = 6)
 
 pp_EPC <- predict(
@@ -418,7 +446,12 @@ pp_EPC <- predict(
   num.threads = n.cores
 )
 ggplot() +
+  geom_hex(data = df, aes(x = ws_h, norm_potential)) +
   gg(pp_EPC) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
   facet_wrap(~site_name, labeller = as_labeller(sites_labels)) +
   labs(x = "ERA 5 wind speed", y = "Expected normalised power %")
 ggsave(sprintf("fig/%s_24_wfsamp_EPC.pdf", model_code), width = 8, height = 6)
@@ -548,7 +581,21 @@ pp_zero <- predict(
   num.threads = n.cores
 )
 ggplot() +
+  geom_col(
+    data = df %>%
+      group_by(site_name, ws_group) %>%
+      summarise(
+        prop_zero = mean(is_zero, na.rm = TRUE),
+        n = n(),
+        .groups = "drop"
+      ),
+    aes(x = ws_group, prop_zero, fill = n)
+  ) +
   gg(pp_zero) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
   facet_wrap(~site_name, labeller = as_labeller(sites_labels)) +
   labs(x = "ERA 5 wind speed", y = "Probability of zero generation")
 ggsave(
@@ -564,9 +611,14 @@ pp_beta <- predict(
   num.threads = n.cores
 )
 ggplot() +
+  geom_hex(data = df, aes(x = ws_h, pos_val)) +
   gg(pp_beta) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
   facet_wrap(~site_name, labeller = as_labeller(sites_labels)) +
-  labs(x = "ERA 5 wind speed", y = "Power curve estimate (P>0)")
+  labs(x = "ERA 5 wind speed", y = "Normalised power output (P>0)")
 ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code), width = 8, height = 6)
 
 pp_EPC <- predict(
@@ -578,7 +630,12 @@ pp_EPC <- predict(
   num.threads = n.cores
 )
 ggplot() +
+  geom_hex(data = df, aes(x = ws_h, norm_potential)) +
   gg(pp_EPC) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
   facet_wrap(~site_name) +
   labs(x = "ERA 5 wind speed", y = "Expected normalised power %")
 ggsave(sprintf("fig/%s_24_wfsamp_EPC.pdf", model_code), width = 8, height = 6)
