@@ -6,7 +6,7 @@ n_sites <- 25
 force_zero_at_endpoints <- TRUE
 end_points <- c(0, 30)
 outer_bounds <- c(-5, 35)
-force_prob1_at_endpoints <- TRUE
+force_prob1_at_endpoints <- FALSE
 
 x <- sort(unique(c(
   end_points,
@@ -270,6 +270,7 @@ components_spde <- ~ Intercept(1) +
   )
 like_beta <- bru_obs(
   formula = pos_val ~ Intercept + curve,
+  # formula = pos_val ~ curve,
   family = "beta", # or "betar" - check your INLA version
   data = df,
   control.family = list(link = "logit")
@@ -453,10 +454,11 @@ ggplot() +
       group_by(site_name, ws_group) %>%
       summarise(
         prop_zero = mean(is_zero, na.rm = TRUE),
+        ws_hmean = mean(ws_h, na.rm = TRUE),
         n = n(),
         .groups = "drop"
       ),
-    aes(x = ws_group, prop_zero, fill = n)
+    aes(x = ws_hmean, prop_zero, fill = n)
   ) +
   gg(pp_zero) +
   scale_fill_viridis_c(
@@ -637,10 +639,11 @@ ggplot() +
       group_by(site_name, ws_group) %>%
       summarise(
         prop_zero = mean(is_zero, na.rm = TRUE),
+        ws_hmean = mean(ws_h, na.rm = TRUE),
         n = n(),
         .groups = "drop"
       ),
-    aes(x = ws_group, prop_zero, fill = n)
+    aes(x = ws_hmean, prop_zero, fill = n)
   ) +
   gg(pp_zero) +
   scale_fill_viridis_c(
