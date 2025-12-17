@@ -73,7 +73,8 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - [ ] Using turbine characteristics
     - [ ] find power curves for some models
     - [x] interpolate wind speed to turbine height  
-  - [ ] Using historical power data  
+  - [x] Using historical power data 
+  - [ ] Use 5 parameter family 
   - [ ] Bayesian approach (PC + data)
 
 - **Slides**
@@ -92,7 +93,7 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - [ ] Calibration method inlabru with plotted effects
   - [ ] Power curve effect method with plotted effects
   - [ ] Wind direction effects (cut_off)
-  
+
 
 - **Research topics**
   -[ ] power curve estimation

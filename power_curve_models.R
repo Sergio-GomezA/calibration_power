@@ -1,5 +1,17 @@
 # Power curve model ####
 
+# Global settings ####
+n_groups <- 40
+n_sites <- 25
+force_zero_at_endpoints <- TRUE
+end_points <- c(0, 30)
+outer_bounds <- c(-5, 35)
+force_prob1_at_endpoints <- TRUE
+
+x <- sort(unique(c(
+  end_points,
+  seq(outer_bounds[1], outer_bounds[2], length.out = n_groups)
+)))
 # read Data ####
 if (grepl("exports", getwd())) {
   # running in cluster
@@ -84,7 +96,7 @@ sum(pwr_curv_df$norm_potential >= 1) / nrow(pwr_curv_df) * 100
 
 set.seed(1)
 sites_vec <- pwr_curv_df$site_name %>% unique()
-n_sites <- 25
+
 sites_samp <- sample(sites_vec, n_sites)
 sites_labels <- gsub(
   "Dogger Bank A & B (was Creyke Beck A & B)",
@@ -97,7 +109,7 @@ df <- pwr_curv_df %>%
   filter(site_name %in% sites_samp) #%>%
 # filter(!is.na(pos_val)) %>% # keep only rows used in beta model
 # slice_sample(n = 100000)
-n_groups <- 40
+
 brks <- seq(
   min(df$ws_h, na.rm = TRUE),
   max(df$ws_h, na.rm = TRUE),
@@ -116,9 +128,8 @@ df$ws_group <- cut(
 )
 ws_midpoints <- (brks[-1] + brks[-length(brks)]) / 2
 
-ws_grid <- seq(min(df$ws_h), max(df$ws_h), length.out = 25)
 pred_df <- expand.grid(
-  ws_h = ws_midpoints,
+  ws_h = x,
   site_name = sites_samp
 )
 pred_df$ws_group <- sapply(pred_df$ws_h, function(x) {
@@ -216,17 +227,41 @@ print(
   sprintf("%s model --- initialisation", model_name)
 )
 
-x <- seq(-5, 35, length.out = n_groups) # this sets mesh points - try others if you like
-(mesh1D <- fm_mesh_1d(x, degree = 2, boundary = "dirichlet"))
+# x <- sort(unique(c(
+#   end_points,
+#   seq(outer_bounds[1], outer_bounds[2], length.out = n_groups)
+# )))
+x <- 1:40
+mesh1D <- fm_mesh_1d(x, degree = 2, boundary = c("dirichlet"))
+
 ggplot() +
   geom_fm(data = mesh1D)
 
-the_spde <- inla.spde2.pcmatern(
-  mesh1D,
-  prior.range = c(1, 0.01),
-  prior.sigma = c(1, 0.01)
-)
-
+if (force_zero_at_endpoints) {
+  A <- matrix(0, nrow = 2, ncol = mesh1D$m)
+  zero_idx <- which.min(abs(brks - end_points[1]))
+  A[1, zero_idx] <- 1
+  zero_idx <- min(mesh1D$m, which.min(abs(brks - end_points[2])))
+  A[2, zero_idx] <- 1
+  # undebug(inla.spde2.pcmatern)
+  the_spde <- inla.spde2.pcmatern(
+    mesh1D,
+    prior.range = c(1, 0.01),
+    prior.sigma = c(1, 0.01),
+    extraconstr = list(
+      A = A,
+      e = rep(1e-6, nrow(A))
+    )
+  )
+} else {
+  the_spde <- inla.spde2.pcmatern(
+    mesh1D,
+    prior.range = c(1, 0.01),
+    prior.sigma = c(1, 0.01)
+  )
+}
+# ?inla.spde2.pcmatern
+# inla.doc("^inla.spde2.pcmatern$")
 components_spde <- ~ Intercept(1) +
   curve(
     ws_group,
@@ -246,7 +281,7 @@ if (!file.exists(model_fname)) {
     like_beta,
     options = list(
       control.inla = list(int.strategy = "auto"),
-      verbose = TRUE,
+      verbose = FALSE,
       control.compute = list(config = TRUE) # if you later want posterior samples
     )
   )
@@ -272,6 +307,7 @@ pred_spde <- predict(
   fit_spde,
   pred_df,
   ~ plogis(Intercept + curve),
+  # ~ plogis(curve),
   num.threads = n.cores,
   n.samples <- n_samp
 )
@@ -306,16 +342,31 @@ model_code <- ("ZIBspde")
 print(
   sprintf("%s model --- initialisation", model_name)
 )
-spde_beta <- inla.spde2.pcmatern(
-  mesh1D,
-  prior.range = c(1, 0.01),
-  prior.sigma = c(1, 0.01)
-)
-spde_bern <- inla.spde2.pcmatern(
-  mesh1D,
-  prior.range = c(1, 0.01),
-  prior.sigma = c(1, 0.01)
-)
+spde_beta <- the_spde
+
+if (force_prob1_at_endpoints) {
+  A <- matrix(0, nrow = 2, ncol = mesh1D$m)
+  zero_idx <- which.min(abs(brks - end_points[1]))
+  A[1, zero_idx] <- 1
+  zero_idx <- min(mesh1D$m, which.min(abs(brks - end_points[2])))
+  A[2, zero_idx] <- 1
+  # undebug(inla.spde2.pcmatern)
+  spde_bern <- inla.spde2.pcmatern(
+    mesh1D,
+    prior.range = c(1, 0.01),
+    prior.sigma = c(1, 0.01),
+    extraconstr = list(
+      A = A,
+      e = rep(1 - 1e-6, nrow(A))
+    )
+  )
+} else {
+  spde_bern <- inla.spde2.pcmatern(
+    mesh1D,
+    prior.range = c(1, 0.01),
+    prior.sigma = c(1, 0.01)
+  )
+}
 
 components_zero <- ~ Intercept_pc(1) +
   power_curve(
@@ -478,16 +529,16 @@ print(
 )
 x <- seq(-5, 35, length.out = 20) # this sets mesh points - try others if you like
 (mesh1D <- fm_mesh_1d(x, degree = 2, boundary = "dirichlet"))
-spde_beta <- inla.spde2.pcmatern(
-  mesh1D,
-  prior.range = c(1, 0.01),
-  prior.sigma = c(1, 0.01)
-)
-spde_bern <- inla.spde2.pcmatern(
-  mesh1D,
-  prior.range = c(1, 0.01),
-  prior.sigma = c(1, 0.01)
-)
+# spde_beta <- inla.spde2.pcmatern(
+#   mesh1D,
+#   prior.range = c(1, 0.01),
+#   prior.sigma = c(1, 0.01)
+# )
+# spde_bern <- inla.spde2.pcmatern(
+#   mesh1D,
+#   prior.range = c(1, 0.01),
+#   prior.sigma = c(1, 0.01)
+# )
 
 components_zero <- ~ Intercept_pc(1) +
   power_curve(
