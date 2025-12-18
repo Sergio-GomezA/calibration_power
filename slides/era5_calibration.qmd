@@ -51,7 +51,7 @@ path <- "~/Documents/elexon"
 knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FALSE)
 ```
 
-# Calibration to power {#sec-intro}
+# Overview {#sec-intro}
 
 ## Updates {#sec-updates .unnumbered .nolink}
 
@@ -65,9 +65,6 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FA
 - Compare model against benchmarks: Quantile mapping, GAMs
 - Calibration spatiotemporal model
 
-
-
-# Overview {#sec-appendix}
 
 ## Data sources 
 ::: {.columns}
@@ -124,7 +121,7 @@ p_{it} = o_{it} + \text{curt}_{it}
 
 ## Calibration
 
-### 4. Calibration
+### 4. Calibration of generic power curve estimate
 ERA5-derived power estimate $\hat p_{it}$ is compared versus potential power $p_{it}$
 \begin{align*}
 \hat p_{it} &= \hat{PC}_i(w_{it})\\
@@ -133,7 +130,7 @@ p_{it} &= \beta_0 + \beta \hat p_{it} + s_i + u_t,
 
 where $s_i$ and $u_t$ represent spatial and temporal effects.
 
-# Calibration with linear model
+# Calibration of generic power curve estimate
 
 ## GB level aggregation
 ::: {.columns}
@@ -234,6 +231,8 @@ where $\alpha_0$ is the intercept, the $\alpha_e$ $e \in {k,m,h}$ represent rand
 
 :::
 
+# Power curve modelling
+
 ## Power curve modelling
 ::: {.columns}
 
@@ -259,6 +258,7 @@ Using a three-likelihood approach for power curve estimation:
 
 ## Power curve model equations
 \tiny
+Model is a Zero Inflated Beta (ZIB) with penalisation component:
 \begin{align}
 %%
 &\textbf{Zero--probability model (Bernoulli)} \nonumber \\[4pt]
@@ -291,6 +291,7 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
     \tau_{\mathrm{ps}} = \texttt{precision or penalisation}.
 \end{align}
 
+
 ## Power curve model estimates
 
 ::: {.columns}
@@ -299,7 +300,7 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 
 - Starting models with 
   - 1Y of data (2024)
-  - 12 wind farms
+  - 25 wind farms
   - Hourly data
   - Excluding outages listed in REMIT
 
@@ -309,7 +310,7 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 \centering
 \small Expected Power curve
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_EPC.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen0.10free_24_wfsamp_EPC.pdf}
 :::
 
 :::
@@ -321,7 +322,7 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 \centering
 \small Power curve estimate
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_curve.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen0.10free_24_wfsamp_curve.pdf}
 
 :::
 
@@ -329,12 +330,22 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 \centering
 \small Probability of zero generation
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_zeroProb.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen0.10free_24_wfsamp_zeroProb.pdf}
 :::
 
 :::
 
-# Spatial correlation
+## Alternative versions
+
+- Beta model with RW2 based power curve (B-RW2)
+- Beta model with 1D SPDE based power curve (B-SPDE)
+- ZIB model with 1D SPDE based power curve (ZIB-SPDE)
+
+## ZIB model vs observed data
+
+## Error metrics
+
+# Spatial correlation {-}
 ::: {.columns}
 
 ::: {.column width="50%"}
