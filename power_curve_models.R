@@ -261,6 +261,7 @@ if (force_zero_at_endpoints) {
   )
 }
 # ?inla.spde2.pcmatern
+# inla.doc("^rw2$")
 # inla.doc("^inla.spde2.pcmatern$")
 components_spde <- ~ Intercept(1) +
   curve(
@@ -626,7 +627,7 @@ ggsave(sprintf("fig/%s_24_wfsamp_hyper.pdf", model_code))
 # plot(fit_zib, "power_curve")
 # ?plot.bru
 
-pp_zero <- predict(
+pp_zero_pen <- predict(
   fit_with_penalty,
   newdata = pred_df,
   formula = ~ plogis(Intercept_bern + bern_curve),
@@ -645,7 +646,7 @@ ggplot() +
       ),
     aes(x = ws_hmean, prop_zero, fill = n)
   ) +
-  gg(pp_zero) +
+  gg(pp_zero_pen) +
   scale_fill_viridis_c(
     trans = "log10",
     name = "frequency"
@@ -657,7 +658,7 @@ ggsave(
   width = 8,
   height = 6
 )
-pp_beta <- predict(
+pp_beta_pen <- predict(
   fit_with_penalty,
   newdata = pred_df,
   formula = ~ plogis(Intercept_pc + power_curve),
@@ -666,7 +667,7 @@ pp_beta <- predict(
 )
 ggplot() +
   geom_hex(data = df, aes(x = ws_h, pos_val)) +
-  gg(pp_beta) +
+  gg(pp_beta_pen) +
   scale_fill_viridis_c(
     trans = "log10",
     name = "frequency"
@@ -675,7 +676,7 @@ ggplot() +
   labs(x = "ERA 5 wind speed", y = "Normalised power output (P>0)")
 ggsave(sprintf("fig/%s_24_wfsamp_curve.pdf", model_code), width = 8, height = 6)
 
-pp_EPC <- predict(
+pp_EPC_pen <- predict(
   fit_with_penalty,
   newdata = pred_df,
   formula = ~ (1 - plogis(Intercept_bern + bern_curve)) *
@@ -685,7 +686,7 @@ pp_EPC <- predict(
 )
 ggplot() +
   geom_hex(data = df, aes(x = ws_h, norm_potential)) +
-  gg(pp_EPC) +
+  gg(pp_EPC_pen) +
   scale_fill_viridis_c(
     trans = "log10",
     name = "frequency"
@@ -694,3 +695,19 @@ ggplot() +
   labs(x = "ERA 5 wind speed", y = "Expected normalised power %")
 ggsave(sprintf("fig/%s_24_wfsamp_EPC.pdf", model_code), width = 8, height = 6)
 print("Process finished")
+
+# Comparative figures ####
+sites_subsamp <- sites_samp[23]
+mod_names <- c("B-RW2", "B-SPDE", "ZIB-SPDE", "ZIB-SPDE-P")
+one_farm_df <- lapply(
+  seq_along(mod_names),
+  \(i) {
+    df = model_list[[i]]
+    df %>%
+      filter(site_samp %in% sites_subsamp) %>%
+      mutate(model = mod_names[i])
+  },
+  model_list = list(pred_lp, pred_spde, pp_beta, pp_beta_pen)
+)
+
+# Comparative scores ####

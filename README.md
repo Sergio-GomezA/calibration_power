@@ -76,6 +76,7 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - [x] Using historical power data 
   - [ ] Use 5 parameter family 
   - [x] Bayesian approach (PC + data)
+  - [ ] Inspect estimates from power curve fitting
 
 - **Slides**
   - [x] New set with era 5
