@@ -1,0 +1,1177 @@
+---
+title: "ERA 5 calibration to Elexon power"
+author:
+  - "S. Gomez$^1$"
+institute:
+   - $^1$School of Mathematics, University of Edinburgh
+institute-short: "UoE"
+date: "2025-12-11"
+format: 
+  beamer:
+    theme: Rochester
+    colortheme: spruce
+    fonttheme: professionalfonts
+    fig-cap-location: top
+    toc: true
+    slide-level: 2
+    split-bib: true
+    output-file: "era5_calibration_slides.pdf"
+header-includes:
+  - \usepackage{graphicx}
+fontsize: 12pt
+aspectratio: 169
+editor: source
+bibliography: calib_pow_ref.bib
+nocite: "@*"
+---
+
+```{r include=FALSE}
+require(tidyverse)
+require(kableExtra)
+require(parallel)
+require(dplyr)
+require(scales)
+require(ggsci)
+
+require(jsonlite)
+require(httr)
+
+require(data.table)
+require(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+require(plotly)
+require(ggthemes)
+require(arrow)
+path <- "~/Documents/elexon"
+```
+
+```{r}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FALSE)
+```
+
+# Calibration to power {#sec-intro}
+
+## Updates {#sec-updates .unnumbered .nolink}
+
+### New
+- Updated linear models
+- Power curve modelling
+- Spatial correlation check
+
+### Next steps
+- Combine PC model with calibration
+- Compare model against benchmarks: Quantile mapping, GAMs
+- Calibration spatiotemporal model
+
+
+
+# Overview {#sec-appendix}
+
+## Data sources 
+::: {.columns}
+
+::: {.column width="50%"}
+### Wind speed
+- ERA5 at wind farms
+  - Hourly data
+  - Spatial resolution 0.25° x 0.25° 
+  - 10m and 100m heights
+
+:::
+
+::: {.column width="50%"}
+### Wind power
+- Elexon BMU data (since 2019)
+  - Half hourly data
+  - Generation, curtailment, potential, capacity
+  - Outage data (REMIT)
+- REPD database
+  - Location, turbine height, capacity
+:::
+
+:::
+
+## Overview {#sec-overview}
+### 1. ERA 5 to wind farm 
+Vertical interpolation to turbine height $h$.
+
+\centering
+$w(h) = w_{100} \left( \frac{h}{100} \right)^{\alpha}$, 
+where $\alpha = 1/7$
+
+### 2. Wind speed to power
+Generic power curves rescaled to wind farm capacity.
+\begin{equation*}
+\hat{PC}_i(w) = PC_i(w)\times \frac{C_i}{\text{Rated power}},
+\end{equation*}
+
+where $C_i$ is the capacity at location $i$
+
+
+## Overview of power conversion
+### 3. Potential generation
+Curtailment and outages are two main events that impact observed generation $o_{it}$
+
+- Curtailment is added giving rise to potential generation:
+\begin{equation*}
+p_{it} = o_{it} + \text{curt}_{it}
+\end{equation*}
+
+- Outage data shows additional limits on capacity
+- Currently outage periods are excluded
+
+## Calibration
+
+### 4. Calibration
+ERA5-derived power estimate $\hat p_{it}$ is compared versus potential power $p_{it}$
+\begin{align*}
+\hat p_{it} &= \hat{PC}_i(w_{it})\\
+p_{it} &= \beta_0 + \beta \hat p_{it} + s_i + u_t,
+\end{align*}
+
+where $s_i$ and $u_t$ represent spatial and temporal effects.
+
+# Calibration with linear model
+
+## GB level aggregation
+::: {.columns}
+
+::: {.column width="50%"}
+\small
+- Power aggregated at GB level
+  \begin{align*}
+  p_{\text{tot},t} &= \sum_i p_{it} / \sum_i C_i 
+  \end{align*}
+- Each point represents one hour
+- Overestimation persits but dispersion is lower now
+:::
+
+::: {.column width="50%"}
+\centering
+\small Scatter aggregated power
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_aggr_scatter_all.png}
+:::
+
+:::
+
+## Initial linear model
+
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Features of importance: 
+  - $m$: month
+  - $k$: Type (offshore / onshore)
+
+\begin{equation*}
+p^{calib}_t = \alpha_{k,m} + \beta_{k,m} \hat p_{t},
+\end{equation*}
+
+where $\alpha_{k,m}$ and $\beta_{k,m}$ represent the intercept and slope, varying by type and month
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Calibration comparison
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_calib_lm0_hexbin_all.pdf}
+:::
+
+:::
+
+## Updated linear model
+
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Using step AIC criteria selection: 
+  - $k$: Type (offshore / onshore)
+  - $m$: month, $h$: hour
+  - $w_t$: wind speed
+
+
+\begin{equation*}
+p^{calib}_t = \alpha_{k,m,h} + \beta_{k,m} \hat p_{t} + \sum_{j=1}^3 \phi_j w_t^3
+\end{equation*}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Calibration comparison
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_calib_lm_hexbin_all.pdf}
+:::
+
+:::
+
+## Autoregressive error
+
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Using step AIC criteria selection: 
+  - $k$: Type (offshore / onshore)
+  - $m$: month, $h$: hour
+  - $w_t$: wind speed
+  - $u_t$: AR1
+
+\begin{equation*}
+p^{calib}_t = \alpha_0 + \sum \alpha_e + \beta_{k} \hat p_{t} + f_w(w_t) + u_t
+\end{equation*}
+
+where $\alpha_0$ is the intercept, the $\alpha_e$ $e \in {k,m,h}$ represent random effects (cyclic for month and hour), $\beta_k$ is a random slope, $f_w$ is smooth effect (RW2). 
+:::
+
+::: {.column width="50%"}
+\centering
+\small Calibration comparison
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_calib_lar1_hexbin_all.pdf}
+:::
+
+:::
+
+## Power curve modelling
+::: {.columns}
+
+::: {.column width="50%" }
+### Components
+
+- Power curve estimate from data
+- Probability of zero generation
+- Penalisation to make power curve resemble manufaturer's PC
+
+:::
+
+::: {.column width="50%"}
+Using a three-likelihood approach for power curve estimation:
+
+- **1st likelihood:** Observed power is modelled as a smooth function of wind speed
+- **2nd likelihood:** Zero inflated component
+- **3rd likelihood** Penalisation towards a generic PC
+
+:::
+
+:::
+
+## Power curve model equations
+\tiny
+\begin{align}
+%%
+&\textbf{Zero--probability model (Bernoulli)} \nonumber \\[4pt]
+\eta^{(0)}_{i}
+  &= \alpha_{\mathrm{bern}}
+     + f_{\mathrm{bern}}\!\left(w_i;\,\mathbf{s}(i)\right), \\[4pt]
+Z_i \mid \eta^{(0)}_{i} 
+  &\sim \mathrm{Bernoulli}(p_i),
+  \qquad 
+  p_i = \operatorname{logit}^{-1}\!\left(\eta^{(0)}_{i}\right),
+\\[10pt]
+%%
+&\textbf{Positive--output model (Beta)} \nonumber \\[4pt]
+\eta^{(\beta)}_{i}
+  &= \alpha_{\mathrm{pc}}
+     + f_{\mathrm{pc}}\!\left(w_i;\,\mathbf{s}(i)\right), \\[4pt]
+P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
+  &\sim \mathrm{Beta}(\mu_i,\phi),
+  \qquad
+  \mu_i = \operatorname{logit}^{-1}\!\left(\eta^{(\beta)}_{i}\right),
+\\[10pt]
+%%
+&\textbf{Pseudo--likelihood model (Gaussian)} \nonumber \\[4pt]
+\tilde{P}_i \mid \eta^{(\beta)}_{i}
+  &\sim \mathcal{N}\!\left(
+      \eta^{(\beta)}_{i},
+      \tau_{\mathrm{ps}}^{-1}
+    \right),
+  \qquad
+    \tau_{\mathrm{ps}} = \texttt{precision or penalisation}.
+\end{align}
+
+## Power curve model estimates
+
+::: {.columns}
+
+::: {.column width="50%" }
+
+- Starting models with 
+  - 1Y of data (2024)
+  - 12 wind farms
+  - Hourly data
+  - Excluding outages listed in REMIT
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Expected Power curve
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_EPC.pdf}
+:::
+
+:::
+## Power curve model estimates
+
+::: {.columns}
+
+::: {.column width="50%" }
+\centering
+\small Power curve estimate
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_curve.pdf}
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Probability of zero generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen1_24_wfsamp_zeroProb.pdf}
+:::
+
+:::
+
+# Spatial correlation
+::: {.columns}
+
+::: {.column width="50%"}
+\small Correlation for Elexon generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
+:::
+
+::: {.column width="50%"}
+\small Correlation for ERA5 uncalibrated estimate
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_est_corr_dist.pdf}
+:::
+
+:::
+
+
+## Next Steps
+
+\begin{itemize}
+   \item Combine updated power curve model with calibration
+   \item Benefits of including spatial correlation  
+   \item Model validation against benchmarks
+\end{itemize}
+
+# Appendix 
+# Previous research {-}
+
+## Power curve modelling
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+### Binning method
+\begin{equation*}
+  P_i = \frac{1}{n_i} \sum_{j=1}^{n_i} P_{ij}
+\end{equation*}
+where: $P_{ij}$ is the $j$ th power observation in bin $i$ and
+$n_i$ no. of observations in bin $i$
+
+:::
+
+::: {.column width="50%"}
+### Logistic
+\begin{equation*}
+P(u) = a \frac{1+ m \exp(-u/\tau)}{1+ n \exp(-u/\tau)}
+\end{equation*}
+where $a$ represents the upper asymptote, $n, m$ shape the lower asymptote, and $\tau$ controls the transition. 
+:::
+
+:::
+
+## Power curve modelling
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+### 5 parameter curve
+\begin{equation*}
+  P(u) = D+ \frac{A-D}{(1+(u/C)^B)^G} 
+\end{equation*}
+where: $A$ and $D$ are the upper and lower asymptotes, $C$ is the inflection point, $B$ the slope at inflection point, adn $G$ controls the asymmetry.
+
+:::
+
+::: {.column width="50%"}
+
+:::
+
+:::
+
+## Reanalysis data to quantify extreme wind power statistics
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+
+D. Cannon, D. Brayshaw, et. al (2015)
+
+- MERRA wind speed validated with MIDAS
+- Vertical interpolation with a logarithmic change
+- Calibrated power curves based on manufacturers PC
+- Use that to analys extreme low and high levels, and ramps
+:::
+
+::: {.column width="50%"}
+\centering
+\small $\Delta$CF comparison 
+\includegraphics[width=\linewidth]{../fig_extra/2013_cannon_delta_comparison.png}
+:::
+
+:::
+
+## Balancing energy
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+H. Thornton, D. Brayshaw (2020) analyse the relationship between weather, energy demand, and wind power.
+
+- ERA Interim wind speed
+- Cubic power curve with air density correction
+- CF compared with GB average from other studies
+- Seasonal effects on Demand and 
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small $\Delta$CF comparison 
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2020_thornton_CF_vs_demand.png}
+:::
+
+:::
+
+## Analysis of extreme wind droughts
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+Panit Potisomporn, C. Vogel (2024) perform a extreme value analysis of wind droughts in GB.
+
+- Use ERA5 wind speeds calibrated to MIDAS with QM
+- Build a ML algorithm that learns how to extrapolate wind speed from 10m to hub height
+- Use a 5 parameter logistic function to model power curve
+- Model energy losses with factors by type.
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small CF calibration 
+\includegraphics[width=\linewidth]{../fig_extra/2024_potisomporn_CF_comparison.png}
+:::
+
+:::
+
+## References
+
+
+<!-- 
+# Appendix
+
+## ERA5 data {#sec-era5}
+
+\begin{columns}[T, totalwidth=\textwidth]
+   \begin{column}{0.4\textwidth}
+    % set font size for itemize levels locally
+    {
+    \setbeamerfont{itemize/enumerate body}{size=\fontsize{9}{10}\selectfont}
+    \setbeamerfont{itemize/enumerate subbody}{size=\fontsize{8}{10}\selectfont}
+
+    \begin{itemize}
+      \item 5th generation of ECMWF's global reanalysis
+      \item Spatial resolution $0.25^\circ \times 0.25^\circ$ (31km $\times$ 31 km at equator)
+      \item Hourly temporal resolution
+      \item Heights: 10m, 100m
+    \end{itemize}
+    } % end local font block
+  \end{column}
+
+  % Right column: figure
+  
+  \begin{column}{0.6\textwidth}
+    \centering
+    \small Average monthly wind speed and 90 CI
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_uk_1s.pdf}
+  \end{column}
+
+\end{columns}
+
+## ERA5 series
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Wind speed seasonality
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_uk_1s_seas.eps}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Wind speed by location type
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ws_uk_tech.eps}
+:::
+
+:::
+
+
+## ERA5 wind direction at wind farms
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Wind direction frequency
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wd_uk_1s.eps}
+:::
+
+::: {.column width="70%"}
+\centering
+    \small Seasonal patterns
+    \includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/wd_uk_1s_seas.eps}
+:::
+
+:::
+
+
+# Elexon data {-}
+
+## BMU wind data
+
+\begin{columns}[T, totalwidth=\textwidth]
+   \begin{column}{0.5\textwidth}
+    % set font size for itemize levels locally
+    {
+    \setbeamerfont{itemize/enumerate body}{size=\fontsize{9}{10}\selectfont}
+    \setbeamerfont{itemize/enumerate subbody}{size=\fontsize{8}{10}\selectfont}
+
+    \begin{itemize}
+      \item 150 wind farms split in over 216 units
+      \item Total capacity: 27 GW
+      \item Half hourly resolution
+      \item Records starting in 2019
+      \item Curtailment and outage data available
+      \item Location / turbine data unavailable
+    \end{itemize}
+    } % end local font block
+  \end{column}
+
+  % Right column: figure
+  \begin{column}{0.5\textwidth}
+    \centering
+    \small Wind installed capacity
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_capacity_type_2025_nt.eps}
+  \end{column}
+
+\end{columns}
+
+## BMU wind data
+
+\small BMU wind generation (2024) 
+```{r}
+pot_summary <- fread(
+  file.path("../data/hist_pot.csv")
+)
+
+# on shore off shore distribution
+pot_summary %>% 
+    group_by(tech_typ) %>%
+    summarise(
+        total_gen = sum(quantity, na.rm = TRUE)/1000,
+        total_curt = sum(curtailment, na.rm = TRUE)/1000,
+        total_pot = sum(potential, na.rm = TRUE)/1000,
+        total_cap = sum(capacity, na.rm = TRUE),
+        n_hours = sum(n_hours),
+        n = n()
+    ) %>% 
+    janitor::adorn_totals("row") %>%
+    mutate(
+        cap_factor = total_gen*1000 / (total_cap )/(n_hours/n/2),
+        pot_factor = total_pot*1000 / (total_cap )/(n_hours/n/2)
+    ) %>% select(-n_hours) %>% 
+    kable(
+        col.names = c("Type", "Generation (GWh)", "Curtailment", "Potential" ,"Capacity (MW)", "Number of BMUs", "CF","PF"),
+        digits = c(0,0,0,0,0,0,2,2),
+        format = "latex",
+        format.args = list(big.mark = ",")) %>%
+    kable_styling(latex_options = c("scale_down"))
+```
+
+## Capacity factor through time
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Capacity factor by year
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/capacity_factor2.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Capacity factor by quarter
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/capacity_factor2_q.pdf}
+:::
+
+:::
+
+## Curtailment through time
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Curtailment by year
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_factor.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Curtailment seasonality
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_factor_q.pdf}
+:::
+
+:::
+
+## Curtailment
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \footnotesize Curtailment map
+    \includegraphics[width=\linewidth,height=6cm,keepaspectratio]{../fig/curtailment_map.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+ \footnotesize Curtailment by region
+
+![](../fig/curtailment_monthly.pdf){width=100% height=2.5cm}
+
+\footnotesize Average during curtailment periods
+
+![](../fig/curtailment_plus_monthly.pdf){width=100% height=2.5cm}
+
+
+:::
+
+:::
+
+
+## Curtailment through the day
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Curtailment by hour
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_intraday.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Average during curtailment periods
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/curtailment_plus_intraday.pdf}
+:::
+
+:::
+
+## Potential generation
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Potential by year
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/potential_factor.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Potential seasonality
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/potential_factor_q.pdf}
+:::
+
+:::
+
+## Renewable energy planning database (REPD)
+
+```{r}
+repd0 <- fread(file.path(path,"renew_energ_plan_db", "repd-q2-jul-2025.csv")) %>% 
+    rename(
+    tech_typ = `Technology Type`,
+    devel_stat = `Development Status (short)`,
+    capacity_repd = `Installed Capacity (MWelec)`,
+    capacity_turb = `Turbine Capacity`,
+    n_turb = `No. of Turbines`,
+    height_turb = `Height of Turbines (m)`,
+    x_coord = `X-coordinate`,
+    y_coord = `Y-coordinate`)
+names(repd0) <- tolower(gsub(" ", "_", names(repd0)))
+
+```
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+\setbeamerfont{itemize/enumerate body}{size=\fontsize{9}{10}\selectfont}
+\setbeamerfont{itemize/enumerate subbody}{size=\fontsize{8}{10}\selectfont}
+\begin{itemize}
+      \item Official UK government renewable data
+      \item Over 800 wind farms listed as operational
+      \item Coordinates available 
+      \item Also available:
+      \begin{itemize}
+        \item Development status 
+        \item Number of turbines
+        \item Turbine capacity
+        \item Turbine height (for some only)
+      \end{itemize}
+    \end{itemize}
+:::
+
+::: {.column width="50%"}
+\centering
+\small REPD wind farms
+\vspace{0.2cm}
+```{r}
+reduced_table <- repd0 %>%
+  filter(
+    grepl("Wind", tech_typ),
+    devel_stat %in% c("Operational", "Under Construction")
+  ) %>%
+  group_by(tech_typ, devel_stat) %>%
+  summarise(
+    n = n_distinct(ref_id),
+    capacity = sum(capacity_repd, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  janitor::adorn_totals(where = "row")
+
+kable(
+  reduced_table,
+  col.names = c("Type", "Development Status","Count","Capacity MW"),
+  digits = 0,
+  format = "latex",
+  format.args = list(big.mark = ",")
+) %>% 
+    kable_styling(
+        latex_options = c("scale_down")
+    )
+```
+:::
+:::
+
+## Turbine data available
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Turbine capacity histogram
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/hist_turb_capacity_2025.eps}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Number of turbines histogram
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/hist_n_turb_2025.eps}
+:::
+
+:::
+
+## Turbine data available
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+Turbine Height availability
+\vspace{1cm}
+```{r}
+ref_catalog_2025 <- fread(
+  file.path("../data/ref_catalog_wind_2025.csv.gz")) 
+ref_catalog_2025 %>% 
+    mutate(heightNA = is.na(height_turb)) %>% 
+    group_by(tech_typ, heightNA) %>% 
+    summarise(
+        height = mean(height_turb, na.rm = TRUE),
+        n = n()
+    ) %>% 
+    kable(
+        col.names = c("Type","Height available", "Average height (m)","count"),
+        digits = 1,
+        format = "latex"
+    ) %>% 
+    kable_styling(
+        latex_options = c("scale_down")
+    )
+
+```
+
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Turbine height histogram
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/hist_turb_height_2025.eps}
+:::
+
+:::
+
+# Outages {-}
+## Outage data
+::: {.columns}
+
+::: {.column width="50%"}
+\begin{itemize}
+  \item REMIT messages announce plan or unplanned outages
+  \item event start / end times
+  \item affected BMUs and capacity reduction
+\end{itemize}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Duration of events
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_events_by_year.pdf}
+:::
+
+:::
+## Outage characteristics
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+    \small Number of events by year
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_event_duration.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Duration of events
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_capacity_impact_perc.eps}
+:::
+
+:::
+
+## Outages characteristics by location
+::: {.columns}
+
+::: {.column width="32%"}
+\centering
+    \small No. of events
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_nevents_map.pdf}
+:::
+
+::: {.column width="32%"}
+\centering
+    \small Mean duration
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_duration_map.pdf}
+:::
+
+::: {.column width="32%"}
+\centering
+    \small Unavailable capacity
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/remit_cap_imp_map.pdf}
+:::
+
+:::
+
+# Power conversion {-}
+
+## Generic power curves
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+\setbeamerfont{itemize/enumerate body}{size=\fontsize{9}{10}\selectfont}
+\setbeamerfont{itemize/enumerate subbody}{size=\fontsize{8}{10}\selectfont}
+\begin{itemize}
+      \item Using 3 generic power curves
+      \item Offshore plus the IEC 3 classes
+      \item Assigning class based on GWA mean wind speed at location
+      \item Rescaling rated power to turbine capacity
+\end{itemize}
+
+\vspace{0.2cm}
+\centering
+IEC classification
+
+\vspace{0.2cm}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{l c c l}
+\toprule
+Class & Mean wind speed  & Extreme 10-min & Typical sites \\
+ & at hub height (m/s) &  gust (m/s) \\
+\midrule
+I   & 10   & 70   & Very windy / exposed sites \\
+II  & 8.5  & 59.5 & Moderate wind sites \\
+III & 7.5  & 52.5 & Low-wind / inland sites \\
+\bottomrule
+\end{tabular}
+}
+:::
+
+::: {.column width="50%"}
+\centering
+    \small Generic power curves (PC$_k$)
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/generic_power_curves_uncens.eps}
+:::
+
+:::
+## Power estimate based on generic power curves
+
+For each location $i$ we have: 
+
+- observed raw power $\tilde p_{it}$
+- curtailment amount $a_{it}$
+- potential output $p_{it} = \tilde p_{it} + a_{it}$
+- wind farm capacity $c_i$
+- turbine height $v_i$
+- ERA5 wind speed $w_{it}$.
+
+## Power estimate based on generic power curves
+
+An initial estimate will require:
+\begin{itemize}
+  \item Mapping location to a rescaled power curve $\widetilde \text{PC}_k$
+  \item Estimate wind farm power in GWh
+\end{itemize}
+
+\begin{equation*}
+    \hat p_{it} = \widetilde \text{PC}_{k} (w_{it})
+\end{equation*}
+
+## ERA5 based estimates vs Elexon 2024
+
+\begin{enumerate}
+  \item Remove periods with outages
+  \begin{itemize}
+    \item Modelling loss due to expected outages could be future work
+  \end{itemize}
+  \item Vertical interpolation of ERA5 wind speed to turbine height
+  \item Apply generic power curve to get estimated power
+  \begin{itemize}
+    \item Modelling power curve from data could be future work
+  \end{itemize}
+\end{enumerate}
+
+# Curtailment and outages in select wind farms {-}
+
+## Generic power curves vs observed data - Fallago Rig
+Onshore wind farm with moderate curtailment
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with raw generation}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_FALGW-1_valq0.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Adding curtailment}
+
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_FALGW-1_valpot.pdf}
+  \end{column}
+
+\end{columns}
+
+## Generic power curves vs observed data - Fallago Rig
+Onshore wind farm with moderate curtailment
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Highlighting outages}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_FALGW-1_valout.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Potential generation excluding outages}
+
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_FALGW-1_valnout.pdf}
+  \end{column}
+
+\end{columns}
+
+## Generic power curves vs observed data - Viking
+Onshore wind farm with high curtailment
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with raw generation}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_VKNGW-1_valq0.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Adding curtailment}
+
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_VKNGW-1_valpot.pdf}
+  \end{column}
+
+\end{columns}
+
+## Generic power curves vs observed data - Viking
+Onshore wind farm with high curtailment
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Highlighting outages}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_VKNGW-1_valout.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Potential generation excluding outages}
+
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_VKNGW-1_valnout.pdf}
+  \end{column}
+
+\end{columns}
+
+## Generic power curves vs observed data - Hornsea 1
+Offshore wind farm with low curtailment
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with raw generation}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_HOWAO-1_valq0.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Adding curtailment}
+
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_comparison_HOWAO-1_valpot.pdf}
+  \end{column}
+
+\end{columns}
+
+## Generic power curves vs observed data - Hornsea 1
+Offshore wind farm with low curtailment
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Highlighting outages}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_HOWAO-1_valout.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Potential generation excluding outages}
+
+    \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/pc_comparison_HOWAO-1_valnout.pdf}
+  \end{column}
+
+\end{columns}
+
+## Generic power curves vs observed data - Seagreen 1
+Offshore wind farm with high curtailment
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Comparison with raw generation}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_SGRWO-1_valq0.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Adding curtailment}
+
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_SGRWO-1_valpot.pdf}
+  \end{column}
+
+\end{columns}
+
+## Generic power curves vs observed data - Seagreen 1
+Offshore wind farm with high curtailment
+\begin{columns}[T, totalwidth=\textwidth]
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Highlighting outages}
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_SGRWO-1_valout.pdf}
+    
+  \end{column}
+
+  \begin{column}{0.5\textwidth}
+    \centering
+    {\small Potential generation excluding outages}
+
+    \includegraphics[
+      width=\linewidth,
+      height=5cm,keepaspectratio]{
+        ../fig/pc_comparison_T_SGRWO-1_valnout.pdf}
+  \end{column}
+
+\end{columns} -->
