@@ -61,54 +61,74 @@ inla.setOption(num.threads = paste0(n.cores, ":1"))
 # penalty :  replicate = pc
 
 # Basic models ####
-
-pwr_curv_df <- pwr_curv_df %>%
-  group_by(lon, lat, halfHourEndTime) %>%
-  summarise(
-    site_name = first(site_name),
-    ws_h = mean(ws_h),
-    across(c(potential, power_est0, capacity), sum),
-    .groups = "drop"
-  ) %>%
-  mutate(
-    norm_potential = pmin(1, potential / capacity),
-    norm_power_est0 = power_est0 / capacity,
-    error0 = norm_potential - norm_power_est0
-  ) %>%
-  mutate(
-    site_id = as.integer(factor(site_name)),
-    pos_val = ifelse(
-      norm_potential > 0 & norm_potential < 1,
-      pmin(pmax(norm_potential, 1e-6), 1 - 1e-6),
-      NA_real_
-    ),
-    is_zero = as.integer(norm_potential == 0),
-    generic_logit = qlogis(
-      pmin(pmax(norm_power_est0, 1e-6), 1 - 1e-6)
-    )
-  ) #%>%
-# mutate(
-#   site_name = ifelse(grepl("Dogger", site_name), "Dogger Bank", site_name)
-# )
-
-sum(pwr_curv_df$norm_potential <= 0) / nrow(pwr_curv_df) * 100
-sum(pwr_curv_df$norm_potential >= 1) / nrow(pwr_curv_df) * 100
-
-set.seed(1)
-sites_vec <- pwr_curv_df$site_name %>% unique()
-
-sites_samp <- sample(sites_vec, n_sites)
-sites_labels <- gsub(
-  "Dogger Bank A & B (was Creyke Beck A & B)",
-  "Dogger Bank",
-  sites_samp,
-  fixed = TRUE
+model_df_fname <- file.path(
+  model_path,
+  "power_curve_model_data_wfsamp.parquet"
 )
-names(sites_labels) <- sites_samp
-df <- pwr_curv_df %>%
-  filter(site_name %in% sites_samp) #%>%
-# filter(!is.na(pos_val)) %>% # keep only rows used in beta model
-# slice_sample(n = 100000)
+
+if (!file.exists(model_df_fname)) {
+  pwr_curv_df <- pwr_curv_df %>%
+    group_by(lon, lat, halfHourEndTime) %>%
+    summarise(
+      site_name = first(site_name),
+      ws_h = mean(ws_h),
+      across(c(potential, power_est0, capacity), sum),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      norm_potential = pmin(1, potential / capacity),
+      norm_power_est0 = power_est0 / capacity,
+      error0 = norm_potential - norm_power_est0
+    ) %>%
+    mutate(
+      site_id = as.integer(factor(site_name)),
+      pos_val = ifelse(
+        norm_potential > 0 & norm_potential < 1,
+        pmin(pmax(norm_potential, 1e-6), 1 - 1e-6),
+        NA_real_
+      ),
+      is_zero = as.integer(norm_potential == 0),
+      generic_logit = qlogis(
+        pmin(pmax(norm_power_est0, 1e-6), 1 - 1e-6)
+      )
+    ) #%>%
+  # mutate(
+  #   site_name = ifelse(grepl("Dogger", site_name), "Dogger Bank", site_name)
+  # )
+
+  sum(pwr_curv_df$norm_potential <= 0) / nrow(pwr_curv_df) * 100
+  sum(pwr_curv_df$norm_potential >= 1) / nrow(pwr_curv_df) * 100
+
+  set.seed(1)
+  sites_vec <- pwr_curv_df$site_name %>% unique()
+
+  sites_samp <- sample(sites_vec, n_sites)
+  sites_labels <- gsub(
+    "Dogger Bank A & B (was Creyke Beck A & B)",
+    "Dogger Bank",
+    sites_samp,
+    fixed = TRUE
+  )
+  names(sites_labels) <- sites_samp
+  df <- pwr_curv_df %>%
+    filter(site_name %in% sites_samp)
+  write_parquet(
+    df,
+    model_df_fname
+  )
+} else {
+  df <- read_parquet(model_df_fname)
+
+  sites_samp <- df$site_name %>% unique()
+  sites_labels <- gsub(
+    "Dogger Bank A & B (was Creyke Beck A & B)",
+    "Dogger Bank",
+    sites_samp,
+    fixed = TRUE
+  )
+  names(sites_labels) <- sites_samp
+}
+
 
 brks <- seq(
   min(df$ws_h, na.rm = TRUE),
@@ -696,18 +716,49 @@ ggplot() +
 ggsave(sprintf("fig/%s_24_wfsamp_EPC.pdf", model_code), width = 8, height = 6)
 print("Process finished")
 
-# Comparative figures ####
-sites_subsamp <- sites_samp[23]
-mod_names <- c("B-RW2", "B-SPDE", "ZIB-SPDE", "ZIB-SPDE-P")
-one_farm_df <- lapply(
-  seq_along(mod_names),
-  \(i) {
-    df = model_list[[i]]
-    df %>%
-      filter(site_samp %in% sites_subsamp) %>%
-      mutate(model = mod_names[i])
-  },
-  model_list = list(pred_lp, pred_spde, pp_beta, pp_beta_pen)
-)
 
+# Comparative figures ####
+
+mod_names <- c("B-RW2", "B-SPDE", "ZIB-SPDE", "ZIB-SPDE-P")
+pc_pred_fname <- file.path(model_path, "PC_model_wfsamp_comparison.parquet")
+if (!file.exists(pc_pred_fname)) {
+  pred_df_list <- list(pred_lp, pred_spde, pp_beta, pp_beta_pen)
+  df_pc_pred <- lapply(
+    seq_along(mod_names),
+    \(i) {
+      pred_df_list[[i]] %>% mutate(model = mod_names[i])
+    }
+  ) %>%
+    bind_rows()
+  arrow::write_parquet(
+    df_pc_pred,
+    pc_pred_fname
+  )
+} else {
+  df_pc_pred <- read_parquet(
+    pc_pred_fname
+  )
+}
+sites_subsamp <- "West of Duddon Sands" #sites_samp[23]
+
+df_pc_pred_1wf <- df_pc_pred %>%
+  filter(site_name %in% sites_subsamp)
+
+ggplot() +
+  geom_hex(
+    data = df %>% filter(site_name %in% sites_subsamp),
+    aes(x = ws_h, pos_val)
+  ) +
+  gg(df_pc_pred_1wf) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
+  facet_wrap(~model) +
+  labs(x = "ERA 5 wind speed", y = "Normalised power output (P>0)")
+ggsave(
+  sprintf("fig/%s_24_1wf_curve.pdf", "comparison"),
+  width = 8,
+  height = 6
+)
 # Comparative scores ####
