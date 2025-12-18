@@ -714,19 +714,39 @@ ggplot() +
   facet_wrap(~site_name) +
   labs(x = "ERA 5 wind speed", y = "Expected normalised power %")
 ggsave(sprintf("fig/%s_24_wfsamp_EPC.pdf", model_code), width = 8, height = 6)
-print("Process finished")
+print("Modelling process finished")
 
 
 # Comparative figures ####
 
-mod_names <- c("B-RW2", "B-SPDE", "ZIB-SPDE", "ZIB-SPDE-P")
+mod_names <- c("B-RW2", "B-SPDE", rep("ZIB-SPDE", 3), rep("ZIB-SPDE-P", 3))
+components <- c(
+  rep("power curve", 2),
+  rep(c("zero prob", "power curve", "EPC"), 2)
+)
+mod_names_short <- mod_names %>% unique()
 pc_pred_fname <- file.path(model_path, "PC_model_wfsamp_comparison.parquet")
+
 if (!file.exists(pc_pred_fname)) {
-  pred_df_list <- list(pred_lp, pred_spde, pp_beta, pp_beta_pen)
+  pred_df_list <- list(
+    pred_lp,
+    pred_spde,
+    pp_zero,
+    pp_beta,
+    pp_EPC,
+    pp_zero_pen,
+    pp_beta_pen,
+    pp_EPC_pen
+  )
+
   df_pc_pred <- lapply(
     seq_along(mod_names),
     \(i) {
-      pred_df_list[[i]] %>% mutate(model = mod_names[i])
+      pred_df_list[[i]] %>%
+        mutate(
+          model = mod_names[i],
+          component = components[i]
+        )
     }
   ) %>%
     bind_rows()
@@ -739,11 +759,36 @@ if (!file.exists(pc_pred_fname)) {
     pc_pred_fname
   )
 }
+
+
 sites_subsamp <- "West of Duddon Sands" #sites_samp[23]
+df_pc_pred_1wf <- df_pc_pred %>%
+  filter(site_name %in% sites_subsamp, component == "power curve")
+
+
+ggplot() +
+  geom_hex(
+    data = df %>% filter(site_name %in% sites_subsamp),
+    aes(x = ws_h, pos_val)
+  ) +
+  gg(df_pc_pred_1wf) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
+  facet_wrap(~model) +
+  labs(x = "ERA 5 wind speed", y = "Normalised power output (P>0)")
+ggsave(
+  sprintf("fig/%s_24_1wf_curve_raw.pdf", "comparison"),
+  width = 8,
+  height = 6
+)
 
 df_pc_pred_1wf <- df_pc_pred %>%
-  filter(site_name %in% sites_subsamp)
-
+  filter(
+    site_name %in% sites_subsamp,
+    component == "EPC" | (model %in% c(mod_names[1:2]))
+  )
 ggplot() +
   geom_hex(
     data = df %>% filter(site_name %in% sites_subsamp),
