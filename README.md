@@ -75,7 +75,7 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
     - [x] interpolate wind speed to turbine height  
   - [x] Using historical power data 
   - [ ] Use 5 parameter family 
-  - [ ] Bayesian approach (PC + data)
+  - [x] Bayesian approach (PC + data)
 
 - **Slides**
   - [x] New set with era 5
