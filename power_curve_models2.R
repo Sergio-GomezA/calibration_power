@@ -987,8 +987,8 @@ for (site in sites_samp) {
   pred_site_ind <- which(pp_EPC$site_name == site)
 
   pcmod_obs_tdf$pred_rw2[site_ind] <- approx(
-    x = pred_spde$ws_h[pred_site_ind],
-    y = pred_spde$mean[pred_site_ind],
+    x = pred_rw2$ws_h[pred_site_ind],
+    y = pred_rw2$mean[pred_site_ind],
     xout = pcmod_obs_tdf$ws_h[site_ind],
     rule = 2
   )$y
@@ -1051,3 +1051,24 @@ aggr_pcmod_tdf <- pcmod_obs_tdf %>%
 
 write_parquet(aggr_pcmod_tdf, "data/pcmodel_wfsamp_aggr_test.parquet")
 aggr_pcmod_tdf <- read_parquet("data/pcmodel_wfsamp_aggr_test.parquet")
+
+pred_cols <- gsub("fit_", "pred_", est_cols)
+names(mod_labels) <- pred_cols
+tdf_long <- aggr_pcmod_tdf %>%
+  select(norm_potential, all_of(pred_cols)) %>%
+  pivot_longer(
+    cols = all_of(pred_cols),
+    names_to = "model",
+    values_to = "estimate"
+  )
+tmetrics_table <- tdf_long %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model])
+
+tmetrics_table
