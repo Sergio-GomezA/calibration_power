@@ -385,14 +385,14 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 require(ModelMetrics)
 mod_names <- c("B-RW2", "B-SPDE", rep("ZIB-SPDE", 3), rep("ZIB-SPDE-P", 3))
 mod_names_short <- mod_names %>% unique()
-aggr_pcmod_df <- read_parquet("../data/pcmodel_wfsamp_aggregated.parquet")
+aggr_pcmod_df <- read_parquet("../data/pcmodel_wfsamp_aggr_test.parquet")
 mod_labels <- c("Generic PC", mod_names_short)
 est_cols <- c(
   "norm_power_est0",
-  "fit_rw2",
-  "fit_spde",
-  "fit_zib",
-  "fit_zibp"
+  "pred_rw2",
+  "pred_spde",
+  "pred_zib",
+  "pred_zibp"
 )
 names(mod_labels) <- est_cols
 df_long <- aggr_pcmod_df %>%
