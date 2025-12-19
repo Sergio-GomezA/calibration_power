@@ -7,6 +7,7 @@ force_zero_at_endpoints <- TRUE
 end_points <- c(0, 30)
 outer_bounds <- c(-5, 35)
 force_prob1_at_endpoints <- FALSE
+train_prop <- 0.7
 
 x <- sort(unique(c(
   end_points,
@@ -65,7 +66,10 @@ model_df_fname <- file.path(
   model_path,
   "power_curve_model_data_wfsamp.parquet"
 )
-
+test_df_fname <- file.path(
+  model_path,
+  "power_curve_test_data_wfsamp.parquet"
+)
 if (!file.exists(model_df_fname)) {
   pwr_curv_df <- pwr_curv_df %>%
     group_by(lon, lat, halfHourEndTime) %>%
@@ -111,8 +115,13 @@ if (!file.exists(model_df_fname)) {
     fixed = TRUE
   )
   names(sites_labels) <- sites_samp
+
+  set.seed(123) # for reproducibility
   df <- pwr_curv_df %>%
-    filter(site_name %in% sites_samp)
+    filter(site_name %in% sites_samp) %>%
+    group_by(site_name) %>%
+    slice_sample(prop = train_prop) %>%
+    ungroup()
 
   brks <- seq(
     min(df$ws_h, na.rm = TRUE),
@@ -130,6 +139,19 @@ if (!file.exists(model_df_fname)) {
     df,
     model_df_fname
   )
+  test_df <- pwr_curv_df %>%
+    filter(site_name %in% sites_samp) %>%
+    anti_join(df, by = colnames(pwr_curv_df))
+  test_df$ws_group <- cut(
+    test_df$ws_h,
+    breaks = brks,
+    include.lowest = TRUE,
+    labels = FALSE
+  )
+  write_parquet(
+    test_df,
+    test_df_fname
+  )
 } else {
   df <- read_parquet(model_df_fname)
   brks <- seq(
@@ -145,6 +167,8 @@ if (!file.exists(model_df_fname)) {
     fixed = TRUE
   )
   names(sites_labels) <- sites_samp
+
+  test_df <- read_parquet(test_df_fname)
 }
 
 ws_midpoints <- (brks[-1] + brks[-length(brks)]) / 2
@@ -932,3 +956,98 @@ metrics_table <- df_long %>%
     .groups = "drop"
   ) %>%
   mutate(model = mod_labels[model])
+
+
+# Out of sample evaluation ####
+
+## predicted values ####
+
+pred_rw2 <- df_pc_pred %>%
+  filter(component == "power curve", model == "B-RW2")
+
+pred_spde <- df_pc_pred %>%
+  filter(component == "power curve", model == "B-SPDE")
+
+pp_EPC <- df_pc_pred %>%
+  filter(component == "EPC", model == "ZIB-SPDE")
+
+pp_EPC_pen <- df_pc_pred %>%
+  filter(component == "EPC", model == "ZIB-SPDE-P")
+
+pcmod_obs_tdf <- test_df %>%
+  mutate(
+    pred_rw2 = 0,
+    pred_spde = 0,
+    pred_zib = 0,
+    pred_zibp = 0
+  )
+
+for (site in sites_samp) {
+  site_ind <- which(test_df$site_name == site)
+  pred_site_ind <- which(pp_EPC$site_name == site)
+
+  pcmod_obs_tdf$pred_rw2[site_ind] <- approx(
+    x = pred_spde$ws_h[pred_site_ind],
+    y = pred_spde$mean[pred_site_ind],
+    xout = pcmod_obs_tdf$ws_h[site_ind],
+    rule = 2
+  )$y
+
+  pcmod_obs_tdf$pred_spde[site_ind] <- approx(
+    x = pred_spde$ws_h[pred_site_ind],
+    y = pred_spde$mean[pred_site_ind],
+    xout = pcmod_obs_tdf$ws_h[site_ind],
+    rule = 2
+  )$y
+
+  pcmod_obs_tdf$pred_zib[site_ind] <- approx(
+    x = pp_EPC$ws_h[pred_site_ind],
+    y = pp_EPC$mean[pred_site_ind],
+    xout = pcmod_obs_tdf$ws_h[site_ind],
+    rule = 2
+  )$y
+
+  pcmod_obs_tdf$pred_zibp[site_ind] <- approx(
+    x = pp_EPC_pen$ws_h[pred_site_ind],
+    y = pp_EPC_pen$mean[pred_site_ind],
+    xout = pcmod_obs_tdf$ws_h[site_ind],
+    rule = 2
+  )$y
+}
+
+ws_cols <- c("ws_h", "wd10", "wd100")
+ws_cols <- c("ws_h")
+aggr_pcmod_tdf <- pcmod_obs_tdf %>%
+  # filter(halfHourEndTime == as.POSIXct("2024-01-01 01:00:00", tz = "UTC")) %>%
+  group_by(tech_typ, halfHourEndTime) %>%
+  # mutate(across(matches("fit_"), ~ . * capacity)) %>%
+  summarise(
+    # ws_h_wmean = sum(ws_h * capacity),
+    # across(c(ws_h, wd10, wd100), ~ sum(. * capacity), .names = "{.col}_wmean"),
+    across(any_of(ws_cols), ~ sum(. * capacity), .names = "{.col}_wmean"),
+    across(matches("pred_"), ~ sum(. * capacity)),
+    across(
+      c(power_est0, potential, capacity),
+      sum
+    ),
+    across(any_of(ws_cols), mean, .names = "{.col}_mean")
+  ) %>%
+  mutate(
+    across(
+      c(power_est0, potential),
+      ~ . / capacity,
+      .names = "norm_{.col}"
+    ),
+    # ws_h_wmean = ws_h_wmean / capacity,
+    across(matches("_wmean|pred_"), ~ . / capacity),
+    month = factor(month(halfHourEndTime)),
+    hour = factor(hour(halfHourEndTime))
+  ) %>%
+  mutate(ws_group = inla.group(ws_h_wmean, n = 20, method = "quantile")) %>%
+  group_by(tech_typ) %>%
+  arrange(halfHourEndTime, .by_group = TRUE) %>%
+  mutate(t = row_number()) %>%
+  ungroup()
+
+write_parquet(aggr_pcmod_tdf, "data/pcmodel_wfsamp_aggr_test.parquet")
+aggr_pcmod_tdf <- read_parquet("data/pcmodel_wfsamp_aggr_test.parquet")
