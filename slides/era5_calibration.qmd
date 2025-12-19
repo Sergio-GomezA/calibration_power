@@ -56,12 +56,14 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FA
 ## Updates {#sec-updates .unnumbered .nolink}
 
 ### New
-- Updated linear models
 - Power curve modelling
+- Calibration comparison
 - Spatial correlation check
 
 ### Next steps
-- Combine PC model with calibration
+- Wind speed Cut-off estimation (pooling data)
+- Wind direction effects on power curve
+- Out-of-sample validation
 - Compare model against benchmarks: Quantile mapping, GAMs
 - Calibration spatiotemporal model
 
@@ -337,39 +339,93 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 
 ## Alternative versions
 
-- Beta model with RW2 based power curve (B-RW2)
-- Beta model with 1D SPDE based power curve (B-SPDE)
-- ZIB model with 1D SPDE based power curve (ZIB-SPDE)
-
-## ZIB model vs observed data
-
-## Error metrics
-
-# Spatial correlation {-}
 ::: {.columns}
 
-::: {.column width="50%"}
-\small Correlation for Elexon generation
-
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
+::: {.column width="50%" }
+\small
+\centering
+- Beta model with RW2 power curve (B-RW2)
+- Beta model with 1D SPDE power curve (B-SPDE)
+- ZIB model with 1D SPDE power curve (ZIB-SPDE)
+- ZIB model with 1D SPDE power curve penalised (ZIB-SPDE-P)
 :::
 
 ::: {.column width="50%"}
-\small Correlation for ERA5 uncalibrated estimate
+\centering
+\small Power curve estimates under different models
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_est_corr_dist.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_24_1wf_curve.pdf}
 :::
 
 :::
 
+## ZIB model vs observed data
+::: {.columns}
+
+::: {.column width="50%" }
+\small
+\centering
+- Beta model with RW2 power curve (B-RW2)
+- Beta model with 1D SPDE power curve (B-SPDE)
+- ZIB model with 1D SPDE power curve (ZIB-SPDE)
+- ZIB model with 1D SPDE power curve penalised (ZIB-SPDE-P)
+:::
+
+::: {.column width="50%"}
+\centering
+\small Power curve models vs observed data
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gbwfsamp_pcmodel_hexbin_2024.pdf}
+:::
+
+:::
+## Error metrics
+
+```{r}
+require(ModelMetrics)
+mod_names <- c("B-RW2", "B-SPDE", rep("ZIB-SPDE", 3), rep("ZIB-SPDE-P", 3))
+mod_names_short <- mod_names %>% unique()
+aggr_pcmod_df <- read_parquet("../data/pcmodel_wfsamp_aggregated.parquet")
+mod_labels <- c("Generic PC", mod_names_short)
+est_cols <- c(
+  "norm_power_est0",
+  "fit_rw2",
+  "fit_spde",
+  "fit_zib",
+  "fit_zibp"
+)
+names(mod_labels) <- est_cols
+df_long <- aggr_pcmod_df %>%
+  select(norm_potential, all_of(est_cols)) %>%
+  pivot_longer(
+    cols = all_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  )
+metrics_table <- df_long %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>% 
+  mutate(model = mod_labels[model])
+metrics_table %>% 
+  kable(digits = 4) %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
 
 ## Next Steps
 
-\begin{itemize}
-   \item Combine updated power curve model with calibration
-   \item Benefits of including spatial correlation  
-   \item Model validation against benchmarks
-\end{itemize}
+- Combine updated power curve model with calibration
+- Wind speed Cut-off estimation (pooling data)
+- Wind direction effects on power curve
+- Out-of-sample validation
+- Compare model against benchmarks: Quantile mapping, GAMs
+- Calibration spatiotemporal model
 
 # Appendix 
 # Previous research {-}
