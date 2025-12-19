@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#$ -N PC models
+#$ -N PCmodels
 #$ -wd /exports/eddie/scratch/s2441782/calibration_power/
 #$ -o /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 #$ -e /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
