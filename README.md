@@ -94,7 +94,10 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - [ ] Calibration method inlabru with plotted effects
   - [ ] Power curve effect method with plotted effects
   - [ ] Wind direction effects (cut_off)
-
+  - [ ] Pool tail data to estimate cut-off
+  - [ ] Check group documentation for spatial effects
+  - [ ] Poisson process for outages
+  - [ ] Fit in different conditions (time, wind speed, direction)
 
 - **Research topics**
   -[ ] power curve estimation

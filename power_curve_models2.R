@@ -1,5 +1,7 @@
 # Power curve model ####
 
+# This adds the train test split 0.7/0.3 at wind farm level
+
 # Global settings ####
 n_groups <- 40
 n_sites <- 25
