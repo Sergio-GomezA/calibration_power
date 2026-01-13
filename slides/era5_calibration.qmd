@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2025-12-19"
+date: "2026-01-13"
 format: 
   beamer:
     theme: Rochester
@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "era5_calibration_slides.pdf"
+    output-file: "era5_calibration_slides_26-01-13.pdf"
 header-includes:
   - \usepackage{graphicx}
 fontsize: 12pt
@@ -342,12 +342,16 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 ::: {.columns}
 
 ::: {.column width="50%" }
-\small
-\centering
+\footnotesize
+
 - Beta model with RW2 power curve (B-RW2)
 - Beta model with 1D SPDE power curve (B-SPDE)
 - ZIB model with 1D SPDE power curve (ZIB-SPDE)
 - ZIB model with 1D SPDE power curve penalised (ZIB-SPDE-P)
+
+Zero Inflated models better capture low wind power regions.
+
+
 :::
 
 ::: {.column width="50%"}
@@ -363,12 +367,13 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 ::: {.columns}
 
 ::: {.column width="50%" }
-\small
-\centering
-- Beta model with RW2 power curve (B-RW2)
-- Beta model with 1D SPDE power curve (B-SPDE)
-- ZIB model with 1D SPDE power curve (ZIB-SPDE)
-- ZIB model with 1D SPDE power curve penalised (ZIB-SPDE-P)
+\footnotesize
+
+- Power curve modelling highly improves the calibration
+- ZIB models deal better with the tail regions
+- Penalised version actually pulls estimate toward Generic PC
+- We could pull estimate instead to a 5 parameter curve estimate
+
 :::
 
 ::: {.column width="50%"}
@@ -380,7 +385,7 @@ P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
 
 :::
 ## Error metrics
-
+Error metrics calculated on 30% of the sampled wind farms data.
 ```{r}
 require(ModelMetrics)
 mod_names <- c("B-RW2", "B-SPDE", rep("ZIB-SPDE", 3), rep("ZIB-SPDE-P", 3))
