@@ -28,7 +28,6 @@ install.packages('R.utils', temp_lib, dependencies = TRUE)
 
 dir.create("/export/eddie/scratch/s2441782/Rtmp", showWarnings = FALSE)
 Sys.setenv(TMPDIR = "/export/eddie/scratch/s2441782/Rtmp")
-
 install.packages(
   c("rnaturalearth", "rnaturalearthdata", "ggthemes", "brms", "geosphere"),
   temp_lib,
