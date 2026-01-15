@@ -59,13 +59,13 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FA
 - Power curve modelling
 - Calibration comparison
 - Spatial correlation check
-
-### Next steps
-- Wind speed Cut-off estimation (pooling data)
-- Wind direction effects on power curve
 - Out-of-sample validation
+- Wind speed Cut-off estimation (pooling data)
+
+<!-- ### Next steps
+- Wind direction effects on power curve
 - Compare model against benchmarks: Quantile mapping, GAMs
-- Calibration spatiotemporal model
+- Calibration spatiotemporal model -->
 
 
 ## Data sources 
@@ -258,41 +258,112 @@ Using a three-likelihood approach for power curve estimation:
 
 :::
 
+## Power model overview
+
+\footnotesize
+
+1. $\pi_{it}=\pi(w, i) = \operatorname{Pr}(P_{it} = 0)$ depends of wind speed and location
+\begin{equation*}
+L^{(0)}(\theta^0| \mathbf{p}, \mathbf{w}, \mathbf{i}) = \prod_{t} \left[ \pi_i(w_{it}, i)^{\mathbb{1}(P_{it} = 0)} \times (1 - \pi_i(w_{it}, i))^{\mathbb{1}(P_{it} > 0)} \right]
+\end{equation*}
+2. Generation when $P_{it} > 0$ also depends on wind speed / location. Learned as a smooth function from data: $s^{\mathrm{pc}}(w, i) \in (0,1)$
+\begin{align*}
+s^{\mathrm{pc}}(w_{it},i) &= \text{E}(P_{it}| P_{it}>0, w_{it}, i) = \mu^+_{it}\\
+L^{(\beta)}(\theta^{\mathrm{pc}}| \mathbf{p}, \mathbf{w}, \mathbf{i}) &= \prod_{t: P_{it} > 0} \text{Beta}\left(P_{it} | \mu^+_{it}, \phi \right),
+\end{align*}
+where $\theta^{0}$ and $\theta^{\mathrm{pc}}$ represents the parameters of the smooth functions, $\pi(w,i)$ and $s^{\mathrm{pc}}$, and $\phi$ the precision of the Beta distribution.
+
+<!-- ## Power model overview
+\begin{align*}
+\mu_{it} &= E[P_{it}|w_{it}, i] \\
+&=
+(1 - \pi_i(w_{it}, i)) \times s_{\mathrm{pc}}(w_{it}, i)\\
+s_{\mathrm{pc}}(w_{it}, i) &\approx \hat{PC}_i(w_{it})
+\end{align*} -->
+
+## Penalisation component
+
+3. Finally, we penalise $s^{\mathrm{pc}}$ to be close to our generic power curve estimate, $\hat{PC}_i(w)$: 
+$d_{it}=|\hat{PC}_i(w_{it}) - s^{\mathrm{pc}}(w_{it},i)|$ should be small. 
+
+- Or maximise the negative of $\tau_{\mathrm{ps}} \sum d^2_{it}$ for a certain penalisation parameter $\tau_{\mathrm{ps}}$.
+- Adding that penalty term is similar to assume $d_{it} \sim N(0, 1/\tau_{\mathrm{ps}}^{-1})$
+\begin{equation*}
+\max_{\theta} \quad l^{(0)}(\theta) + l^{(\beta)}(\theta) - \tau_{\mathrm{ps}} \sum_{i,t} d^2_{it}
+\end{equation*}
+where $\theta = (\theta^0,\theta^{\mathrm{pc}}, \tau_{\mathrm{ps}})$ represents the parameters of both likelihoods, plus the penalisation parameter. 
+
 ## Power curve model equations
 \tiny
 Model is a Zero Inflated Beta (ZIB) with penalisation component:
-\begin{align}
+\begin{align*}
 %%
 &\textbf{Zero--probability model (Bernoulli)} \nonumber \\[4pt]
-\eta^{(0)}_{i}
-  &= \alpha_{\mathrm{bern}}
-     + f_{\mathrm{bern}}\!\left(w_i;\,\mathbf{s}(i)\right), \\[4pt]
-Z_i \mid \eta^{(0)}_{i} 
-  &\sim \mathrm{Bernoulli}(p_i),
+\eta^{(0)}_{it}
+  &= \alpha_{\mathrm{zero}}
+     + f_{\mathrm{zero}}\!\left(w_{it},\,i\right), \\[4pt]
+Z_{it} \mid \eta^{(0)}_{it} 
+  &\sim \mathrm{Bernoulli}(\pi_{it}),
   \qquad 
-  p_i = \operatorname{logit}^{-1}\!\left(\eta^{(0)}_{i}\right),
+  \pi_{it} = \frac{1}{1 + \exp\left\{-\eta^{(0)}_{it}\right\}},
 \\[10pt]
 %%
 &\textbf{Positive--output model (Beta)} \nonumber \\[4pt]
-\eta^{(\beta)}_{i}
+\eta^{(\beta)}_{it}
   &= \alpha_{\mathrm{pc}}
-     + f_{\mathrm{pc}}\!\left(w_i;\,\mathbf{s}(i)\right), \\[4pt]
-P_i^{\text{obs}} \mid \eta^{(\beta)}_{i}
-  &\sim \mathrm{Beta}(\mu_i,\phi),
+     + f_{\mathrm{pc}}\!\left(w_{it},\,i\right), \\[4pt]
+P_{it}^{\text{obs}} \mid \eta^{(\beta)}_{it}
+  &\sim \mathrm{Beta}(\mu^+_{it},\phi),
   \qquad
-  \mu_i = \operatorname{logit}^{-1}\!\left(\eta^{(\beta)}_{i}\right),
+  \mu^+_{it} = \frac{1}{1 + \exp\left\{-\eta^{(\beta)}_{it}\right\}},
 \\[10pt]
 %%
 &\textbf{Pseudo--likelihood model (Gaussian)} \nonumber \\[4pt]
-\tilde{P}_i \mid \eta^{(\beta)}_{i}
+\hat{PC}_i(w_{it}) \mid \eta^{(\beta)}_{it}
   &\sim \mathcal{N}\!\left(
-      \eta^{(\beta)}_{i},
+      \eta^{(\beta)}_{it},
       \tau_{\mathrm{ps}}^{-1}
     \right),
   \qquad
-    \tau_{\mathrm{ps}} = \texttt{precision or penalisation}.
-\end{align}
+    \tau_{\mathrm{ps}} = \text{precision or penalisation}.
+\end{align*}
 
+## Details on smooth components
+\footnotesize
+- The smooth components $f_{\mathrm{zero}}(w,i)$ $f_{\mathrm{pc}}(w,i)$ is modelled as a 1D SPDE over wind speed with a uniform correlation matrix across locations $i = 1, \ldots, I$.
+\begin{equation*}
+f(w, i) = \sum_{i=1}^{I} \beta_{i} \psi_k(w),
+\end{equation*}
+where $\psi_k(w)$ are basis functions defined over wind speed and $\beta_i$ are coefficients
+The correlation structure of $f(w, i)$ assumes a Matern covariance function:
+Let $w_{s}$, $w_h$ represent two wind speed values in location $i$, and $d = |w_s - w_t|$ their distance, then:
+\begin{align*}
+\operatorname{Cor}(d) &= \operatorname{Cor}(f(w_s,i), f(w_t, i))\\
+& = \frac{1}{2^{\nu-1} \Gamma(\nu)}  (\kappa d)^\nu K_\nu (\kappa d), \quad \alpha = \nu + d/2,
+\end{align*}
+
+## Details on smooth components
+- Additionally a uniform correlation matrix is assumed across locations $j,k \in \{ 1, \ldots, I\}$.
+That is: 
+\begin{equation*}
+\operatorname{Cor}(f(w,j), f(w, k))  = \rho, \quad j \neq k
+\end{equation*}
+which helps to pool information across locations, benefiting locations with less data.
+
+## Power estimate
+
+This leads to the following power estimate at time $t$ and location $i$:
+\begin{equation*}
+\hat P_{it} = \begin{cases}
+0, & \text{with probability } \pi_{it},\\
+\mu^+_{it}, & \text{with probability } 1 - \pi_{it}.
+\end{cases}
+\end{equation*}
+
+Which leads to the expected power estimate:
+\begin{equation*}
+E[P_{it}|w_{it}, i] = (1 - \pi_{it}) \times \mu^+_{it}
+\end{equation*}
 
 ## Power curve model estimates
 
@@ -423,12 +494,82 @@ metrics_table %>%
   )
 ```
 
+## Pooling data for cut-off estimation
+::: {.columns}
+::: {.column width="50%" }
+\small
+- Not enough data to estimate at wind farm level
+- Even using all 5 years of data (2019-2024), only a few farms show cut-off behaviour
+
+\centering
+Pooling data at high wind speeds
+\footnotesize
+```{r}
+
+wf_pattern_aggr <- read.csv("../data/cutoff_wind_farms_pattern.csv")
+
+wf_pattern_aggr %>% 
+  select(-cutoff_pattern) %>% 
+  kable(
+    col.names = c("wind speed", "prop. P=0", "prop. P<=0.02", "n obs."),
+    digits = c(0,2,2,0),
+    format = "latex",
+    big.mark = ","
+  ) %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+:::
+
+::: {.column width="50%"}
+\small
+\centering
+Tail behaviour of power curve
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cutoff_wind_farms.pdf}
+:::
+:::
+
+## Model to estimate cut-off by wind speed
+
+::: {.columns}
+::: {.column width="50%" }
+\centering
+Hyperparameters of the cut-off model
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cutoffspde_cut_wfsamp_hyper.pdf}
+:::
+
+::: {.column width="50%"}
+\small
+\centering
+Probability of zero generation at high wind speeds
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cutoffspde_cut_wfsamp_zeroProb.pdf}
+:::
+:::
+
+# Spatial correlation
+::: {.columns}
+
+::: {.column width="50%"}
+\small Correlation for Elexon generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
+:::
+
+::: {.column width="50%"}
+\small Correlation for error after calibration
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/error0_corr_dist.pdf}
+:::
+
+:::
+
+
 ## Next Steps
 
-- Combine updated power curve model with calibration
-- Wind speed Cut-off estimation (pooling data)
+
 - Wind direction effects on power curve
-- Out-of-sample validation
 - Compare model against benchmarks: Quantile mapping, GAMs
 - Calibration spatiotemporal model
 

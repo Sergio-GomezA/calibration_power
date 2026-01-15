@@ -1074,3 +1074,309 @@ tmetrics_table <- tdf_long %>%
   mutate(model = mod_labels[model])
 
 tmetrics_table
+
+
+# Pooling data for cut-off ####
+
+cutoff_df_fname <- file.path(
+  model_path,
+  "power_curve_cut-off_pooled_train.parquet"
+)
+cutoff_df_fname <- file.path(
+  model_path,
+  "power_curve_cut-off_pooled_test.parquet"
+)
+if (!file.exists(cutoff_df_fname)) {
+  q_threshold <- 0.95
+  pwr_curv_df <- read_parquet(
+    file.path(
+      gen_path,
+      "power_curve_all.parquet"
+    )
+  ) %>%
+    group_by(site_name) %>%
+    mutate(tail_data = ifelse(ws_h >= quantile(ws_h, q_threshold), 1, 0)) %>%
+    filter(tail_data == 1)
+
+  pwr_curv_df <- pwr_curv_df %>%
+    group_by(lon, lat, halfHourEndTime) %>%
+    summarise(
+      site_name = first(site_name),
+      tech_typ = first(tech_typ),
+      ws_h = mean(ws_h),
+      across(c(potential, power_est0, capacity), sum),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      norm_potential = pmin(1, potential / capacity),
+      norm_power_est0 = power_est0 / capacity,
+      error0 = norm_potential - norm_power_est0
+    ) %>%
+    mutate(
+      site_id = as.integer(factor(site_name)),
+      pos_val = ifelse(
+        norm_potential > 0 & norm_potential < 1,
+        pmin(pmax(norm_potential, 1e-6), 1 - 1e-6),
+        NA_real_
+      ),
+      is_zero = as.integer(norm_potential == 0),
+      generic_logit = qlogis(
+        pmin(pmax(norm_power_est0, 1e-6), 1 - 1e-6)
+      )
+    )
+}
+
+
+cutoff_df <- pwr_curv_df
+
+brks <- seq(
+  min(cutoff_df$ws_h, na.rm = TRUE),
+  max(cutoff_df$ws_h, na.rm = TRUE),
+  length.out = n_groups + 1
+)
+
+cutoff_df$ws_group <- cut(
+  cutoff_df$ws_h,
+  breaks = brks,
+  include.lowest = TRUE,
+  labels = FALSE
+)
+set.seed(1)
+cutoff_train_df <- cutoff_df %>%
+  group_by(site_name) %>%
+  slice_sample(prop = train_prop) %>%
+  ungroup()
+cutoff_test_df <- cutoff_df %>%
+  anti_join(cutoff_train_df, by = colnames(cutoff_df))
+
+# sites_vec <- pwr_curv_df$site_name %>% unique()
+# sites_summary <- pwr_curv_df %>%
+#   group_by(tech_typ, site_name) %>%
+#   summarise(n = n()) %>%
+#   # filter(n >= 7000) %>%
+#   slice_sample(n = 30)
+
+# sites_samp <- sample(sites_vec, n_sites)
+# sites_labels <- gsub(
+#   "Dogger Bank A & B (was Creyke Beck A & B)",
+#   "Dogger Bank",
+#   sites_samp,
+#   fixed = TRUE
+# )
+# names(sites_labels) <- sites_samp
+
+low_power_threshold <- 0.02
+wf_pattern <- cutoff_train_df %>%
+  mutate(
+    ws_group = cut(
+      ws_h,
+      breaks = c(0, 15, 20, 25, 30, Inf),
+      right = TRUE,
+      include.lowest = TRUE
+    )
+  ) %>%
+  group_by(site_name, ws_group) %>%
+  summarise(
+    propzero = mean(norm_potential <= 0),
+    proplow = mean(norm_potential <= low_power_threshold),
+    n = n()
+  ) %>%
+  mutate(cutoff_pattern = ifelse(max(propzero) > 0.5, 1, 0)) %>%
+  filter(cutoff_pattern == 1)
+
+
+clear_cutoff <- (wf_pattern %>%
+  filter(proplow >= .50, n > 15) %>%
+  filter(!grepl("Dogger|Benbrack", site_name)) %>%
+  pull(site_name)) %>%
+  unique()
+
+wf_pattern_aggr <- cutoff_train_df %>%
+  filter(site_name %in% clear_cutoff) %>%
+  mutate(
+    ws_group = cut(
+      ws_h,
+      breaks = c(0, 15, 20, 25, 30, Inf),
+      right = TRUE,
+      include.lowest = TRUE
+    )
+  ) %>%
+  group_by(ws_group) %>%
+  summarise(
+    propzero = mean(norm_potential <= 0),
+    proplow = mean(norm_potential <= low_power_threshold),
+    n = n()
+  ) %>%
+  mutate(cutoff_pattern = ifelse(max(propzero) > 0.5, 1, 0)) %>%
+  filter(cutoff_pattern == 1)
+
+write.csv(
+  wf_pattern_aggr,
+  file.path("data", "cutoff_wind_farms_pattern.csv"),
+  row.names = FALSE
+)
+
+cutoff_train_df %>%
+  filter(site_name %in% clear_cutoff) %>%
+  ggplot(aes(ws_h, norm_potential)) +
+  geom_hex() +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
+  facet_wrap(~ tech_typ + site_name, ncol = 5) +
+  coord_cartesian(xlim = c(10, 35), ylim = c(0, 1)) +
+  theme(legend.position = "inside", legend.position.inside = c(0.8, 0.15)) +
+  labs(x = "wind speed", y = "Elexon generation")
+
+ggsave(
+  file.path("fig", "cutoff_wind_farms.pdf"),
+  width = 8,
+  height = 6
+)
+
+
+## Smooth 1D SPDE cutoff model ####
+model_name <- "cutoff SPDE"
+model_code <- ("cutoffspde")
+print(
+  sprintf("%s model --- initialisation", model_name)
+)
+
+x <- 10:35
+mesh1D <- fm_mesh_1d(x, degree = 2, boundary = c("neumann", "dirichlet"))
+ggplot() +
+  geom_fm(data = mesh1D)
+A <- matrix(0, nrow = 1, ncol = mesh1D$m)
+zero_idx <- which.min(abs(x - end_points[2]))
+A[1, zero_idx] <- 1
+
+spde_cutoff <- inla.spde2.pcmatern(
+  mesh1D,
+  prior.range = c(1, 0.01),
+  prior.sigma = c(1, 0.01),
+  extraconstr = list(
+    A = A,
+    e = rep(1e-6, nrow(A))
+  )
+)
+
+components_cut <- ~ Intercept_cut(1) +
+  cut_curve(
+    ws_group,
+    model = spde_cutoff,
+    group = site_name
+  )
+
+like_cut <- bru_obs(
+  formula = is_zero ~ Intercept_cut + cut_curve,
+  family = "binomial",
+  data = cutoff_train_df %>% filter(site_name %in% clear_cutoff),
+  control.family = list(link = "logit")
+)
+
+model_fname <- file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+if (!file.exists(model_fname)) {
+  fit_cut <- bru(
+    components_cut,
+    like_cut,
+    options = list(
+      control.inla = list(int.strategy = "auto"),
+      verbose = TRUE,
+      control.compute = list(config = TRUE)
+    )
+  )
+  print(
+    sprintf("%s model --- estimation finished", model_name)
+  )
+  saveRDS(
+    fit_cut,
+    file = file.path(model_path, sprintf("%s-24-wfsamp.rds", model_name))
+  )
+} else {
+  print(
+    sprintf("%s model file found --- loading file", model_name)
+  )
+  fit_cut <- readRDS(model_fname)
+}
+summary(fit_cut)
+
+print(
+  sprintf("%s model --- sampling and plotting", model_name)
+)
+plot(fit_cut, "Intercept_cut")
+ggsave(sprintf("fig/%s_cut_wfsamp_intercut.pdf", model_code))
+
+plot.hyper.dens(fit_cut)
+ggsave(sprintf("fig/%s_cut_wfsamp_hyper.pdf", model_code))
+
+
+ws_midpoints <- (brks[-1] + brks[-length(brks)]) / 2
+
+pred_df <- expand.grid(
+  ws_h = x,
+  site_name = clear_cutoff
+)
+pred_df$ws_group <- sapply(pred_df$ws_h, function(x) {
+  which.min(abs(ws_midpoints - x))
+})
+
+
+n_samp <- 1000
+
+
+true_cutoff <- data.frame(
+  site_name = clear_cutoff,
+  turbine = c(
+    "Siemens SWT-3.2-113",
+    "Nordex N133",
+    "Siemens SWT-3.6-107",
+    "Nordex N133/4800",
+    "Siemens SWT-7.0-154",
+    "Siemens SWT-6",
+    "Nordex N133/4800",
+    "Vestas V136-4.5MW",
+    "Siemens-Gamesa SG 8.0-167 DD",
+    "Bonus B82/2300 ",
+    "Vestas V100-2.0",
+    "Siemens SWT-3.6-107",
+    "GE Vernova GE 2.85 - 103"
+  ),
+  ws_cutoff = c(22, 28, 25, 28, 25, 25, 28, 32, 25, 25, 22, 25, 25)
+)
+
+pr_zero <- predict(
+  fit_cut,
+  newdata = pred_df,
+  formula = ~ plogis(Intercept_cut + cut_curve),
+  n.samples = n_samp,
+  num.threads = n.cores
+)
+ggplot() +
+  geom_col(
+    data = cutoff_train_df %>%
+      filter(site_name %in% clear_cutoff) %>%
+      group_by(site_name, ws_group) %>%
+      summarise(
+        prop_zero = mean(is_zero, na.rm = TRUE),
+        ws_hmean = mean(ws_h, na.rm = TRUE),
+        n = n(),
+        .groups = "drop"
+      ),
+    aes(x = ws_hmean, prop_zero, fill = n)
+  ) +
+  gg(pr_zero) +
+  geom_vline(data = true_cutoff, aes(xintercept = ws_cutoff), col = "darkred") +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency"
+  ) +
+  facet_wrap(~site_name, ncol = 5) +
+  coord_cartesian(xlim = c(10, 35), ylim = c(0, 1)) +
+  theme(legend.position = "inside", legend.position.inside = c(0.8, 0.15)) +
+  labs(x = "ERA 5 wind speed", y = "Probability of zero generation")
+ggsave(
+  sprintf("fig/%s_cut_wfsamp_zeroProb.pdf", model_code),
+  width = 8,
+  height = 6
+)
