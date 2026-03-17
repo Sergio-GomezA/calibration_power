@@ -1,6 +1,6 @@
 # packages
 
-temp_lib <- "/exports/eddie/scratch/s2441782/calibration/lib"
+temp_lib <- "/exports/eddie3_homes_local/s2441782/calibration/lib"
 .libPaths(temp_lib)
 if (!require(inlabru)) {
   local({
