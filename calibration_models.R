@@ -116,6 +116,16 @@ GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet"))
 
 # write_parquet(GB_df, file.path(gen_path, "GB_aggr_frag.parquet"))
 GB_df <- read_parquet(file.path(gen_path, "GB_aggr_frag.parquet"))
+GB_df$halfHourEndTime %>% range()
+GB_df %>%
+  mutate(year = year(halfHourEndTime)) %>%
+  group_by(
+    year,
+    tech_typ
+  ) %>%
+  summarise(n = n()) %>%
+  pivot_wider(names_from = tech_typ, values_from = n) %>%
+  janitor::adorn_totals(where = c("row", "col"))
 
 # Linear ####
 
@@ -186,10 +196,16 @@ model_AIC <- step(
   # steps = 5,
   k = 2
 )
-
+model_AIC %>%
+  saveRDS(
+    file.path(
+      model_path,
+      "lm0.rds"
+    )
+  )
 anova(model_AIC)
 
-plot(model_BIC)
+# plot(model_AIC)
 summary(model_AIC)
 
 GB_df$nlin.fit <- pmax(0, model_AIC$fitted.values)
@@ -433,6 +449,106 @@ GB_df %>%
   geom_line(aes(t, lar1.fit, col = "ar1 fit")) +
   facet_wrap(~tech_typ, nrow = 2) +
   scale_color_aaas()
+
+
+# Quantile mapping model ####
+require(qmap)
+qqmod <- fitQmap(
+  obs = GB_df %>% pull(norm_potential),
+  mod = GB_df %>% pull(norm_power_est0),
+  method = "QUANT"
+)
+wgen_qm <- with(
+  GB_df,
+  doQmapQUANT(norm_power_est0, qqmod, type = "linear")
+)
+cols <- c("norm_power_est0", "norm_potential", "wgen_qm")
+col_labels <- c("PC(ERA5)", "Wind gen.", "QM corrected")
+names(col_labels) <- cols
+manual.bw <- 0.5
+GB_df %>%
+  mutate(wgen_qm = wgen_qm) %>%
+  pivot_longer(cols = any_of(cols)) %>%
+  ggplot() +
+  stat_density(
+    aes(x = value, col = name),
+    geom = "line",
+    position = "identity",
+    # bw = manual.bw
+  ) +
+  labs(col = "source") +
+  scale_color_aaas(labels = as_labeller(col_labels)) +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(.7, .8),
+    legend.background = element_rect(fill = NA, color = NA),
+    legend.key = element_rect(fill = NA, color = NA)
+  ) +
+  coord_cartesian(xlim = c(0, 1))
+
+GB_df %>%
+  ggplot(aes(norm_potential, wgen_qm)) +
+  geom_hex() +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon CF", y = "ERA5 QM calibrated")
+ggsave("fig/gb_calib_qm_hexbin_all.pdf", width = 6, height = 4)
+
+
+# Scoring and metrics comparison #####
+n <- nrow(GB_df)
+# seasonal lm
+model_AIC <- readRDS(file.path(model_path, "lm0.rds"))
+# model_AIC$fitted.values %>% length()
+# ar lm
+full_model_ar1 <- readRDS(file = file.path(model_path, "gls_ar1.rds"))
+full_model_ar1
+# summary(full_model_ar1)
+full_model_ar1$fitted %>% length()
+
+bru0 <- readRDS(file.path(model_path, "lm_bru0.rds"))
+bru0$summary.fitted.values %>% dim()
+bru_ar <- readRDS(file.path(model_path, "bru_ar2_full.rds"))
+bru_ar$summary.fitted.values[(n - 55):(n - 45), ]
+bru_ar$.args$formula
+# qm
+model_AIC %>% summary()
+model_df <- GB_df %>%
+  mutate(
+    lm = model_AIC$fitted.values,
+    ar = full_model_ar1$fitted
+  )
+
+mod_labels <- c("Generic PC", mod_names_short)
+est_cols <- c(
+  "norm_power_est0",
+  "pred_rw2",
+  "pred_spde",
+  "pred_zib",
+  "pred_zibp"
+)
+names(mod_labels) <- est_cols
+df_long <- aggr_pcmod_df %>%
+  select(norm_potential, all_of(est_cols)) %>%
+  pivot_longer(
+    cols = all_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  )
+metrics_table <- df_long %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model])
 
 
 # Spatial correlation ####

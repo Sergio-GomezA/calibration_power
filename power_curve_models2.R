@@ -962,7 +962,7 @@ metrics_table <- df_long %>%
 
 # Out of sample evaluation ####
 
-## predicted values ####
+## predicted values from inlabru models ####
 
 pred_rw2 <- df_pc_pred %>%
   filter(component == "power curve", model == "B-RW2")
@@ -1016,6 +1016,14 @@ for (site in sites_samp) {
     rule = 2
   )$y
 }
+
+## predicted values from linear models ####
+
+# reading models
+model_fnames <- c(
+  "",
+  "",
+)
 
 ws_cols <- c("ws_h", "wd10", "wd100")
 ws_cols <- c("ws_h")
