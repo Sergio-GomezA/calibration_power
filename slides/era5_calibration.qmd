@@ -53,6 +53,34 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FA
 
 # Overview {#sec-intro}
 
+
+## Plan {#sec-plan .unnumbered .nolink}
+
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\textbf{In progress}
+\begin{itemize}
+  \item Literature review
+  \item Calibration methods write-up\\{\small (linear, spatiotemporal \& quantile* regression)}
+  \item Power curve modelling write-up\\{\small (parametric, nonparametric, penalised regression)}
+  \item Calibration at aggregate vs.\ site level
+  \item Cut-off estimation
+  \item Wind drought extremes
+\end{itemize}
+\end{column}
+\begin{column}{0.42\textwidth}
+\textbf{Next steps}
+\begin{itemize}
+  \item \textit{Draft}: next 2 weeks 
+  \item \textit{Completion}: $\sim$6 months
+\end{itemize}
+\vspace{1em}
+
+\end{column}
+\end{columns}
+
+
+
 ## Updates {#sec-updates .unnumbered .nolink}
 
 ### New
@@ -570,8 +598,12 @@ Probability of zero generation at high wind speeds
 
 
 - Wind direction effects on power curve
-- Compare model against benchmarks: Quantile mapping, GAMs
-- Calibration spatiotemporal model
+- Compare model against benchmarks: Quantile mapping
+- Add CRPS and coverage metrics
+- Spatiotemporal calibration model
+- Write introduction and methods
+  - References of applications of the 1D SPDE
+  - References for cut-off estimation
 
 # Appendix 
 # Previous research {-}
