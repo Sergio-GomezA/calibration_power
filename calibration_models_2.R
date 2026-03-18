@@ -205,5 +205,8 @@ model_df <- GB_df %>%
     qm = wgen_qm
   )
 
-
 write_parquet(model_df, "data/calibration_df.parquet")
+
+model_df <- read_parquet("data/calibration_df.parquet")
+
+model_df %>% head()
