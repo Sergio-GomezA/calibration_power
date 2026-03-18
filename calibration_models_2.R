@@ -202,6 +202,8 @@ model_df <- GB_df %>%
     ar = full_model_ar1$fitted,
     lm_bru = bru0$summary.fitted.values[1:n, "mean"],
     ar_bru = bru_ar$summary.fitted.values[1:n, "mean"],
+    ar_bru2 = bru_ar$summary.fitted.values[1:n, "mean"] -
+      bru_ar$summary.random$u[1:n, "mean"],
     qm = wgen_qm
   )
 
@@ -219,12 +221,13 @@ ModelMetrics::rmse(
 
 
 df_long <- model_df %>%
-  dplyr::select(norm_potential, all_of(est_cols)) %>%
+  dplyr::select(tech_typ, norm_potential, all_of(est_cols)) %>%
   pivot_longer(
     cols = all_of(est_cols),
     names_to = "model",
     values_to = "estimate"
   )
+require(ModelMetrics)
 metrics_table <- df_long %>%
   group_by(model) %>%
   summarise(
@@ -234,3 +237,18 @@ metrics_table <- df_long %>%
     .groups = "drop"
   ) %>%
   mutate(model = mod_labels[model])
+
+
+df_long %>%
+  group_by(tech_typ, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model])
+
+
+df_long %>%
+  head()
