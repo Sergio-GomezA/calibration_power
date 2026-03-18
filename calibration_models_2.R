@@ -199,7 +199,7 @@ names(mod_labels) <- est_cols
 model_df <- GB_df %>%
   mutate(
     lm = model_AIC$fitted.values,
-    # ar = full_model_ar1$fitted,
+    ar = full_model_ar1$fitted,
     lm_bru = bru0$summary.fitted.values[1:n, "mean"],
     ar_bru = bru_ar$summary.fitted.values[1:n, "mean"],
     qm = wgen_qm
@@ -210,3 +210,27 @@ write_parquet(model_df, "data/calibration_df.parquet")
 model_df <- read_parquet("data/calibration_df.parquet")
 
 model_df %>% head()
+
+
+ModelMetrics::rmse(
+  full_model_ar1$fitted,
+  GB_df$norm_potential
+)
+
+
+df_long <- model_df %>%
+  dplyr::select(norm_potential, all_of(est_cols)) %>%
+  pivot_longer(
+    cols = all_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  )
+metrics_table <- df_long %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model])
