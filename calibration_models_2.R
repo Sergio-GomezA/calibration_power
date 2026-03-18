@@ -1,0 +1,209 @@
+# model fit 2.0
+
+local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
+
+
+require(parallel)
+
+if (local_run) {
+  data_path <- "~/Documents/ERA5_at_wf/"
+  gen_path <- "~/Documents/elexon/"
+  model_path <- "~/Documents/elexon/model_objects"
+} else {
+  data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
+  gen_path <- "/exports/eddie/scratch/s2441782/calibration/data"
+  model_path <- "/exports/eddie/scratch/s2441782/calibration/model_objects"
+  temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
+  .libPaths(temp_lib)
+}
+
+
+# install.packages(
+#   c("qmap"),
+#   temp_lib,
+#   dependencies = TRUE
+# )
+
+require(arrow)
+require(dplyr)
+require(tidyr)
+# require(rnaturalearth)
+# require(rnaturalearthdata)
+require(sf)
+require(ggplot2)
+require(ggthemes)
+require(ggsci)
+# require(FNN)
+require(data.table)
+# require(parallel)
+library(purrr)
+# require(brms)
+require(INLA)
+require(inlabru)
+require(qmap)
+
+source("aux_funct.R")
+
+GB_df <- read_parquet(file.path(gen_path, "GB_aggr_frag.parquet"))
+
+base_model <- lm(
+  norm_potential ~ norm_power_est0,
+  data = GB_df
+)
+
+full_model <- lm(
+  norm_potential ~ tech_typ *
+    norm_power_est0 +
+    norm_power_est0 * month +
+    hour +
+    poly(ws_h_wmean, 3),
+  data = GB_df
+)
+summary(full_model)
+
+
+model_AIC <- step(
+  base_model,
+  scope = list(lower = base_model, upper = full_model),
+  # steps = 5,
+  k = 2
+)
+model_AIC %>%
+  saveRDS(
+    file.path(
+      model_path,
+      "lm0.rds"
+    )
+  )
+
+
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  norm_power_est0(norm_power_est0, model = "linear") + # fixed slope
+  tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  tech_power(tech_typ, model = "iid", replicate = norm_power_est0) + # random slope
+  month(month, model = "rw2", cyclic = TRUE) +
+  # month_power(month, model = "iid", replicate = norm_power_est0) + # random slope
+  hour(hour, model = "rw2", cyclic = TRUE) +
+  wind(ws_group, model = "rw2")
+
+bru0 <- bru(
+  components = components0,
+  formula = norm_potential ~ Intercept +
+    norm_power_est0 +
+    tech_typ +
+    tech_power +
+    month +
+    hour +
+    wind,
+  family = "gaussian",
+  data = GB_df
+)
+summary(bru0)
+saveRDS(bru0, file = file.path(model_path, "lm_bru0.rds"))
+
+
+componentsar1 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  norm_power_est0(norm_power_est0, model = "linear") + # fixed slope
+  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  # tech_power(tech_typ, model = "iid", replicate = norm_power_est0) + # random slope
+  month(month, model = "rw2", cyclic = TRUE) +
+  # hour(hour, model = "rw2", cyclic = TRUE) +
+  wind(ws_group, model = "rw2") +
+  u(t, model = "ar1", replicate = tech_typ)
+
+bruar1 <- bru(
+  components = componentsar1,
+  formula = norm_potential ~ Intercept +
+    norm_power_est0 +
+    # tech_typ +
+    # tech_power +
+    month +
+    # hour +
+    wind +
+    u,
+  family = "gaussian",
+  data = GB_df,
+  options = list(
+    control.predictor = list(
+      compute = FALSE # don't store posterior for all latent effects
+    ),
+    control.compute = list(
+      dic = TRUE, # you can keep DIC or WAIC if needed
+      waic = TRUE,
+      cpo = FALSE # skip CPO to save memory
+    ),
+    verbose = TRUE
+  )
+)
+saveRDS(bruar1, file.path(model_path, "bru_ar1.rds"))
+# arimax option ####
+library(nlme)
+
+full_model_ar1 <- gls(
+  norm_potential ~ tech_typ *
+    norm_power_est0 +
+    norm_power_est0 * month +
+    month +
+    hour +
+    poly(ws_h_wmean, 3),
+  data = GB_df,
+  correlation = corAR1(form = ~ t | tech_typ), # AR1 per tech type
+  verbose = TRUE
+)
+saveRDS(full_model_ar1, file = file.path(model_path, "gls_ar1.rds"))
+
+qqmod <- fitQmap(
+  obs = GB_df %>% pull(norm_potential),
+  mod = GB_df %>% pull(norm_power_est0),
+  method = "QUANT"
+)
+
+wgen_qm <- with(
+  GB_df,
+  doQmapQUANT(norm_power_est0, qqmod, type = "linear")
+)
+
+
+# read models ####
+
+# seasonal lm
+model_AIC <- readRDS(file.path(model_path, "lm0.rds"))
+# model_AIC$fitted.values %>% length()
+# ar lm
+full_model_ar1 <- readRDS(file = file.path(model_path, "gls_ar1.rds"))
+
+bru0 <- readRDS(file.path(model_path, "lm_bru0.rds"))
+
+bru_ar <- readRDS(file.path(model_path, "bru_ar1.rds"))
+
+# qm
+
+mod_labels <- c(
+  "Generic PC",
+  "Linear",
+  "AR1",
+  "Linear inlabru",
+  "AR inlabru",
+  "QM"
+)
+est_cols <- c(
+  "norm_power_est0",
+  "lm",
+  "ar",
+  "lm_bru",
+  "ar_bru",
+  "qm"
+)
+n <- nrow(GB_df)
+names(mod_labels) <- est_cols
+model_df <- GB_df %>%
+  mutate(
+    lm = model_AIC$fitted.values,
+    # ar = full_model_ar1$fitted,
+    lm_bru = bru0$summary.fitted.values[1:n, "mean"],
+    ar_bru = bru_ar$summary.fitted.values[1:n, "mean"],
+    qm = wgen_qm
+  )
+
+
+write_parquet(model_df, "data/calibration_df.parquet")
