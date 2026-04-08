@@ -44,6 +44,24 @@ require(qmap)
 
 source("aux_funct.R")
 
+GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet"))
+GB_df %>%
+  pull(halfHourEndTime) %>%
+  range()
+
+GB_df %>%
+  ggplot(aes(norm_potential, norm_power_est0)) +
+  geom_hex() +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon CF", y = "Generic PC estimate")
+ggsave("fig/gb_est0_hexbin_all.pdf", width = 6, height = 4)
+
 GB_df <- read_parquet(file.path(gen_path, "GB_aggr_frag.parquet"))
 
 base_model <- lm(
@@ -173,7 +191,8 @@ model_AIC <- readRDS(file.path(model_path, "lm0.rds"))
 full_model_ar1 <- readRDS(file = file.path(model_path, "gls_ar1.rds"))
 
 bru0 <- readRDS(file.path(model_path, "lm_bru0.rds"))
-
+bru0$.args$formula
+summary(bru0)
 bru_ar <- readRDS(file.path(model_path, "bru_ar1.rds"))
 
 # qm
@@ -191,7 +210,8 @@ est_cols <- c(
   "lm",
   "ar",
   "lm_bru",
-  "ar_bru",
+  # "ar_bru",
+  "ar_bru2",
   "qm"
 )
 n <- nrow(GB_df)
@@ -236,8 +256,14 @@ metrics_table <- df_long %>%
     Bias = mean(estimate - norm_potential, na.rm = TRUE),
     .groups = "drop"
   ) %>%
-  mutate(model = mod_labels[model])
+  mutate(model = mod_labels[model]) %>%
+  arrange(desc(RMSE))
 
+write.csv(
+  metrics_table,
+  "summaries/calib_metrics.csv",
+  row.names = FALSE
+)
 
 df_long %>%
   group_by(tech_typ, model) %>%
@@ -247,8 +273,98 @@ df_long %>%
     Bias = mean(estimate - norm_potential, na.rm = TRUE),
     .groups = "drop"
   ) %>%
-  mutate(model = mod_labels[model])
+  mutate(model = mod_labels[model]) %>%
+  arrange(tech_typ, desc(RMSE))
 
 
-df_long %>%
-  head()
+est_cols <- c(
+  "norm_power_est0",
+  "lm",
+  "ar",
+  "lm_bru",
+  # "ar_bru",
+  "ar_bru2",
+  "qm"
+)
+model_df %>%
+  ggplot(aes(norm_potential, lm)) +
+  geom_hex() +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon CF", y = "Calibrated ERA5 CF")
+ggsave("fig/gb_lmcalib_hexbin_all.pdf", width = 6, height = 4)
+
+model_df %>%
+  ggplot(aes(norm_potential, ar)) +
+  geom_hex() +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon CF", y = "Calibrated ERA5 CF")
+ggsave("fig/gb_ar1calib_hexbin_all.pdf", width = 6, height = 4)
+
+
+model_df %>%
+  ggplot(aes(norm_potential, lm_bru)) +
+  geom_hex() +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon CF", y = "Calibrated ERA5 CF")
+ggsave("fig/gb_lmbrucalib_hexbin_all.pdf", width = 6, height = 4)
+
+
+model_df %>%
+  ggplot(aes(norm_potential, ar_bru2)) +
+  geom_hex() +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon CF", y = "Calibrated ERA5 CF")
+ggsave("fig/gb_arbrucalib_hexbin_all.pdf", width = 6, height = 4)
+
+
+model_df %>%
+  ggplot(aes(norm_potential, qm)) +
+  geom_hex() +
+  geom_abline(intercept = 0, slope = 1, linetype = 2) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  coord_fixed(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Elexon CF", y = "Calibrated ERA5 CF")
+ggsave("fig/gb_qmcalib_hexbin_all.pdf", width = 6, height = 4)
+
+
+source("aux_funct.R")
+bru0$summary.random %>% names()
+
+bru0
+
+wind_eff <- plot.effects(bru0, "wind", show.fig = F)
+plot.effects(bru0, "hour")
+plot.effects(bru0, "month")
+test <- plot.effects(bru0, "tech_typ", show.fig = F)
+test +
+  bru0$summary.random$wind
+wind_eff$data %>% head()
+facet_wrap()
