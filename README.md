@@ -55,6 +55,10 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - [x] unwind remit outage profile
   - [x] merge with clean generation data
   - [x] wind vertical interpolation
+  - [ ] Residual analysis
+    - [ ] scatter plots
+    - [ ] box plots
+    - [ ] look for specific events
 
 
 - **Power curve fitting**
