@@ -1674,3 +1674,69 @@ plot.hyper.dens <- function(
 
   print(p.dens)
 }
+
+
+plot.effects <- function(
+  inla.model,
+  rand.effect,
+  trans = \(x) x,
+  show.fig = TRUE,
+  window = "all",
+  ...
+) {
+  if (rand.effect == "etaderiv" | rand.effect == "eta+deriv") {
+    lagged_eta <- inla.model$summary.random$eta.2[
+      -nrow(inla.model$summary.random$eta.2),
+      c(1, 2, 3, 6, 5, 4, 7, 8)
+    ]
+    spline_summary <- inla.model$summary.random$eta.1[-1, ] -
+      lagged_eta
+    # ID fix
+    spline_summary$ID <- inla.model$summary.random$eta.1$ID[-1]
+
+    if (rand.effect == "eta+deriv") {
+      spline_summary[, 2:ncol(spline_summary)] <- spline_summary[,
+        2:ncol(spline_summary)
+      ] +
+        inla.model$summary.random$eta[-1, 2:ncol(spline_summary)]
+    }
+  } else {
+    # Extract the summary for the specified random effect
+    spline_summary <- inla.model$summary.random[[rand.effect]]
+  }
+
+  if (window != "all" & is.numeric(window)) {
+    spline_summary <- spline_summary %>% tail(trunc(window))
+  }
+
+  # Create a data frame for ggplot
+  plot_data <- data.frame(
+    group = spline_summary$ID, # The grouped values for the random effect
+    mean = spline_summary$mean, # Posterior mean
+    lower = spline_summary$`0.025quant`, # 2.5% quantile (lower credible interval)
+    upper = spline_summary$`0.975quant` # 97.5% quantile (upper credible interval)
+  ) %>%
+    {
+      if (rand.effect %in% c("hour", "month")) {
+        mutate(., across(group, as.numeric))
+      } else {
+        .
+      }
+    } %>%
+    mutate(across(mean:upper, trans))
+
+  # Plot using ggplot2
+  p1 <- ggplot(plot_data, aes(x = group, ...)) +
+    geom_line(aes(y = mean), color = "blue", lwd = 1) + # Plot mean
+    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) + # Plot credible intervals
+    labs(
+      title = paste("Estimated effect for", rand.effect),
+      x = paste(rand.effect, "(Binned Variable)"),
+      y = "Estimated Effect"
+    ) +
+    theme_minimal()
+  if (show.fig) {
+    print(p1)
+  }
+  invisible(list(data = plot_data, fig = p1))
+}

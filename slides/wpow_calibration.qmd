@@ -1,0 +1,869 @@
+---
+title: "ERA 5 calibration to Elexon power"
+author:
+  - "S. Gomez$^1$"
+institute:
+   - $^1$School of Mathematics, University of Edinburgh
+institute-short: "UoE"
+date: "2026-03-31"
+format: 
+  beamer:
+    theme: Rochester
+    colortheme: spruce
+    fonttheme: professionalfonts
+    fig-cap-location: top
+    toc: true
+    slide-level: 2
+    split-bib: true
+    output-file: "wpow_calibration_slides_31-03-18.pdf"
+header-includes:
+  - \usepackage{graphicx}
+fontsize: 12pt
+aspectratio: 169
+editor: source
+bibliography: calib_pow_ref.bib
+nocite: "@*"
+---
+
+```{r include=FALSE}
+require(tidyverse)
+require(kableExtra)
+require(parallel)
+require(dplyr)
+require(scales)
+require(ggsci)
+
+require(jsonlite)
+require(httr)
+
+require(data.table)
+require(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+
+require(plotly)
+require(ggthemes)
+require(arrow)
+path <- "~/Documents/elexon"
+
+```
+
+```{r}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FALSE)
+theme_set(theme_bw())
+```
+
+# Overview {#sec-intro}
+
+
+## Plan {#sec-plan .unnumbered .nolink}
+
+\begin{itemize}
+  \item Literature review
+  \item Calibration methods write-up\\{\small (linear, spatiotemporal \& quantile regression)}
+  \item Power curve modelling write-up\\{\small (parametric, nonparametric, penalised regression)}
+  \item Calibration at aggregate vs.\ site level
+  \item Cut-off estimation
+  \item Wind drought extremes
+\end{itemize}
+<!-- 
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\textbf{In progress}
+\begin{itemize}
+  \item Literature review
+  \item Calibration methods write-up\\{\small (linear, spatiotemporal \& quantile regression)}
+  \item Power curve modelling write-up\\{\small (parametric, nonparametric, penalised regression)}
+  \item Calibration at aggregate vs.\ site level
+  \item Cut-off estimation
+  \item Wind drought extremes
+\end{itemize}
+\end{column}
+\begin{column}{0.42\textwidth}
+\textbf{Next steps}
+\begin{itemize}
+  \item \textit{Draft}: next 2 weeks 
+  \item \textit{Completion}: $\sim$6 months
+\end{itemize}
+\vspace{1em}
+
+\end{column}
+\end{columns} -->
+
+
+
+<!-- ## Updates {#sec-updates .unnumbered .nolink}
+
+### New
+- Power curve modelling
+- Calibration comparison
+- Spatial correlation check
+- Out-of-sample validation
+- Wind speed Cut-off estimation (pooling data) -->
+
+<!-- ### Next steps
+- Wind direction effects on power curve
+- Compare model against benchmarks: Quantile mapping, GAMs
+- Calibration spatiotemporal model -->
+
+
+# Calibration of generic power curve estimate
+
+## GB level aggregation
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Nearest ERA5 grid for wind speed
+- Vertical interpolation using a power law
+- Generic Power Curve (onshore, offshore)
+- Normalised ower aggregated at GB level
+  \begin{align*}
+  p_{\text{tot},t} &= \sum_i p_{it} / \sum_i C_i 
+  \end{align*}
+- Hourly resolution
+- Potential generation (ex curtailment)
+:::
+
+::: {.column width="50%"}
+\centering
+\small Scatter aggregated power
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_est0_hexbin_all.pdf}
+:::
+
+:::
+
+## Linear model
+
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Using step AIC criteria selection: 
+  - $k$: Type (offshore / onshore)
+  - $m$: month, $h$: hour
+  - $w_t$: wind speed
+
+
+\begin{equation*}
+p^{calib}_t = \alpha_{k,m,h} + \beta_{k,m} \hat p_{t} + \sum_{j=1}^3 \phi_j w_t^3
+\end{equation*}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Calibration comparison
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_lmcalib_hexbin_all.pdf}
+:::
+
+:::
+
+## Autoregressive error
+
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Using step AIC criteria selection: 
+  - $k$: Type (offshore / onshore)
+  - $m$: month, $h$: hour
+  - $w_t$: wind speed
+  - $u_t$: AR1
+
+\begin{equation*}
+p^{calib}_t = \alpha_0 + \sum \alpha_e + \beta_{k} \hat p_{t} + f_w(w_t) + u_t
+\end{equation*}
+
+where $\alpha_0$ is the intercept, the $\alpha_e$ $e \in {k,m,h}$ represent random effects (cyclic for month and hour), $\beta_k$ is a random slope, $f_w$ is smooth effect (RW2). 
+:::
+
+::: {.column width="50%"}
+\centering
+\small Calibration comparison
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_ar1calib_hexbin_all.pdf}
+:::
+
+:::
+
+## Hierarchical Bayesian model
+
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Turning muliplicative corrections into smooth functions
+
+
+\begin{equation*}
+p^{calib}_t = \alpha + \beta_k + \beta_m + \beta_h + s_p(p_{t}) + s_w (w_t)
+\end{equation*}
+
+where $\beta_k$, $\beta_m$, $\beta_h$ are random effects and $s_p$ and $s_w$ are smooth functions
+:::
+
+::: {.column width="50%"}
+\centering
+\small Calibration comparison
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_lmbrucalib_hexbin_all.pdf}
+:::
+
+:::
+
+## Quantile Mapping
+
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Quantile mapping aims to replicate observed distribution
+
+\begin{equation*}
+p^{calib}_t = F_\text{obs} (F_\text{mod}^{-1}(p_{t}))
+\end{equation*}
+
+where $F_\text{mod}$ and $F_\text{obs}$ are the CDF of the power estimate and observed values
+:::
+
+::: {.column width="50%"}
+\centering
+\small Calibration comparison
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gb_qmcalib_hexbin_all.pdf}
+:::
+
+:::
+
+## Comparison scores
+
+```{r}
+
+metrics_table <- read.csv("../summaries/calib_metrics.csv")
+# metrics_table <- read.csv("summaries/calib_metrics.csv")
+
+metrics_table %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+# Power curve modelling
+
+## Power curve modelling
+::: {.columns}
+
+::: {.column width="50%" }
+### Components
+
+- Power curve estimate from data
+- Probability of zero generation
+- Penalisation to make power curve resemble manufaturer's PC
+
+:::
+
+::: {.column width="50%"}
+Using a three-likelihood approach for power curve estimation:
+
+- **1st likelihood:** Observed power is modelled as a smooth function of wind speed
+- **2nd likelihood:** Zero inflated component
+- **3rd likelihood** Penalisation towards a generic PC
+
+:::
+
+:::
+
+## Power model overview
+
+\footnotesize
+
+1. $\pi_{it}=\pi(w, i) = \operatorname{Pr}(P_{it} = 0)$ depends of wind speed and location
+\begin{equation*}
+L^{(0)}(\theta^0| \mathbf{p}, \mathbf{w}, \mathbf{i}) = \prod_{t} \left[ \pi_i(w_{it}, i)^{\mathbb{1}(P_{it} = 0)} \times (1 - \pi_i(w_{it}, i))^{\mathbb{1}(P_{it} > 0)} \right]
+\end{equation*}
+2. Generation when $P_{it} > 0$ also depends on wind speed / location. Learned as a smooth function from data: $s^{\mathrm{pc}}(w, i) \in (0,1)$
+\begin{align*}
+s^{\mathrm{pc}}(w_{it},i) &= \text{E}(P_{it}| P_{it}>0, w_{it}, i) = \mu^+_{it}\\
+L^{(\beta)}(\theta^{\mathrm{pc}}| \mathbf{p}, \mathbf{w}, \mathbf{i}) &= \prod_{t: P_{it} > 0} \text{Beta}\left(P_{it} | \mu^+_{it}, \phi \right),
+\end{align*}
+where $\theta^{0}$ and $\theta^{\mathrm{pc}}$ represents the parameters of the smooth functions, $\pi(w,i)$ and $s^{\mathrm{pc}}$, and $\phi$ the precision of the Beta distribution.
+
+<!-- ## Power model overview
+\begin{align*}
+\mu_{it} &= E[P_{it}|w_{it}, i] \\
+&=
+(1 - \pi_i(w_{it}, i)) \times s_{\mathrm{pc}}(w_{it}, i)\\
+s_{\mathrm{pc}}(w_{it}, i) &\approx \hat{PC}_i(w_{it})
+\end{align*} -->
+
+## Penalisation component
+
+3. Finally, we penalise $s^{\mathrm{pc}}$ to be close to our generic power curve estimate, $\hat{PC}_i(w)$: 
+$d_{it}=|\hat{PC}_i(w_{it}) - s^{\mathrm{pc}}(w_{it},i)|$ should be small. 
+
+- Or maximise the negative of $\tau_{\mathrm{ps}} \sum d^2_{it}$ for a certain penalisation parameter $\tau_{\mathrm{ps}}$.
+- Adding that penalty term is similar to assume $d_{it} \sim N(0, 1/\tau_{\mathrm{ps}}^{-1})$
+\begin{equation*}
+\max_{\theta} \quad l^{(0)}(\theta) + l^{(\beta)}(\theta) - \tau_{\mathrm{ps}} \sum_{i,t} d^2_{it}
+\end{equation*}
+where $\theta = (\theta^0,\theta^{\mathrm{pc}}, \tau_{\mathrm{ps}})$ represents the parameters of both likelihoods, plus the penalisation parameter. 
+
+## Power curve model equations
+\tiny
+Model is a Zero Inflated Beta (ZIB) with penalisation component:
+\begin{align*}
+%%
+&\textbf{Zero--probability model (Bernoulli)} \nonumber \\[4pt]
+\eta^{(0)}_{it}
+  &= \alpha_{\mathrm{zero}}
+     + f_{\mathrm{zero}}\!\left(w_{it},\,i\right), \\[4pt]
+Z_{it} \mid \eta^{(0)}_{it} 
+  &\sim \mathrm{Bernoulli}(\pi_{it}),
+  \qquad 
+  \pi_{it} = \frac{1}{1 + \exp\left\{-\eta^{(0)}_{it}\right\}},
+\\[10pt]
+%%
+&\textbf{Positive--output model (Beta)} \nonumber \\[4pt]
+\eta^{(\beta)}_{it}
+  &= \alpha_{\mathrm{pc}}
+     + f_{\mathrm{pc}}\!\left(w_{it},\,i\right), \\[4pt]
+P_{it}^{\text{obs}} \mid \eta^{(\beta)}_{it}
+  &\sim \mathrm{Beta}(\mu^+_{it},\phi),
+  \qquad
+  \mu^+_{it} = \frac{1}{1 + \exp\left\{-\eta^{(\beta)}_{it}\right\}},
+\\[10pt]
+%%
+&\textbf{Pseudo--likelihood model (Gaussian)} \nonumber \\[4pt]
+\hat{PC}_i(w_{it}) \mid \eta^{(\beta)}_{it}
+  &\sim \mathcal{N}\!\left(
+      \eta^{(\beta)}_{it},
+      \tau_{\mathrm{ps}}^{-1}
+    \right),
+  \qquad
+    \tau_{\mathrm{ps}} = \text{precision or penalisation}.
+\end{align*}
+
+## Details on smooth components
+\footnotesize
+- The smooth components $f_{\mathrm{zero}}(w,i)$ $f_{\mathrm{pc}}(w,i)$ is modelled as a 1D SPDE over wind speed with a uniform correlation matrix across locations $i = 1, \ldots, I$.
+\begin{equation*}
+f(w, i) = \sum_{i=1}^{I} \beta_{i} \psi_k(w),
+\end{equation*}
+where $\psi_k(w)$ are basis functions defined over wind speed and $\beta_i$ are coefficients
+The correlation structure of $f(w, i)$ assumes a Matern covariance function:
+Let $w_{s}$, $w_h$ represent two wind speed values in location $i$, and $d = |w_s - w_t|$ their distance, then:
+\begin{align*}
+\operatorname{Cor}(d) &= \operatorname{Cor}(f(w_s,i), f(w_t, i))\\
+& = \frac{1}{2^{\nu-1} \Gamma(\nu)}  (\kappa d)^\nu K_\nu (\kappa d), \quad \alpha = \nu + d/2,
+\end{align*}
+
+## Details on smooth components
+- Additionally a uniform correlation matrix is assumed across locations $j,k \in \{ 1, \ldots, I\}$.
+That is: 
+\begin{equation*}
+\operatorname{Cor}(f(w,j), f(w, k))  = \rho, \quad j \neq k
+\end{equation*}
+which helps to pool information across locations, benefiting locations with less data.
+
+## Power estimate
+
+This leads to the following power estimate at time $t$ and location $i$:
+\begin{equation*}
+\hat P_{it} = \begin{cases}
+0, & \text{with probability } \pi_{it},\\
+\mu^+_{it}, & \text{with probability } 1 - \pi_{it}.
+\end{cases}
+\end{equation*}
+
+Which leads to the expected power estimate:
+\begin{equation*}
+E[P_{it}|w_{it}, i] = (1 - \pi_{it}) \times \mu^+_{it}
+\end{equation*}
+
+## Power curve model estimates
+
+::: {.columns}
+
+::: {.column width="50%" }
+
+- Starting models with 
+  - 1Y of data (2024)
+  - 25 wind farms
+  - Hourly data
+  - Excluding outages listed in REMIT
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Expected Power curve
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen0.10free_24_wfsamp_EPC.pdf}
+:::
+
+:::
+## Power curve model estimates
+
+::: {.columns}
+
+::: {.column width="50%" }
+\centering
+\small Power curve estimate
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen0.10free_24_wfsamp_curve.pdf}
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Probability of zero generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ZIBspdePen0.10free_24_wfsamp_zeroProb.pdf}
+:::
+
+:::
+
+## Alternative versions
+
+::: {.columns}
+
+::: {.column width="50%" }
+\footnotesize
+
+- Beta model with RW2 power curve (B-RW2)
+- Beta model with 1D SPDE power curve (B-SPDE)
+- ZIB model with 1D SPDE power curve (ZIB-SPDE)
+- ZIB model with 1D SPDE power curve penalised (ZIB-SPDE-P)
+
+Zero Inflated models better capture low wind power regions.
+
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Power curve estimates under different models
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/comparison_24_1wf_curve.pdf}
+:::
+
+:::
+
+## ZIB model vs observed data
+::: {.columns}
+
+::: {.column width="50%" }
+\footnotesize
+
+- Power curve modelling highly improves the calibration
+- ZIB models deal better with the tail regions
+- Penalised version actually pulls estimate toward Generic PC
+- We could pull estimate instead to a 5 parameter curve estimate
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Power curve models vs observed data
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/gbwfsamp_pcmodel_hexbin_2024.pdf}
+:::
+
+:::
+## Error metrics
+Error metrics calculated on 30% of the sampled wind farms data.
+```{r}
+require(ModelMetrics)
+mod_names <- c("B-RW2", "B-SPDE", rep("ZIB-SPDE", 3), rep("ZIB-SPDE-P", 3))
+mod_names_short <- mod_names %>% unique()
+aggr_pcmod_df <- read_parquet("../data/pcmodel_wfsamp_aggr_test.parquet")
+# aggr_pcmod_df <- read_parquet("data/pcmodel_wfsamp_aggr_test.parquet")
+mod_labels <- c("Generic PC", mod_names_short)
+est_cols <- c(
+  "norm_power_est0",
+  "pred_rw2",
+  "pred_spde",
+  "pred_zib",
+  "pred_zibp"
+)
+names(mod_labels) <- est_cols
+df_long <- aggr_pcmod_df %>%
+  select(norm_potential, all_of(est_cols)) %>%
+  pivot_longer(
+    cols = all_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  )
+metrics_table <- df_long %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>% 
+  mutate(model = mod_labels[model])
+metrics_table %>% 
+  kable(digits = 4, format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+## Pooling data for cut-off estimation
+::: {.columns}
+::: {.column width="50%" }
+\small
+- Not enough data to estimate at wind farm level
+- Even using all 5 years of data (2019-2024), only a few farms show cut-off behaviour
+
+\centering
+Pooling data at high wind speeds
+\footnotesize
+```{r}
+
+wf_pattern_aggr <- read.csv("../data/cutoff_wind_farms_pattern.csv")
+
+wf_pattern_aggr %>% 
+  select(-cutoff_pattern) %>% 
+  kable(
+    col.names = c("wind speed", "prop. P=0", "prop. P<=0.02", "n obs."),
+    digits = c(0,2,2,0),
+    format = "latex",
+    big.mark = ","
+  ) %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+:::
+
+::: {.column width="50%"}
+\small
+\centering
+Tail behaviour of power curve
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cutoff_wind_farms.pdf}
+:::
+:::
+
+## Model to estimate cut-off by wind speed
+
+::: {.columns}
+::: {.column width="50%" }
+\centering
+Hyperparameters of the cut-off model
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cutoffspde_cut_wfsamp_hyper.pdf}
+:::
+
+::: {.column width="50%"}
+\small
+\centering
+Probability of zero generation at high wind speeds
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/cutoffspde_cut_wfsamp_zeroProb.pdf}
+:::
+:::
+
+
+# Power Curve fitting{-}
+
+## Classic parametric shape
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+\footnotesize
+The five-parameter formula (Lydia et.al, 2013):
+
+\begin{equation*}
+  P(u) = D+ \frac{A-D}{(1+(u/C)^B)^G} 
+\end{equation*}
+where: $A$ and $D$ are the upper and lower asymptotes, $C$ controls the inflection point, $B$ is related to the slope at inflection point, and $G$ controls the asymmetry.
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small 5 parameters power curve
+```{r fig.width = 4.5, fig.height = 3.5}
+pc5param <- function(x, A, B, C, D, G) {
+  D + (A - D) / (1 + (x / C)^B)^G
+}
+D <- 0
+A <- 1
+B = -15
+G = 0.4
+C = 7
+w <- seq(0, 25, length.out = 100)
+p <- pc5param(w, A, B, C, D, G)
+
+data.frame(
+  wind = w,
+  power = p
+) %>%
+  ggplot(aes(wind, power)) +
+  geom_line(col = blues9[7])
+```
+
+:::
+
+:::
+
+## Parametric shape for cut-off
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+\footnotesize
+Adding extra parameters we can model de decay after cut-off:
+
+\begin{equation*}
+  P(u) = D+ \frac{A-D}{(1+(u/C_1)^{B_1})^G(1+(u/C_2)^{B_2})^G} 
+\end{equation*}
+where: $A$ and $D$ are the upper and lower asymptotes, $C_1$ is the first inflection point, $C_2$ is related to the cut-off, $B_1$ is related to the slope at inflection point, $B_2$ to the slope during cut-off, and $G$ controls the asymmetry.
+
+:::
+
+::: {.column width="50%"}
+
+\centering
+\small 7 parameters power curve
+
+```{r fig.width = 4.5, fig.height = 3.5}
+pc7param_r <- function(x, A_raw, B1_raw, C1, D, G_raw, C2, B2_raw) {
+  B1 <- -exp(B1_raw) # always negative
+  B2 <- exp(B2_raw) # always positive
+  A <- D + exp(A_raw) # ensures A > D
+  G <- exp(G_raw) # ensures G > 0
+
+  D +
+    (A - D) /
+      (1 + (x / C1)^B1)^G /
+      (1 + (x / C2)^B2)^G
+}
+D <- 0
+A <- 1
+B1 = log(15)
+B2 = log(100)
+G = log(0.4)
+C1 = 7
+C2 = 22
+w <- seq(0, 30, length.out = 100)
+p <- pc7param_r(w, A, B1, C1, D, G, C2, B2)
+
+data.frame(
+  wind = w,
+  power = p
+) %>%
+  ggplot(aes(wind, power)) +
+  geom_line(col = blues9[7])
+```
+
+:::
+
+:::
+
+
+## Parametric fit for Scottish wind farms
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+\footnotesize
+
+- We can fit the parametric shape using optim
+- As long as there is a reasonable amount of points showing the cut-off optim can converge
+
+\tiny
+\centering
+Estimates from data
+
+```{r}
+pre_path <- "/home/s2441782/ownCloud-s2441782@datasync.ed.ac.uk/projects/proj2/prob-scen-spatial"
+solution1 <- read.csv(file.path(pre_path,"data/pc_7pars_wfsamp_24b.csv")) %>%
+  rename(par = X)
+solution1 %>%
+  kable(digits = 2, format = "latex") %>%
+  kable_styling(full_width = FALSE)
+```
+:::
+
+::: {.column width="50%"}
+\centering
+\small Data and power curve estimate
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/scottish_wfsamp_24_pc-est.png}
+:::
+
+:::
+
+
+# Spatial correlation
+::: {.columns}
+
+::: {.column width="50%"}
+\small Correlation for Elexon generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
+:::
+
+::: {.column width="50%"}
+\small Correlation for error after calibration
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/error0_corr_dist.pdf}
+:::
+
+:::
+
+
+## Next Steps
+
+- Add CRPS and coverage metrics
+- Spatiotemporal calibration model
+- Write introduction and methods
+
+# Appendix 
+
+
+## Data sources 
+::: {.columns}
+
+::: {.column width="50%"}
+### Wind speed
+- ERA5 at wind farms
+  - Hourly data
+  - Spatial resolution 0.25° x 0.25° 
+  - 10m and 100m heights
+
+:::
+
+::: {.column width="50%"}
+### Wind power
+- Elexon BMU data (since 2019)
+  - Half hourly data
+  - Generation, curtailment, potential, capacity
+  - Outage data (REMIT)
+- REPD database
+  - Location, turbine height, capacity
+:::
+
+:::
+
+
+# Previous research {-}
+
+## Power curve modelling
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+### Binning method
+\begin{equation*}
+  P_i = \frac{1}{n_i} \sum_{j=1}^{n_i} P_{ij}
+\end{equation*}
+where: $P_{ij}$ is the $j$ th power observation in bin $i$ and
+$n_i$ no. of observations in bin $i$
+
+:::
+
+::: {.column width="50%"}
+### Logistic
+\begin{equation*}
+P(u) = a \frac{1+ m \exp(-u/\tau)}{1+ n \exp(-u/\tau)}
+\end{equation*}
+where $a$ represents the upper asymptote, $n, m$ shape the lower asymptote, and $\tau$ controls the transition. 
+:::
+
+:::
+
+## Power curve modelling
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+### 5 parameter curve
+\begin{equation*}
+  P(u) = D+ \frac{A-D}{(1+(u/C)^B)^G} 
+\end{equation*}
+where: $A$ and $D$ are the upper and lower asymptotes, $C$ is the inflection point, $B$ the slope at inflection point, adn $G$ controls the asymmetry.
+
+:::
+
+::: {.column width="50%"}
+
+:::
+
+:::
+
+## Reanalysis data to quantify extreme wind power statistics
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+
+D. Cannon, D. Brayshaw, et. al (2015)
+
+- MERRA wind speed validated with MIDAS
+- Vertical interpolation with a logarithmic change
+- Calibrated power curves based on manufacturers PC
+- Use that to analys extreme low and high levels, and ramps
+:::
+
+::: {.column width="50%"}
+\centering
+\small $\Delta$CF comparison 
+\includegraphics[width=\linewidth]{../fig_extra/2013_cannon_delta_comparison.png}
+:::
+
+:::
+
+## Balancing energy
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+H. Thornton, D. Brayshaw (2020) analyse the relationship between weather, energy demand, and wind power.
+
+- ERA Interim wind speed
+- Cubic power curve with air density correction
+- CF compared with GB average from other studies
+- Seasonal effects on Demand and 
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small $\Delta$CF comparison 
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2020_thornton_CF_vs_demand.png}
+:::
+
+:::
+
+## Analysis of extreme wind droughts
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+Panit Potisomporn, C. Vogel (2024) perform a extreme value analysis of wind droughts in GB.
+
+- Use ERA5 wind speeds calibrated to MIDAS with QM
+- Build a ML algorithm that learns how to extrapolate wind speed from 10m to hub height
+- Use a 5 parameter logistic function to model power curve
+- Model energy losses with factors by type.
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small CF calibration 
+\includegraphics[width=\linewidth]{../fig_extra/2024_potisomporn_CF_comparison.png}
+:::
+
+:::
+
+## References
+
