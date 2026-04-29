@@ -195,6 +195,19 @@ bru0$.args$formula
 summary(bru0)
 bru_ar <- readRDS(file.path(model_path, "bru_ar1.rds"))
 
+
+model_AIC %>% summary()
+anova(model_AIC)
+
+# wind direction effect..
+
+# install.packages("stargazer")
+# install.packages("modelsummary")
+# require(stargazer)
+require(modelsummary)
+
+modelsummary(model_AIC, output = "latex")
+
 # qm
 
 mod_labels <- c(
@@ -211,7 +224,7 @@ est_cols <- c(
   "ar",
   "lm_bru",
   # "ar_bru",
-  "ar_bru2",
+  "ar_bru2", # excludes ar term (interpolates)
   "qm"
 )
 n <- nrow(GB_df)
@@ -228,6 +241,9 @@ model_df <- GB_df %>%
   )
 
 write_parquet(model_df, "data/calibration_df.parquet")
+
+
+## Reading fitted values ####
 
 model_df <- read_parquet("data/calibration_df.parquet")
 
@@ -368,3 +384,198 @@ test +
   bru0$summary.random$wind
 wind_eff$data %>% head()
 facet_wrap()
+
+# residual exploratory analysis ####
+
+## Insample #####
+
+model_df %>% names()
+
+est_cols <- c(
+  "norm_power_est0",
+  "lm",
+  "ar",
+  "lm_bru",
+  # "ar_bru",
+  "ar_bru2", # excludes ar term (interpolates)
+  "qm"
+)
+model_df <- model_df %>%
+  mutate(
+    across(
+      any_of(est_cols),
+      ~ . - norm_potential,
+      .names = "{.col}_resid"
+    ),
+    month = month(halfHourEndTime),
+    season = case_when(
+      month %in% c(12, 1, 2) ~ "DJF",
+      month %in% c(3, 4, 5) ~ "MAM",
+      month %in% c(6, 7, 8) ~ "JJA",
+      month %in% c(9, 10, 11) ~ "SON",
+      TRUE ~ NA_character_
+    ) %>%
+      factor(levels = c("MAM", "JJA", "SON", "DJF"))
+  )
+
+# turbine type
+model_df %>%
+  ggplot(aes(tech_typ, norm_power_est0_resid)) +
+  geom_boxplot(aes(fill = tech_typ)) +
+  scale_fill_manual(values = mypalette) +
+  theme(legend.position = "none") +
+  labs(x = "", y = "Residuals of Generic PC")
+
+ggsave("fig/gb_tech_genPC_resid_boxplot.pdf", width = 5, height = 4)
+
+model_df %>%
+  ggplot(aes(norm_power_est0_resid)) +
+  geom_density(aes(fill = tech_typ), alpha = 0.5) +
+  scale_fill_manual(values = mypalette) +
+  theme(legend.position = "inside", legend.position.inside = c(0.2, 0.8)) +
+  labs(x = "", y = "Residuals of Generic PC", fill = "type")
+
+ggsave("fig/gb_tech_genPC_resid_density.pdf", width = 5, height = 4)
+
+model_df %>%
+  ggplot(aes(x = norm_potential, y = norm_power_est0_resid)) +
+  # This creates the filled contour "topography"
+  geom_hex(alpha = 0.8) +
+  # Add contour lines for extra precision
+  # geom_density_2d(color = "white", size = 0.2, alpha = 0.3) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  facet_wrap(~tech_typ) +
+  # theme_minimal() +
+  theme(legend.position = "right") +
+  labs(
+    x = "Normalised wind generation",
+    y = "Residuals",
+    fill = "Density Level"
+  )
+ggsave("fig/gb_tech+_genPC_resid_2Ddensity.pdf", width = 7, height = 4)
+
+# season
+# 1: Red, 2: Blue, 3: Green, 8: Brown/Dark Grey
+seasonal_colors <- c(
+  "DJF" = "#4DBBD5FF", # Blue (Winter)
+  "MAM" = "#00A087FF", # Teal/Green (Spring)
+  "JJA" = "#E64B35FF", # Red/Coral (Summer)
+  "SON" = "#7E6148FF" # Brown (Autumn)
+)
+model_df %>%
+  ggplot(aes(season, norm_power_est0_resid)) +
+  geom_boxplot(aes(fill = season)) +
+  facet_wrap(~tech_typ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = seasonal_colors) +
+  theme(legend.position = "none") +
+  labs(x = "", y = "Residuals of Generic PC")
+
+ggsave("fig/gb_tech+seas_genPC_resid_boxplot.pdf", width = 3.5, height = 3)
+
+require(ggridges)
+model_df %>%
+  mutate(
+    season = factor(season, levels = rev(c("DJF", "MAM", "JJA", "SON")))
+  ) %>%
+  ggplot(aes(norm_power_est0_resid, season, fill = season)) +
+  # geom_density(aes(fill = season), alpha = 0.5) +
+  geom_density_ridges(alpha = 0.7, scale = 1.2, color = "white") +
+  facet_wrap(~tech_typ, nrow = 2) +
+  theme_ridges() +
+  theme(legend.position = "bottom") +
+  coord_cartesian(xlim = c(-0.2, 0.6)) +
+  scale_fill_manual(values = seasonal_colors) +
+  theme(legend.position = "none", legend.position.inside = c(0.1, 0.8)) +
+  labs(x = "", y = "Residuals of Generic PC")
+ggsave("fig/gb_tech+seas_genPC_resid_ridge.pdf", width = 5, height = 4)
+
+# month
+model_df %>%
+  ggplot(aes(x = norm_power_est0_resid, y = as.factor(month))) +
+  geom_density_ridges(
+    aes(fill = season),
+    alpha = 0.7,
+    scale = 1.2,
+    color = "white"
+  ) +
+  facet_wrap(~tech_typ) +
+  theme_ridges() +
+  coord_cartesian(xlim = c(-0.2, 0.6)) +
+  scale_fill_manual(values = seasonal_colors) +
+  theme(legend.position = "none") +
+  labs(x = "Residuals of Generic PC", y = "month")
+ggsave("fig/gb_tech+month_genPC_resid_ridge.pdf", width = 5, height = 5)
+
+
+model_df %>%
+  ggplot(aes(as.factor(month), norm_power_est0_resid)) +
+  geom_boxplot(aes(fill = season)) +
+  facet_wrap(~tech_typ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = seasonal_colors) +
+  theme(legend.position = "none") +
+  labs(x = "month", y = "Residuals of Generic PC")
+ggsave("fig/gb_tech+month_genPC_resid_boxplot.pdf", width = 5, height = 4)
+
+# hour
+
+# Dark Blue (00:00) -> Light Blue (12:00) -> Dark Blue (23:00)
+simple_blues <- c("#08306b", "#c6dbef", "#08306b")
+model_df %>% names()
+model_df %>%
+  ggplot(aes(x = as.factor(hour), y = ws_h_wmean)) +
+  # Use as.numeric(hour) to ensure the gradient mapping works
+  geom_boxplot(
+    aes(fill = as.numeric(hour)),
+    outlier.size = 0.5,
+    alpha = 0.8,
+    outliers = FALSE
+  ) +
+  facet_wrap(~tech_typ, nrow = 2, scales = "free") +
+  # Applying the gradient
+  scale_fill_gradientn(colors = simple_blues) +
+  # theme_bw() +
+  theme(
+    legend.position = "none",
+    panel.grid.minor = element_blank(),
+    # Academic journals often prefer slightly larger axis titles
+    # axis.title = element_text(face = "bold")
+  ) +
+  labs(
+    x = "Hour of Day",
+    y = "Residuals of Generic PC"
+  )
+ggsave("fig/gb_tech+hour_genPC_resid_boxplot.pdf", width = 5, height = 4)
+
+
+model_df %>%
+  ggplot(aes(y = as.factor(hour), x = norm_power_est0_resid)) +
+  geom_density_ridges(
+    aes(fill = as.numeric(hour)),
+    alpha = 0.7,
+    scale = 1.2,
+    color = "white"
+  ) +
+  facet_wrap(~tech_typ, nrow = 2, scales = "free") +
+  scale_fill_gradientn(colors = simple_blues) +
+  theme_ridges() +
+  theme(
+    legend.position = "none",
+    panel.grid.minor = element_blank(),
+    # Academic journals often prefer slightly larger axis titles
+    # axis.title = element_text(face = "bold")
+  ) +
+  labs(
+    y = "Hour of Day",
+    x = "Residuals of Generic PC"
+  )
+ggsave("fig/gb_tech+hour_genPC_resid_ridge.pdf", width = 5, height = 7)
+
+# best model coefficients ####
+
+# Reading wind farm level PC models ####

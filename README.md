@@ -56,9 +56,11 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - [x] merge with clean generation data
   - [x] wind vertical interpolation
   - [ ] Residual analysis
-    - [ ] scatter plots
-    - [ ] box plots
-    - [ ] look for specific events
+    - [x] scatter plots
+    - [x] box plots
+    - [ ] look for specific events 
+      - [ ] identify patterns?
+      - [ ] anomaly detection
 
 
 - **Power curve fitting**
