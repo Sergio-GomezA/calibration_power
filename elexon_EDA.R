@@ -21,6 +21,7 @@ ref_catalog_2025 <- fread(
   file.path("data/ref_catalog_wind_2025.csv.gz")
 )
 
+
 # Figures ####
 
 c_pal <- pal_locuszoom()(7)[c(1, 5, 3)]

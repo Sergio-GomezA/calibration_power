@@ -507,7 +507,7 @@ model_AIC <- readRDS(file.path(model_path, "lm0.rds"))
 # model_AIC$fitted.values %>% length()
 # ar lm
 full_model_ar1 <- readRDS(file = file.path(model_path, "gls_ar1.rds"))
-full_model_ar1
+
 # summary(full_model_ar1)
 full_model_ar1$fitted %>% length()
 
