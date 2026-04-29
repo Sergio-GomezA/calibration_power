@@ -9,7 +9,7 @@ GB_df <- read_parquet("GB_aggr_wind_gen.parquet")
 GB_df %>%
   head()
 
-data.fr
+
 GB_df %>% names()
 
 # GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
