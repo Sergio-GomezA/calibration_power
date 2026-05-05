@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "wpow_calibration_slides_26-05-05.pdf"
+    output-file: "wpow_calibration_slides_31-03-18.pdf"
 header-includes:
   - \usepackage{graphicx}
 fontsize: 12pt
@@ -56,221 +56,58 @@ theme_set(theme_bw())
 # Overview {#sec-intro}
 
 
-## Updates {#sec-updates .unnumbered .nolink}
+## Plan {#sec-plan .unnumbered .nolink}
 
-### New
 \begin{itemize}
-  \item Probabilistic Scenarios Revision
+  \item Literature review
   \item Calibration methods write-up\\{\small (linear, spatiotemporal \& quantile regression)}
   \item Power curve modelling write-up\\{\small (parametric, nonparametric, penalised regression)}
-  \item Addressing non stationarity
+  \item Calibration at aggregate vs.\ site level
+  \item Cut-off estimation
+  \item Wind drought extremes
 \end{itemize}
-
 <!-- 
-  \item Wind drought extremes -->
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\textbf{In progress}
+\begin{itemize}
+  \item Literature review
+  \item Calibration methods write-up\\{\small (linear, spatiotemporal \& quantile regression)}
+  \item Power curve modelling write-up\\{\small (parametric, nonparametric, penalised regression)}
+  \item Calibration at aggregate vs.\ site level
+  \item Cut-off estimation
+  \item Wind drought extremes
+\end{itemize}
+\end{column}
+\begin{column}{0.42\textwidth}
+\textbf{Next steps}
+\begin{itemize}
+  \item \textit{Draft}: next 2 weeks 
+  \item \textit{Completion}: $\sim$6 months
+\end{itemize}
+\vspace{1em}
+
+\end{column}
+\end{columns} -->
 
 
 
 <!-- ## Updates {#sec-updates .unnumbered .nolink}
 
+### New
+- Power curve modelling
+- Calibration comparison
+- Spatial correlation check
+- Out-of-sample validation
+- Wind speed Cut-off estimation (pooling data) -->
 
 <!-- ### Next steps
 - Wind direction effects on power curve
 - Compare model against benchmarks: Quantile mapping, GAMs
 - Calibration spatiotemporal model -->
 
-## Spatial correlation {-}
-::: {.columns}
 
-::: {.column width="50%"}
-\small Correlation for Elexon generation
-
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
-:::
-
-::: {.column width="50%"}
-\small Correlation for error after calibration
-
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/error0_corr_dist.pdf}
-:::
-
-:::
-
-# Challenges in spatial wind calibration
-
-- Non-stationarity 
-  - (space) spatially varying coefficients
-  - (wind direction) anisotropy
-  - (time) regimes / storms and other weather events
-
-- Physically informed model 
-  - Regularisation / penalisation
-
-- Data dimensionality reduction
-  - Aggregate time dimension (day)
-
-
-# Non-stationarity approaches found in the literature
-
-
-## Regression with PDE regularisation
-::: {.columns}
-
-::: {.column width="50%"}
-\footnotesize
-- Tomasetto et al.(2024) model anisotropy through a physics informed regression model
-- Includding physical knowledge through a PDE regularisation term
-\centering
-\includegraphics[width=\linewidth,height=3cm,keepaspectratio]{../fig_extra/2024_tomasetto_s-pde.png}
-:::
-
-::: {.column width="50%"}
-\centering
-\small 
-Sea Surface Temperature (SST)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2024_tomasetto_temp.png}
-:::
-
-:::
-
-## Explanatory variables in the covariance
-::: {.columns}
-
-::: {.column width="50%"}
-\footnotesize
-- Ingebrigtsen, Lindgren, and Steinsland (2014)
-- Regression on ranke and precision parameters of spatial term
-
-\begin{align}
-  \log \tau(\mathbf{s}) &= b_0^{(\tau)}(\mathbf{s}) +
-    \sum_{k=1}^p b_k^{(\tau)}(\mathbf{s})\,\theta_k,
-  \label{eq:logtau}\\
-  \log \kappa(\mathbf{s}) &= b_0^{(\kappa)}(\mathbf{s}) +
-    \sum_{k=1}^p b_k^{(\kappa)}(\mathbf{s})\,\theta_k.
-  \label{eq:logkappa}
-\end{align}
-
-:::
-
-::: {.column width="50%"}
-\centering
-\small 
-Field and correlation at two points
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2018_krasinksi_cov_regress.png}
-:::
-
-:::
-
-
-
-## Variables relevant to non-stationarity in wind
-::: {.columns}
-
-::: {.column width="50%"}
-\footnotesize
-- Wind dynamics are non-stationary in space and time
-- Weather regimes, storms, other events
-- Circulation patterns (NAO, AO, EA, SCAN)
-- NAO + leads to higher wind speeds UK and more variability
-
-:::
-
-::: {.column width="50%"}
-\centering
-\small 
-North Atlantic Oscillation (NAO)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2026_noaa_nao.png}
-:::
-
-:::
-
-## Cirtulation patterns and wind power
-
-::: {.columns}
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-North Atlantic Oscillation Index (NAO)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/nao_generation.pdf}
-
-:::
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-Artic Oscillation Index (AO)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ao_generation.pdf}
-:::
-
-:::
-
-## Cirtulation patterns and wind power
-
-::: {.columns}
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-East Atlantic Index (EA)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ea_generation.pdf}
-:::
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-Scandinavian Oscillation Index (SCAN)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/scan_generation.pdf}
-:::
-
-:::
-
-
-
-## Cirtulation patterns and error in wind power estimates
-
-::: {.columns}
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-North Atlantic Oscillation Index (NAO)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/nao_error.pdf}
-
-:::
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-Artic Oscillation Index (AO)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ao_error.pdf}
-:::
-
-:::
-
-## Cirtulation patterns and error in wind power estimates
-
-::: {.columns}
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-East Atlantic Index (EA)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ea_error.pdf}
-:::
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-Scandinavian Oscillation Index (SCAN)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/scan_error.pdf}
-:::
-
-:::
-
-# Appendix 
-
-# Calibration of generic power curve estimate {-}
+# Calibration of generic power curve estimate
 
 ## GB level aggregation
 ::: {.columns}
@@ -410,7 +247,7 @@ metrics_table %>%
   )
 ```
 
-# Power curve modelling {-}
+# Power curve modelling
 
 ## Power curve modelling
 ::: {.columns}
@@ -863,18 +700,32 @@ solution1 %>%
 :::
 
 
+# Spatial correlation
+::: {.columns}
 
+::: {.column width="50%"}
+\small Correlation for Elexon generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/norm_pot_corr_dist.pdf}
+:::
+
+::: {.column width="50%"}
+\small Correlation for error after calibration
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/error0_corr_dist.pdf}
+:::
+
+:::
 
 
 ## Next Steps
 
-
+- Add CRPS and coverage metrics
 - Spatiotemporal calibration model
-- Non-stationary covariance model
-- Comparison against benchmarks
+- Write introduction and methods
 
+# Appendix 
 
-<!-- - Add CRPS and coverage metrics -->
 
 ## Data sources 
 ::: {.columns}
