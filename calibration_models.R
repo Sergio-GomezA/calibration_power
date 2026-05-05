@@ -639,6 +639,7 @@ n.days <- 7
 time_skips <- 29
 # slice data to 12 hour time steps
 gb_thin <- pwr_curv_df %>%
+  rename(halfHourEndTime = time) %>%
   group_by(bmUnit) %>%
   arrange(halfHourEndTime) %>%
   mutate(hour = row_number()) %>%
@@ -731,12 +732,16 @@ dev.off()
 
 source("aux_funct.R")
 
-corr_df <- spatial_corr_by_distance_fast(
+
+sp_corr <- spatial_corr_by_distance_fast(
   gb_thin,
   value_col = "norm_potential",
   n_bins = 15,
-  bin_type = "quantile"
+  bin_type = "quantile",
+  bands = c(0.025, 0.975)
 )
+
+corr_df <- sp_corr$summary
 
 ggplot(corr_df, aes(x = dist_mean, y = corr_mean)) +
   geom_ribbon(
@@ -755,7 +760,45 @@ ggplot(corr_df, aes(x = dist_mean, y = corr_mean)) +
     # title = "Spatial correlation vs distance with variability and significance"
   ) +
   theme_minimal()
+
 ggsave("fig/norm_pot_corr_dist.pdf", width = 6, height = 4)
+
+
+outliers_df <- sp_corr$pairs %>%
+  filter(n_obs_per_pair >= 50) %>%
+  group_by(bin) %>%
+  mutate(
+    Q1 = quantile(corr, 0.25, na.rm = TRUE),
+    Q3 = quantile(corr, 0.75, na.rm = TRUE),
+    IQR = Q3 - Q1,
+    lower = Q1 - 1.5 * IQR,
+    upper = Q3 + 1.5 * IQR,
+    is_outlier = corr < lower | corr > upper
+  ) %>%
+  filter(is_outlier)
+
+bin_centers <- sp_corr$pairs %>%
+  group_by(bin) %>%
+  summarise(dist_mean = mean(dist_km), .groups = "drop")
+
+outliers_df <- outliers_df %>%
+  left_join(bin_centers, by = "bin")
+
+ggplot(corr_df, aes(x = dist_mean, y = corr_mean)) +
+  geom_ribbon(aes(ymin = corr_lower, ymax = corr_upper), fill = blues9[3]) +
+  geom_line(color = blues9[5]) +
+  geom_point(color = blues9[7]) +
+  geom_point(
+    data = outliers_df,
+    aes(x = dist_mean, y = corr),
+    color = "red",
+    alpha = 0.6,
+    size = 1.5
+  ) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Distance (km)", y = "Correlation") +
+  theme_minimal()
+
 
 corr_df_e <- spatial_corr_by_distance_fast(
   gb_thin,
@@ -763,7 +806,7 @@ corr_df_e <- spatial_corr_by_distance_fast(
   n_bins = 20,
   bin_type = "quantile"
 )
-ggplot(corr_df_e, aes(x = dist_mean, y = corr_mean)) +
+ggplot(corr_df_e$summary, aes(x = dist_mean, y = corr_mean)) +
   geom_ribbon(
     aes(ymin = corr_lower, ymax = corr_upper),
     # alpha = 0.2,
@@ -782,13 +825,13 @@ ggplot(corr_df_e, aes(x = dist_mean, y = corr_mean)) +
   theme_minimal()
 ggsave("fig/error0_corr_dist.pdf", width = 6, height = 4)
 
-
-spatial_corr_by_distance_fast(
+corr_df_est <- spatial_corr_by_distance_fast(
   gb_thin,
   value_col = "norm_power_est0",
   n_bins = 20,
   bin_type = "quantile"
-) %>%
+)
+corr_df_est$summary %>%
   ggplot(aes(x = dist_mean, y = corr_mean)) +
   geom_ribbon(
     aes(ymin = corr_lower, ymax = corr_upper),
