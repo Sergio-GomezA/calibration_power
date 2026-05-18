@@ -66,3 +66,4 @@ install.packages("ggridges")
 install.packages('R.utils')
 
 install.packages("GGally")
+install.packages("ggspatial")
