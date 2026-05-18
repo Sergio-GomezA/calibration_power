@@ -174,7 +174,9 @@ cat("Building spatial mesh\n")
 loc_unique <- wf_df_frag %>%
   distinct(x, y) %>%
   as.matrix()
-bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
+# bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
+# bnd <- fm_extensions(loc_unique, convex = c(-.08, -.3))
+bnd <- fm_extensions(loc_unique, convex = c(-.1, -.35))
 # bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
 # ggplot() + geom_sf(data = bnd[[2]])
 
@@ -190,16 +192,46 @@ uk_map <- uk_map %>%
   (\(g) g / 1000)() %>%
   st_set_geometry(uk_map, .)
 
+
+hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = 60)
+# ggplot() +
+#   geom_sf(data = uk_map, fill = NA, color = "black") +
+#   geom_sf(data = hex_0) +
+#   geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+#   theme_void()
+
+# wf.mesh <- fm_mesh_2d(
+#   # loc = loc_unique,
+#   loc = fm_hexagon_lattice(bnd[[1]], edge_len = 30),
+#   boundary = bnd,
+#   max.edge = c(60, 120), # km
+#   # offset = -0.2,
+#   cutoff = 25
+# )
 wf.mesh <- fm_mesh_2d(
   # loc = loc_unique,
-  loc = fm_hexagon_lattice(bnd[[1]], edge_len = 30),
+  loc = fm_hexagon_lattice(bnd[[1]], edge_len = 50),
   boundary = bnd,
-  max.edge = c(60, 120), # km
+  max.edge = c(100, 200), # km
   # offset = -0.2,
-  cutoff = 25
+  cutoff = 70
 )
 
-fm_assess()
+ggplot() +
+  geom_sf(data = uk_map, fill = NA, color = "black") +
+  gg(wf.mesh) +
+  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+  theme_void()
+wf.mesh$n
+inla.mesh.assessment
+mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 100)
+
+ggplot() +
+  geom_sf(data = mesh_assessment, aes(col = sd.bound)) +
+  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+  geom_sf(data = uk_map, fill = NA, color = "black") +
+  theme_void() +
+  scale_color_viridis_c(option = "inferno")
 # close to 1
 
 # plot(wf.mesh)
@@ -209,13 +241,6 @@ fm_assess()
 #   pch = 16,
 #   cex = 1
 # )
-
-ggplot() +
-  geom_sf(data = uk_map, fill = NA, color = "black") +
-  gg(wf.mesh) +
-  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-  theme_void()
-wf.mesh$n
 
 # SPDE model
 spde <- INLA::inla.spde2.pcmatern(
@@ -250,8 +275,8 @@ bru0 <- bru(
 )
 summary(bru0)
 
-# saveRDS(bru0, file = file.path(model_path, "st_bru0.rds"))
-bru0 <- readRDS(file.path(model_path, "st_bru0.rds"))
+# saveRDS(bru0, file = file.path(model_path, "st_bru0_mesh2.rds"))
+# bru0 <- readRDS(file.path(model_path, "st_bru0.rds"))
 
 bru0$summary.fixed[, 1:6]
 bru0$summary.random$tech_typ[, 1:6]
@@ -281,6 +306,7 @@ pow_est_st <- predict(
 p_median <- ggplot() +
   gg(pow_est_st, geom = "tile", aes(fill = q0.5)) +
   geom_sf(data = uk_map, fill = NA, color = "black", alpha = 0.5) +
+  gg(wf.mesh, alpha = 0.5) +
   geom_point(data = loc_unique, aes(x, y), color = "darkred") +
   facet_wrap(~time_id) +
   coord_sf() +
@@ -292,6 +318,7 @@ p_median
 p_sd <- ggplot() +
   gg(pow_est_st, geom = "tile", aes(fill = sd)) +
   geom_sf(data = uk_map, fill = NA, color = "black", alpha = 0.5) +
+  gg(wf.mesh, alpha = 0.5) +
   geom_point(data = loc_unique, aes(x, y), color = "darkred") +
   facet_wrap(~time_id) +
   coord_sf() +

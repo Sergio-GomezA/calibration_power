@@ -64,3 +64,5 @@ install.packages("ModelMetrics")
 install.packages("qmap")
 install.packages("ggridges")
 install.packages('R.utils')
+
+install.packages("GGally")
