@@ -54,12 +54,14 @@ source("aux_funct.R")
 source("read_data.R")
 
 
-# 1.2 EDA ------------------------------------------------------------------------
+# 1.2 full data frame-------------------------------------------------
+pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
+
+# 1.3 EDA ------------------------------------------------------------------------
 
 source("eda_figures.R")
 
-# 1.3 1 day data frame -------------------------------------------------
-pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
+# 1.4 1 day data frame -------------------------------------------------
 
 # d0 <- as.Date("2024-08-10")
 d0 <- as.Date("2025-08-10")
@@ -355,7 +357,12 @@ ggsave(
   width = 6,
   height = 4
 )
-
+plot.hyper.dens(bru0)
+ggsave(
+  sprintf("fig/hyperparameters_coarse_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
 # wf_df_frag %>%
 #   pull(pow_group) %>%
 #   range()
@@ -401,9 +408,12 @@ pow_est_st <- predict(
 p_median <- ggplot() +
   gg(pow_est_st, geom = "tile", aes(fill = q0.5)) +
   geom_sf(data = uk_map, fill = NA, color = "black", alpha = 0.5) +
-  gg(wf.mesh, alpha = 0.5) +
+  # gg(wf.mesh, alpha = 0.5) +
   geom_point(data = loc_unique, aes(x, y), color = "darkred", size = 0.5) +
-  facet_wrap(~time_id) +
+  facet_wrap(
+    ~time_id,
+    labeller = as_labeller(c("9" = "9:00", "12" = "12:00", "18" = "18:00"))
+  ) +
   coord_sf() +
   scale_fill_viridis_c() +
   theme_void()
@@ -416,10 +426,13 @@ ggsave(
 
 p_sd <- ggplot() +
   gg(pow_est_st, geom = "tile", aes(fill = sd)) +
-  geom_sf(data = uk_map, fill = NA, color = "black", alpha = 0.5) +
-  gg(wf.mesh, alpha = 0.5) +
+  geom_sf(data = uk_map, fill = NA, color = "white", alpha = 0.5) +
+  # gg(wf.mesh, alpha = 0.5) +
   geom_point(data = loc_unique, aes(x, y), color = "darkred", size = 0.5) +
-  facet_wrap(~time_id) +
+  facet_wrap(
+    ~time_id,
+    labeller = as_labeller(c("9" = "9:00", "12" = "12:00", "18" = "18:00"))
+  ) +
   coord_sf() +
   scale_fill_viridis_c(option = "inferno") +
   theme_void()
@@ -601,7 +614,7 @@ model_df_ts %>%
     lwd = 1
   ) +
   theme_minimal() +
-  facet_wrap(~model, ncol = 2, labeller = as_labeller(mod_labels2)) +
+  facet_wrap(~model, ncol = 3, labeller = as_labeller(mod_labels2)) +
   scale_x_datetime(date_labels = "%H:%M") +
   labs(
     title = sprintf("Power estimates Time Series %s", d0),
@@ -615,8 +628,8 @@ model_df_ts %>%
   theme(legend.position = "bottom")
 ggsave(
   sprintf("fig/power_estimates_time_series_%s.pdf", d0_tag),
-  width = 6,
-  height = 4
+  width = 10,
+  height = 6
 )
 
 model_df_ts2 <- model_df %>%
@@ -663,7 +676,7 @@ model_df_ts2 %>%
     lwd = 1
   ) +
   theme_minimal() +
-  facet_wrap(~model, ncol = 2, labeller = as_labeller(mod_labels)) +
+  facet_wrap(~model, ncol = 3, labeller = as_labeller(mod_labels)) +
   scale_x_datetime(date_labels = "%H:%M") +
   labs(
     title = sprintf("Power estimates Time Series %s", d0),
@@ -677,8 +690,8 @@ model_df_ts2 %>%
   theme(legend.position = "bottom")
 ggsave(
   sprintf("fig/power_estimates_error_time_series_%s.pdf", d0_tag),
-  width = 6,
-  height = 4
+  width = 10,
+  height = 6
 )
 
 # wf_df_frag %>% pull(site_name) %>% unique() %>% length()

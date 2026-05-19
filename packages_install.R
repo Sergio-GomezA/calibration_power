@@ -67,3 +67,5 @@ install.packages('R.utils')
 
 install.packages("GGally")
 install.packages("ggspatial")
+
+install.packages("plotly")

@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2026-03-31"
+date: "2026-05-19"
 format: 
   beamer:
     theme: Rochester
@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "wpow_calibration_slides_26-05-05.pdf"
+    output-file: "wpow_calibration_slides_25-05-19.pdf"
 header-includes:
   - \usepackage{graphicx}
 fontsize: 12pt
@@ -60,10 +60,9 @@ theme_set(theme_bw())
 
 ### New
 \begin{itemize}
-  \item Probabilistic Scenarios Revision
-  \item Calibration methods write-up\\{\small (linear, spatiotemporal \& quantile regression)}
-  \item Power curve modelling write-up\\{\small (parametric, nonparametric, penalised regression)}
-  \item Addressing non stationarity
+  \item Probabilistic Scenarios article accepted in Spatial Statistics
+  \item Project goal and summaries
+  \item Spatiotemporal model for calibration
 \end{itemize}
 
 <!-- 
@@ -78,6 +77,364 @@ theme_set(theme_bw())
 - Wind direction effects on power curve
 - Compare model against benchmarks: Quantile mapping, GAMs
 - Calibration spatiotemporal model -->
+
+# Project Goal
+
+- Correct ERA5 wind power biases using observed generation data.
+- Reduce error metrics (RMSE/MAE/bias).
+- Ensure spatially consistent estimates that generalise out-of-sample.
+- Capture low-wind events: frequency, duration, and spatial extent.
+
+
+# Spatiotemporal calibration model
+
+## Model overview
+
+\begin{equation}
+    \mathbb{E}(p^{\mathrm{calib}}_{it})
+    = \alpha + \beta_{k} + \beta_m + \beta_h
+    + s_p(\hat{p}_{it}) + s_w(w_{it})
+    + u_{it},
+    \label{eq:bayes_spat}
+  \end{equation}
+
+- Calibrated power: corrected output at site *i*, time *t*.  
+- $\alpha$: intercept.  
+- Fixed effects $\beta_k, \beta_m, \beta_h$: location/season/time structure. 
+- ERA5 correction $s_p$: bias adjustment of ERA5 + generic PC estimate.  
+- Wind effect $s_w$: nonlinear wind–power correction.  
+- Spatiotemporal effect $u_{it}$: Spatial component + AR1 error.
+
+## Estimated spatial field
+
+\centering
+
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_median_250810.pdf}
+
+## Standard deviation of the spatial field
+
+\centering
+
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_sd_250810.pdf}
+
+## Random Effects 
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\small Correction by wind speed
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_coarse_250810.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Correction by power regime
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_coarse_250810.pdf}
+:::
+
+:::
+
+## Hyperparameters
+
+\centering
+
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_coarse_250810.pdf}
+
+## Comparison scores
+
+```{r}
+
+metrics_table <- read.csv("../summaries/calib_metrics_250810.csv")
+# metrics_table <- read.csv("summaries/calib_metrics.csv")
+
+metrics_table %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+## Scores by Offshore / Onshore
+
+```{r}
+mod_labels <- c(
+  "Generic PC",
+  "Linear model",
+  "Spatio-temporal model",
+  "QM"
+)
+est_cols <- c(
+  "norm_power_est0",
+  "lm",
+  "st",
+  "qm"
+)
+
+names(mod_labels) <- est_cols
+d0_tag <- "250810"
+model_df <- st_read(sprintf("../data/calibration_df_%s.gpkg", d0_tag), quiet = TRUE)
+df_long <- model_df %>%
+  dplyr::select(tech_typ, norm_potential, all_of(est_cols)) %>%
+  pivot_longer(
+    cols = all_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  )
+require(ModelMetrics)
+tbl_tech_typ <- df_long %>%
+  st_drop_geometry() %>%
+  group_by(tech_typ, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model]) %>%
+  arrange(tech_typ, desc(RMSE))
+
+
+tbl_tech_typ %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+## Estimates by hour
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_250810.pdf}
+
+## Errors by hour
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_error_time_series_250810.pdf}
+
+
+## Model Mesh 
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\small Mesh used for spatial calibration model
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/spatial_mesh_coarse_250810.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Mesh assessment
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/spatial_mesh_coarse_assessment_sddev_250810.pdf}
+:::
+
+:::
+
+# Time series of data and generic PC estimate
+## ERA5 data and generic PC estimate
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/era5_generic_pc_time_series_tech_typ_250810.pdf}
+
+## Observed data
+
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/observed_power_time_series_tech_typ_250810.pdf}
+
+## Error of generic PC estimate
+
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_time_series_tech_typ_250810.pdf}
+
+## ERA5 wind speed
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\small Wind speed at wind farm locations
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_speed_time_series_250810.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Observed generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/observed_power_time_series_250810.pdf}
+:::
+
+:::
+
+# Same day previous year {-}
+
+## Estimated spatial field
+
+\centering
+
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_median_240810.pdf}
+
+## Standard deviation of the spatial field
+
+\centering
+
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_sd_240810.pdf}
+
+## Random Effects 
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\small Correction by wind speed
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_coarse_240810.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Correction by power regime
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_coarse_240810.pdf}
+:::
+
+:::
+
+## Hyperparameters
+
+\centering
+
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_coarse_240810.pdf}
+
+## Comparison scores
+
+```{r}
+
+metrics_table <- read.csv("../summaries/calib_metrics_240810.csv")
+# metrics_table <- read.csv("summaries/calib_metrics.csv")
+
+metrics_table %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+## Scores by Offshore / Onshore
+
+```{r}
+mod_labels <- c(
+  "Generic PC",
+  "Linear model",
+  "Spatio-temporal model",
+  "QM"
+)
+est_cols <- c(
+  "norm_power_est0",
+  "lm",
+  "st",
+  "qm"
+)
+
+names(mod_labels) <- est_cols
+d0_tag <- "240810"
+model_df <- st_read(sprintf("../data/calibration_df_%s.gpkg", d0_tag), quiet = TRUE)
+df_long <- model_df %>%
+  dplyr::select(tech_typ, norm_potential, all_of(est_cols)) %>%
+  pivot_longer(
+    cols = all_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  )
+require(ModelMetrics)
+tbl_tech_typ <- df_long %>%
+  st_drop_geometry() %>%
+  group_by(tech_typ, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model]) %>%
+  arrange(tech_typ, desc(RMSE))
+
+
+tbl_tech_typ %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+## Estimates by hour
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_240810.pdf}
+
+## Errors by hour
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_error_time_series_240810.pdf}
+
+
+## Model Mesh 
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\small Mesh used for spatial calibration model
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/spatial_mesh_coarse_240810.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Mesh assessment
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/spatial_mesh_coarse_assessment_sddev_240810.pdf}
+:::
+
+:::
+
+# Time series of data and generic PC estimate {-}
+## ERA5 data and generic PC estimate
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/era5_generic_pc_time_series_tech_typ_240810.pdf}
+
+## Observed data
+
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/observed_power_time_series_tech_typ_240810.pdf}
+
+## Error of generic PC estimate
+
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_time_series_tech_typ_240810.pdf}
+
+## ERA5 wind speed
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\small Wind speed at wind farm locations
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_speed_time_series_240810.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Observed generation
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/observed_power_time_series_240810.pdf}
+:::
+
+:::
+
+
+# Appendix 
 
 ## Spatial correlation {-}
 ::: {.columns}
@@ -95,180 +452,6 @@ theme_set(theme_bw())
 :::
 
 :::
-
-# Challenges in spatial wind calibration
-
-- Non-stationarity 
-  - (space) spatially varying coefficients
-  - (wind direction) anisotropy
-  - (time) regimes / storms and other weather events
-
-- Physically informed model 
-  - Regularisation / penalisation
-
-- Data dimensionality reduction
-  - Aggregate time dimension (day)
-
-
-# Non-stationarity approaches found in the literature
-
-
-## Regression with PDE regularisation
-::: {.columns}
-
-::: {.column width="50%"}
-\footnotesize
-- Tomasetto et al.(2024) model anisotropy through a physics informed regression model
-- Includding physical knowledge through a PDE regularisation term
-\centering
-\includegraphics[width=\linewidth,height=3cm,keepaspectratio]{../fig_extra/2024_tomasetto_s-pde.png}
-:::
-
-::: {.column width="50%"}
-\centering
-\small 
-Sea Surface Temperature (SST)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2024_tomasetto_temp.png}
-:::
-
-:::
-
-## Explanatory variables in the covariance
-::: {.columns}
-
-::: {.column width="50%"}
-\footnotesize
-- Ingebrigtsen, Lindgren, and Steinsland (2014)
-- Regression on ranke and precision parameters of spatial term
-
-\begin{align}
-  \log \tau(\mathbf{s}) &= b_0^{(\tau)}(\mathbf{s}) +
-    \sum_{k=1}^p b_k^{(\tau)}(\mathbf{s})\,\theta_k,
-  \label{eq:logtau}\\
-  \log \kappa(\mathbf{s}) &= b_0^{(\kappa)}(\mathbf{s}) +
-    \sum_{k=1}^p b_k^{(\kappa)}(\mathbf{s})\,\theta_k.
-  \label{eq:logkappa}
-\end{align}
-
-:::
-
-::: {.column width="50%"}
-\centering
-\small 
-Field and correlation at two points
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2018_krasinksi_cov_regress.png}
-:::
-
-:::
-
-
-
-## Variables relevant to non-stationarity in wind
-::: {.columns}
-
-::: {.column width="50%"}
-\footnotesize
-- Wind dynamics are non-stationary in space and time
-- Weather regimes, storms, other events
-- Circulation patterns (NAO, AO, EA, SCAN)
-- NAO + leads to higher wind speeds UK and more variability
-
-:::
-
-::: {.column width="50%"}
-\centering
-\small 
-North Atlantic Oscillation (NAO)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2026_noaa_nao.png}
-:::
-
-:::
-
-## Cirtulation patterns and wind power
-
-::: {.columns}
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-North Atlantic Oscillation Index (NAO)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/nao_generation.pdf}
-
-:::
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-Artic Oscillation Index (AO)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ao_generation.pdf}
-:::
-
-:::
-
-## Cirtulation patterns and wind power
-
-::: {.columns}
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-East Atlantic Index (EA)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ea_generation.pdf}
-:::
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-Scandinavian Oscillation Index (SCAN)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/scan_generation.pdf}
-:::
-
-:::
-
-
-
-## Cirtulation patterns and error in wind power estimates
-
-::: {.columns}
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-North Atlantic Oscillation Index (NAO)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/nao_error.pdf}
-
-:::
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-Artic Oscillation Index (AO)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ao_error.pdf}
-:::
-
-:::
-
-## Cirtulation patterns and error in wind power estimates
-
-::: {.columns}
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-East Atlantic Index (EA)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ea_error.pdf}
-:::
-
-::: {.column width="50%"}
-\centering
-\footnotesize
-Scandinavian Oscillation Index (SCAN)
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/scan_error.pdf}
-:::
-
-:::
-
-# Appendix 
 
 # Calibration of generic power curve estimate {-}
 
@@ -1010,6 +1193,180 @@ Panit Potisomporn, C. Vogel (2024) perform a extreme value analysis of wind drou
 \centering
 \small CF calibration 
 \includegraphics[width=\linewidth]{../fig_extra/2024_potisomporn_CF_comparison.png}
+:::
+
+:::
+
+
+
+# Challenges in spatial wind calibration {-}
+
+- Non-stationarity 
+  - (space) spatially varying coefficients
+  - (wind direction) anisotropy
+  - (time) regimes / storms and other weather events
+
+- Physically informed model 
+  - Regularisation / penalisation
+
+- Data dimensionality reduction
+  - Aggregate time dimension (day)
+
+
+# Non-stationarity approaches found in the literature {-}
+
+
+## Regression with PDE regularisation
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Tomasetto et al.(2024) model anisotropy through a physics informed regression model
+- Includding physical knowledge through a PDE regularisation term
+\centering
+\includegraphics[width=\linewidth,height=3cm,keepaspectratio]{../fig_extra/2024_tomasetto_s-pde.png}
+:::
+
+::: {.column width="50%"}
+\centering
+\small 
+Sea Surface Temperature (SST)
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2024_tomasetto_temp.png}
+:::
+
+:::
+
+## Explanatory variables in the covariance
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Ingebrigtsen, Lindgren, and Steinsland (2014)
+- Regression on ranke and precision parameters of spatial term
+
+\begin{align}
+  \log \tau(\mathbf{s}) &= b_0^{(\tau)}(\mathbf{s}) +
+    \sum_{k=1}^p b_k^{(\tau)}(\mathbf{s})\,\theta_k,
+  \label{eq:logtau}\\
+  \log \kappa(\mathbf{s}) &= b_0^{(\kappa)}(\mathbf{s}) +
+    \sum_{k=1}^p b_k^{(\kappa)}(\mathbf{s})\,\theta_k.
+  \label{eq:logkappa}
+\end{align}
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small 
+Field and correlation at two points
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2018_krasinksi_cov_regress.png}
+:::
+
+:::
+
+
+
+## Variables relevant to non-stationarity in wind
+::: {.columns}
+
+::: {.column width="50%"}
+\footnotesize
+- Wind dynamics are non-stationary in space and time
+- Weather regimes, storms, other events
+- Circulation patterns (NAO, AO, EA, SCAN)
+- NAO + leads to higher wind speeds UK and more variability
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small 
+North Atlantic Oscillation (NAO)
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig_extra/2026_noaa_nao.png}
+:::
+
+:::
+
+## Cirtulation patterns and wind power
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\footnotesize
+North Atlantic Oscillation Index (NAO)
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/nao_generation.pdf}
+
+:::
+
+::: {.column width="50%"}
+\centering
+\footnotesize
+Artic Oscillation Index (AO)
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ao_generation.pdf}
+:::
+
+:::
+
+## Cirtulation patterns and wind power
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\footnotesize
+East Atlantic Index (EA)
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ea_generation.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\footnotesize
+Scandinavian Oscillation Index (SCAN)
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/scan_generation.pdf}
+:::
+
+:::
+
+
+
+## Cirtulation patterns and error in wind power estimates
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\footnotesize
+North Atlantic Oscillation Index (NAO)
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/nao_error.pdf}
+
+:::
+
+::: {.column width="50%"}
+\centering
+\footnotesize
+Artic Oscillation Index (AO)
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ao_error.pdf}
+:::
+
+:::
+
+## Cirtulation patterns and error in wind power estimates
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\footnotesize
+East Atlantic Index (EA)
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/ea_error.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\footnotesize
+Scandinavian Oscillation Index (SCAN)
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/scan_error.pdf}
 :::
 
 :::
