@@ -1690,6 +1690,8 @@ plot.effects <- function(
   trans = \(x) x,
   show.fig = TRUE,
   window = "all",
+  n.replicate = 1,
+  replicate_names = NULL,
   ...
 ) {
   if (rand.effect == "etaderiv" | rand.effect == "eta+deriv") {
@@ -1716,7 +1718,8 @@ plot.effects <- function(
   if (window != "all" & is.numeric(window)) {
     spline_summary <- spline_summary %>% tail(trunc(window))
   }
-
+  n_row = nrow(spline_summary)
+  # browser()
   # Create a data frame for ggplot
   plot_data <- data.frame(
     group = spline_summary$ID, # The grouped values for the random effect
@@ -1727,6 +1730,24 @@ plot.effects <- function(
     {
       if (rand.effect %in% c("hour", "month")) {
         mutate(., across(group, as.numeric))
+      } else {
+        .
+      }
+    } %>%
+    {
+      # browser()
+      if (n.replicate > 1) {
+        mutate(
+          .,
+          type = rep(
+            if (is.null(replicate_names)) {
+              paste0("rep", 1:n.replicate)
+            } else {
+              replicate_names
+            },
+            each = n_row / n.replicate
+          )
+        )
       } else {
         .
       }
@@ -1742,6 +1763,9 @@ plot.effects <- function(
       x = paste(rand.effect, "(Binned Variable)"),
       y = "Estimated Effect"
     ) +
+    {
+      if (n.replicate > 1) facet_wrap(~type, scales = "free_y")
+    } +
     theme_minimal()
   if (show.fig) {
     print(p1)

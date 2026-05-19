@@ -124,9 +124,12 @@ ModelMetrics::rmse(GB_df$norm_potential, model_AIC0$fitted.values)
 # -- Add non-stationary covariance
 
 ## 3.1 Single run attempt --------------------------------------------------------------
-pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve.parquet"))
+pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
 
 d0 <- as.Date("2024-08-10")
+d0 <- as.Date("2025-08-10")
+
+d0_tag <- format(d0, "%y%m%d")
 n.days <- 1
 wf_df_frag <- pwr_curv_df %>%
   rename(time = halfHourEndTime) %>%
@@ -222,13 +225,21 @@ wf.mesh <- fm_mesh_2d(
   cutoff = 30,
   max.n.strict = c(400, 100)
 )
-wf.mesh$n
+saveRDS(
+  wf.mesh,
+  file.path(model_path, sprintf("spatial_mesh_coarse_%s.rds", d0_tag))
+)
 ggplot() +
   geom_sf(data = uk_map, fill = NA, color = "black") +
   gg(wf.mesh) +
   geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
   theme_void()
-ggsave("fig/spatial_mesh_coarse.pdf", width = 4, height = 6)
+ggsave(
+  sprintf("fig/spatial_mesh_coarse_%s.pdf", d0_tag),
+  width = 4,
+  height = 6
+)
 
 ### mesh assessment #####
 mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 60) %>%
@@ -242,6 +253,11 @@ ggplot() +
   annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
   theme_void() +
   scale_color_viridis_c(option = "D")
+ggsave(
+  sprintf("fig/spatial_mesh_coarse_assessment_edgelen_%s.pdf", d0_tag),
+  width = 4,
+  height = 6
+)
 # sd.dev should be close to 1
 ggplot() +
   geom_sf(data = mesh_assessment, aes(col = sd.dev)) +
@@ -250,7 +266,11 @@ ggplot() +
   annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
   theme_void() +
   scale_color_viridis_c(option = "D")
-ggsave("fig/spatial_mesh_coarse_assessment_sddev.pdf", width = 4, height = 6)
+ggsave(
+  sprintf("fig/spatial_mesh_coarse_assessment_sddev_%s.pdf", d0_tag),
+  width = 4,
+  height = 6
+)
 
 ## SPDE model ####
 spde <- INLA::inla.spde2.pcmatern(
@@ -259,19 +279,19 @@ spde <- INLA::inla.spde2.pcmatern(
   prior.sigma = c(0.2, 0.5) # P(sd > 0.2)=0.5
 )
 
+# components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+#   power_correction(norm_power_est0, model = "linear") + # fixed slope
+#   tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+#   tech_power(tech_typ, model = "iid", weights = norm_power_est0) + # random slope
+#   wind(ws_group, model = "rw2") +
+#   st_field(
+#     geometry,
+#     model = spde,
+#     group = time_id,
+#     control.group = list(model = "ar1")
+#   )
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
-  power_correction(norm_power_est0, model = "linear") + # fixed slope
-  tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
-  tech_power(tech_typ, model = "iid", weights = norm_power_est0) + # random slope
-  wind(ws_group, model = "rw2") +
-  st_field(
-    geometry,
-    model = spde,
-    group = time_id,
-    control.group = list(model = "ar1")
-  )
-components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
-  tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
   power_correction(
     pow_group,
     model = "rw2",
@@ -286,11 +306,10 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     control.group = list(model = "ar1")
   )
 
-
 bru0 <- bru(
   components = components0,
   formula = norm_potential ~ Intercept +
-    tech_typ +
+    # tech_typ +
     power_correction +
     wind +
     st_field,
@@ -299,14 +318,41 @@ bru0 <- bru(
 )
 summary(bru0)
 
-saveRDS(bru0, file = file.path(model_path, "st_bru0_coarse_mesh.rds"))
-# bru0 <- readRDS(file.path(model_path, "st_bru0.rds"))
+saveRDS(
+  bru0,
+  file = file.path(model_path, sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag))
+)
+# bru0 <- readRDS(file.path(
+#   model_path,
+#   sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag)
+# ))
 
 bru0$summary.fixed[, 1:6]
-bru0$summary.random$tech_typ[, 1:6]
-bru0$summary.random$tech_power[, 1:6]
-# bru0$summary.random$wind
+# bru0$summary.random$tech_typ[, 1:6]
+# bru0$summary.random$tech_power[, 1:6]
+
+# source("aux_funct.R")
 plot.effects(bru0, "wind", show.plot = TRUE)
+ggsave(sprintf("fig/wind_effect_coarse_%s.pdf", d0_tag), width = 6, height = 4)
+plot.effects(
+  bru0,
+  "power_correction",
+  show.plot = TRUE,
+  n.replicate = 2,
+  replicate_names = c("Offshore", "Onshore")
+)
+ggsave(
+  sprintf("fig/power_correction_effect_coarse_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+# wf_df_frag %>%
+#   pull(pow_group) %>%
+#   range()
+
+# wf_df_frag %>%
+#   ggplot()+ geom_density(aes(pow_group, fill = tech_typ), alpha = 0.5)+theme_minimal()
 
 # plot intensity of spatial field
 
@@ -314,18 +360,34 @@ ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf")
 ppxl_all <- fm_cprod(
   ppxl,
   data.frame(
+    # time_id = unique(wf_df_frag$time_id)
     time_id = c(9, 12, 18)
   )
 )
 
+set.seed(1)
 pow_est_st <- predict(
   bru0,
   ppxl_all,
   ~ data.frame(
     time_id = time_id,
     norm_potential_est = st_field
-  )
+  ),
+  n.samples = 20
 )
+
+# ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf", dims = c(50, 50))
+
+# pow_est_st <- predict(
+#   bru0,
+#   ppxl,
+#   ~ data.frame(
+#     time_id = time_id,
+#     norm_potential_est = st_field
+#   ),
+#   n.samples = 20
+# )
+# predict(bru0, ppxl, n.samples = 20)
 
 p_median <- ggplot() +
   gg(pow_est_st, geom = "tile", aes(fill = q0.5)) +
@@ -337,7 +399,11 @@ p_median <- ggplot() +
   scale_fill_viridis_c() +
   theme_void()
 p_median
-ggsave("fig/coarse_spatial_field_median.pdf", width = 6, height = 4)
+ggsave(
+  sprintf("fig/coarse_spatial_field_median_%s.pdf", d0_tag),
+  width = 10,
+  height = 6
+)
 
 p_sd <- ggplot() +
   gg(pow_est_st, geom = "tile", aes(fill = sd)) +
@@ -349,7 +415,11 @@ p_sd <- ggplot() +
   scale_fill_viridis_c(option = "inferno") +
   theme_void()
 p_sd
-ggsave("fig/coarse_spatial_field_sd.pdf", width = 6, height = 4)
+ggsave(
+  sprintf("fig/coarse_spatial_field_sd_%s.pdf", d0_tag),
+  width = 10,
+  height = 6
+)
 # plot ts
 # mesh triangle size
 # different days
