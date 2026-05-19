@@ -61,7 +61,7 @@ source("eda_figures.R")
 # 1.3 1 day data frame -------------------------------------------------
 pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
 
-d0 <- as.Date("2024-08-10")
+# d0 <- as.Date("2024-08-10")
 d0 <- as.Date("2025-08-10")
 
 d0_tag <- format(d0, "%y%m%d")
@@ -157,7 +157,7 @@ model_AIC0 <- step(
   # steps = 5,
   k = 2
 )
-model_AIC %>%
+model_AIC0 %>%
   saveRDS(
     file.path(
       model_path,
@@ -325,14 +325,14 @@ bru0 <- bru(
 )
 
 
-saveRDS(
-  bru0,
-  file = file.path(model_path, sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag))
-)
-# bru0 <- readRDS(file.path(
-#   model_path,
-#   sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag)
-# ))
+# saveRDS(
+#   bru0,
+#   file = file.path(model_path, sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag))
+# )
+bru0 <- readRDS(file.path(
+  model_path,
+  sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag)
+))
 
 ## summary and effect plots ####
 summary(bru0)
@@ -460,7 +460,10 @@ ggsave(
 # )
 
 # model comparison ####
-
+model_AIC0 <- readRDS(file.path(
+  model_path,
+  sprintf("lm0_cir%s.rds", d0_tag)
+))
 qqmod <- fitQmap(
   obs = wf_df_frag %>% pull(norm_potential),
   mod = wf_df_frag %>% pull(norm_power_est0),
@@ -484,6 +487,10 @@ est_cols <- c(
   "st",
   "qm"
 )
+# length(wgen_qm)
+# length(wf_df_frag$norm_potential)
+# length(bru0$summary.fitted.values[1:n, "mean"])
+# length(model_AIC0$fitted.values)
 n <- nrow(wf_df_frag)
 names(mod_labels) <- est_cols
 model_df <- wf_df_frag %>%
@@ -503,6 +510,7 @@ st_write(
   model_df,
   sprintf("data/calibration_df_%s.gpkg", d0_tag),
   driver = "GPKG",
+  append = FALSE,
 )
 
 ## Reading fitted values ####
@@ -550,6 +558,128 @@ df_long %>%
   arrange(tech_typ, desc(RMSE))
 
 ## ts plots #####
+
+mod_labels2 <- c(mod_labels, "norm_potential" = "Observed")
+model_df_ts <- model_df %>%
+  dplyr::select(
+    time,
+    site_name,
+    tech_typ,
+    norm_potential,
+    capacity,
+    ws_h,
+    all_of(est_cols)
+  ) %>%
+  pivot_longer(
+    cols = all_of(c("norm_potential", est_cols)),
+    names_to = "model",
+    values_to = "estimate"
+  )
+
+model_df_ts %>%
+  ggplot() +
+  geom_line(
+    aes(time, estimate, group = site_name),
+    alpha = 0.5,
+    col = "gray50"
+  ) +
+  geom_line(
+    data = model_df_ts %>%
+      group_by(time, model) %>%
+      summarise(
+        power = sum(estimate * capacity) / sum(capacity),
+        .groups = "drop"
+      ),
+    aes(time, power, col = "capacity weighted avg."),
+    lwd = 1
+  ) +
+  geom_line(
+    data = model_df_ts %>%
+      group_by(time, model) %>%
+      summarise(power = mean(estimate), .groups = "drop"),
+    aes(time, power, col = "simple avg."),
+    lwd = 1
+  ) +
+  theme_minimal() +
+  facet_wrap(~model, ncol = 2, labeller = as_labeller(mod_labels2)) +
+  scale_x_datetime(date_labels = "%H:%M") +
+  labs(
+    title = sprintf("Power estimates Time Series %s", d0),
+    x = "Time",
+    y = "Generation (% of capacity)",
+    col = ""
+  ) +
+  scale_color_manual(
+    values = c("capacity weighted avg." = "blue", "simple avg." = "red")
+  ) +
+  theme(legend.position = "bottom")
+ggsave(
+  sprintf("fig/power_estimates_time_series_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+model_df_ts2 <- model_df %>%
+  dplyr::select(
+    time,
+    site_name,
+    tech_typ,
+    norm_potential,
+    capacity,
+    ws_h,
+    all_of(est_cols)
+  ) %>%
+  mutate(across(
+    all_of(est_cols),
+    ~ . - norm_potential
+  )) %>%
+  pivot_longer(
+    cols = all_of(est_cols),
+    names_to = "model",
+    values_to = "error"
+  )
+model_df_ts2 %>%
+  ggplot() +
+  geom_line(
+    aes(time, error, group = site_name),
+    alpha = 0.5,
+    col = "gray50"
+  ) +
+  geom_line(
+    data = model_df_ts2 %>%
+      group_by(time, model) %>%
+      summarise(
+        error = sum(error * capacity) / sum(capacity),
+        .groups = "drop"
+      ),
+    aes(time, error, col = "capacity weighted avg."),
+    lwd = 1
+  ) +
+  geom_line(
+    data = model_df_ts2 %>%
+      group_by(time, model) %>%
+      summarise(error = mean(error), .groups = "drop"),
+    aes(time, error, col = "simple avg."),
+    lwd = 1
+  ) +
+  theme_minimal() +
+  facet_wrap(~model, ncol = 2, labeller = as_labeller(mod_labels)) +
+  scale_x_datetime(date_labels = "%H:%M") +
+  labs(
+    title = sprintf("Power estimates Time Series %s", d0),
+    x = "Time",
+    y = "Error (% of capacity)",
+    col = ""
+  ) +
+  scale_color_manual(
+    values = c("capacity weighted avg." = "blue", "simple avg." = "red")
+  ) +
+  theme(legend.position = "bottom")
+ggsave(
+  sprintf("fig/power_estimates_error_time_series_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
 
 # wf_df_frag %>% pull(site_name) %>% unique() %>% length()
 
