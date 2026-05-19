@@ -204,9 +204,9 @@ anova(model_AIC)
 # install.packages("stargazer")
 # install.packages("modelsummary")
 # require(stargazer)
-require(modelsummary)
+# require(modelsummary)
 
-modelsummary(model_AIC, output = "latex")
+# modelsummary(model_AIC, output = "latex")
 
 # qm
 
