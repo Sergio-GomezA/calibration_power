@@ -53,77 +53,12 @@ source("aux_funct.R")
 # 1.1 Load data ----------------------------------------------------------------
 source("read_data.R")
 
+
 # 1.2 EDA ------------------------------------------------------------------------
 
 source("eda_figures.R")
 
-# 2. Aggregated model ------------------------------------------------------------------
-# Updates:
-# - Adding entire dataset
-# - Adding more covariates NAO, AO, EA, SCAN
-
-## 2.1 LM step AIC selection --------------------------------------------------------------
-
-base_model <- lm(
-  norm_potential ~ norm_power_est0,
-  data = GB_df
-)
-
-full_model <- lm(
-  norm_potential ~ tech_typ *
-    norm_power_est0 +
-    norm_power_est0 * month +
-    hour +
-    poly(ws_h_wmean, 3) +
-    nao * tech_typ +
-    ao * tech_typ +
-    ea * tech_typ +
-    scan * tech_typ,
-  data = GB_df
-)
-
-full_model0 <- lm(
-  norm_potential ~ tech_typ *
-    norm_power_est0 +
-    norm_power_est0 * month +
-    hour +
-    poly(ws_h_wmean, 3),
-  data = GB_df
-)
-summary(full_model)
-
-
-model_AIC <- step(
-  base_model,
-  scope = list(lower = base_model, upper = full_model),
-  # steps = 5,
-  k = 2
-)
-model_AIC0 <- step(
-  base_model,
-  scope = list(lower = base_model, upper = full_model0),
-  # steps = 5,
-  k = 2
-)
-model_AIC %>%
-  saveRDS(
-    file.path(
-      model_path,
-      "lm0_cir.rds"
-    )
-  )
-
-ModelMetrics::rmse(GB_df$norm_potential, model_AIC$fitted.values)
-ModelMetrics::rmse(GB_df$norm_potential, model_AIC0$fitted.values)
-
-# 3. Spatially disaggregated model -----------------------------------------------------
-# Updates:
-# -- Add more locations (previously only 25)
-# -- Add anomaly detection to handle outliers separately
-# -- Add more covariates terrain, NAO, AO, EA, SCAN
-# -- Add non-stationary covariance
-
-## 3.1 Single run attempt --------------------------------------------------------------
+# 1.3 1 day data frame -------------------------------------------------
 pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
 
 d0 <- as.Date("2024-08-10")
@@ -145,6 +80,7 @@ wf_df_frag <- pwr_curv_df %>%
     site_name = first(site_name),
     tech_typ = first(tech_typ),
     across(c(ws_h, wd10, wd100), mean),
+    ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
     across(c(potential, power_est0, capacity, curtailment), sum),
     .groups = "drop"
   ) %>%
@@ -172,6 +108,77 @@ wf_df_frag <- wf_df_frag %>%
   st_geometry() %>%
   (\(g) g / 1000)() %>%
   st_set_geometry(wf_df_frag, .)
+
+# 2. Aggregated model ------------------------------------------------------------------
+# Updates:
+# - Adding entire dataset
+# - Adding more covariates NAO, AO, EA, SCAN
+
+## 2.1 LM step AIC selection --------------------------------------------------------------
+
+base_model <- lm(
+  norm_potential ~ norm_power_est0,
+  data = wf_df_frag
+)
+
+# full_model <- lm(
+#   norm_potential ~ tech_typ *
+#     norm_power_est0 +
+#     # norm_power_est0 * month +
+#     # hour +
+#     poly(ws_h_wmean, 3) +
+#     nao * tech_typ +
+#     ao * tech_typ +
+#     ea * tech_typ +
+#     scan * tech_typ,
+#   data = wf_df_frag
+# )
+
+full_model0 <- lm(
+  norm_potential ~ tech_typ *
+    norm_power_est0 +
+    # norm_power_est0 * month +
+    # hour +
+    poly(ws_h_wmean, 3),
+  data = wf_df_frag
+)
+summary(full_model0)
+
+
+# model_AIC <- step(
+#   base_model,
+#   scope = list(lower = base_model, upper = full_model0),
+#   # steps = 5,
+#   k = 2
+# )
+model_AIC0 <- step(
+  base_model,
+  scope = list(lower = base_model, upper = full_model0),
+  # steps = 5,
+  k = 2
+)
+model_AIC %>%
+  saveRDS(
+    file.path(
+      model_path,
+      sprintf("lm0_cir%s.rds", d0_tag)
+    )
+  )
+
+# ModelMetrics::rmse(GB_df$norm_potential, model_AIC$fitted.values)
+ModelMetrics::rmse(wf_df_frag$norm_potential, model_AIC0$fitted.values)
+
+# 3. Spatially disaggregated model -----------------------------------------------------
+# Updates:
+# -- Add more locations (previously only 25)
+# -- Add anomaly detection to handle outliers separately
+# -- Add more covariates terrain, NAO, AO, EA, SCAN
+# -- Add non-stationary covariance
+
+## 3.1 Single run attempt --------------------------------------------------------------
+
+## time series figures ####
+source("ts_figures.R")
 
 ## mesh building #####
 cat("Building spatial mesh\n")
@@ -316,7 +323,7 @@ bru0 <- bru(
   family = "gaussian",
   data = wf_df_frag
 )
-summary(bru0)
+
 
 saveRDS(
   bru0,
@@ -327,6 +334,8 @@ saveRDS(
 #   sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag)
 # ))
 
+## summary and effect plots ####
+summary(bru0)
 bru0$summary.fixed[, 1:6]
 # bru0$summary.random$tech_typ[, 1:6]
 # bru0$summary.random$tech_power[, 1:6]
@@ -354,7 +363,7 @@ ggsave(
 # wf_df_frag %>%
 #   ggplot()+ geom_density(aes(pow_group, fill = tech_typ), alpha = 0.5)+theme_minimal()
 
-# plot intensity of spatial field
+### plot intensity of spatial field ####
 
 ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf")
 ppxl_all <- fm_cprod(
@@ -449,6 +458,98 @@ ggsave(
 #       st_field)
 #   )
 # )
+
+# model comparison ####
+
+qqmod <- fitQmap(
+  obs = wf_df_frag %>% pull(norm_potential),
+  mod = wf_df_frag %>% pull(norm_power_est0),
+  method = "QUANT"
+)
+
+wgen_qm <- with(
+  wf_df_frag,
+  doQmapQUANT(norm_power_est0, qqmod, type = "linear")
+)
+
+mod_labels <- c(
+  "Generic PC",
+  "Linear model",
+  "Spatio-temporal model",
+  "QM"
+)
+est_cols <- c(
+  "norm_power_est0",
+  "lm",
+  "st",
+  "qm"
+)
+n <- nrow(wf_df_frag)
+names(mod_labels) <- est_cols
+model_df <- wf_df_frag %>%
+  mutate(
+    lm = model_AIC0$fitted.values,
+    st = bru0$summary.fitted.values[1:n, "mean"],
+    # ar = full_model_ar1$fitted,
+    # lm_bru = bru0$summary.fitted.values[1:n, "mean"],
+    # ar_bru = bru_ar$summary.fitted.values[1:n, "mean"],
+    # ar_bru2 = bru_ar$summary.fitted.values[1:n, "mean"] -
+    # bru_ar$summary.random$u[1:n, "mean"],
+    qm = wgen_qm
+  )
+
+# write_parquet(model_df, sprintf("data/calibration_df_%s.parquet", d0_tag))
+st_write(
+  model_df,
+  sprintf("data/calibration_df_%s.gpkg", d0_tag),
+  driver = "GPKG",
+)
+
+## Reading fitted values ####
+
+model_df <- st_read(sprintf("data/calibration_df_%s.gpkg", d0_tag))
+
+# model_df %>% head()
+
+df_long <- model_df %>%
+  dplyr::select(tech_typ, norm_potential, all_of(est_cols)) %>%
+  pivot_longer(
+    cols = all_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  )
+require(ModelMetrics)
+metrics_table <- df_long %>%
+  st_drop_geometry() %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model]) %>%
+  arrange(desc(RMSE))
+
+write.csv(
+  metrics_table,
+  sprintf("summaries/calib_metrics_%s.csv", d0_tag),
+  row.names = FALSE
+)
+
+df_long %>%
+  st_drop_geometry() %>%
+  group_by(tech_typ, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model]) %>%
+  arrange(tech_typ, desc(RMSE))
+
+## ts plots #####
 
 # wf_df_frag %>% pull(site_name) %>% unique() %>% length()
 
