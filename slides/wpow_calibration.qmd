@@ -1197,6 +1197,46 @@ Panit Potisomporn, C. Vogel (2024) perform a extreme value analysis of wind drou
 
 :::
 
+# ERA5 + generic power curve error analysis {-}
+
+## Error by Onshore / Offshore
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\small Errors by observed power
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../../calibration_power_main_doc/fig_errors/gb_tech+_genPC_resid_2Ddensity.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Error density
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../../calibration_power_main_doc/fig_errors/gb_tech_genPC_resid_density.pdf}
+:::
+
+:::
+
+## Errors through time
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\small Error by hour
+
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../../calibration_power_main_doc/fig_errors/gb_tech+hour_genPC_resid_boxplot.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Error by month
+
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../../calibration_power_main_doc/fig_errors/gb_tech+month_genPC_resid_boxplot.pdf}
+:::
+
+:::
+
 
 
 # Challenges in spatial wind calibration {-}
