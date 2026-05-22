@@ -69,3 +69,35 @@ install.packages("GGally")
 install.packages("ggspatial")
 
 install.packages("plotly")
+
+remove.packages(c("sf", "lwgeom", "stars", "terra", "units"))
+install.packages(
+  c(
+    "sf",
+    "terra",
+    "lwgeom",
+    "units",
+    "stars"
+  ),
+  type = "source"
+)
+
+
+install.packages("sf")
+install.packages("sf", type = "source")
+remove.packages("stringi")
+install.packages("stringi", type = "source")
+install.packages("ggthemes", type = "source")
+# Sys.getenv("PATH")
+# Sys.which("gdal-config")
+
+# Sys.setenv(PATH = paste(
+#   "/usr/bin",
+#   "/bin",
+#   "/usr/sbin",
+#   "/sbin",
+#   "/usr/local/bin",
+#   sep = ":"
+# ))
+
+# Sys.which("gdal-config")

@@ -123,6 +123,23 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - [x] Correlation decay
   - [x] Non-stationary spatial patterns
 
+
+- **Model diagnostics**
+  - [ ] Aggregate summaries
+    - [ ] Scotland / England
+    - [ ] Onshore / Offshore
+    - [ ] GB model vs sum of WF
+  - [ ] Spatial field outliers
+    - [ ] Plot field vs observations?
+    - [ ] Zoom in and increase mesh resolution to test what happens
+  - [ ] Confidence bands around estimates
+    - [ ] Figures for averages and individual WF
+  - [ ] Running extra days
+    - [ ] low - mid - high regimes
+    - [ ] low curtailment - high curtailment
+    - [ ] no anomalies - many anomalies
+    - [ ] storm days
+
 - **Model validation**
   - [ ] out-of-sample validation
   - [ ] UQ and error metrics
