@@ -704,3 +704,211 @@ ggsave(
   width = 6,
   height = 4
 )
+
+# spatial features impact ------
+
+spatial_feat <- read_parquet("data/spatial_features.gpkg")
+
+spatial_feat %>%
+  ggplot(aes(x = dist_coast)) +
+  geom_histogram(fill = blues9[7])
+
+ggsave(
+  file.path(
+    fig_path,
+    "dist_coast_hist.pdf"
+  ),
+  width = 6,
+  height = 4
+)
+
+spatial_feat %>%
+  ggplot(aes(x = elevation)) +
+  geom_histogram(fill = blues9[7])
+
+ggsave(
+  file.path(
+    fig_path,
+    "elevation_hist.pdf"
+  ),
+  width = 6,
+  height = 4
+)
+
+spatial_feat %>%
+  ggplot(aes(x = elevation)) +
+  geom_histogram(fill = blues9[7]) +
+  facet_wrap(~tech_typ)
+
+ggsave(
+  file.path(
+    fig_path,
+    "elevation_hist_by_tech.pdf"
+  ),
+  width = 6,
+  height = 4
+)
+
+fig_df <- pwr_curv_df %>%
+  mutate(
+    dist_coast_g5 = cut(
+      dist_coast,
+      breaks = quantile(dist_coast, probs = seq(0, 1, 0.2)),
+      include.lowest = TRUE
+    ),
+    elevation_g5 = cut(
+      elevation,
+      breaks = quantile(elevation, probs = seq(0, 1, 0.2)),
+      include.lowest = TRUE
+    ),
+    norm_potential = pmin(1, potential / capacity),
+    norm_power_est0 = power_est0 / capacity,
+    error0 = norm_potential - norm_power_est0
+  )
+
+## error by distance to coast -----
+fig_df %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(x = error0, y = dist_coast_g5, fill = dist_coast_g5),
+    alpha = 0.7
+  ) +
+  scale_fill_manual(
+    values = blues9[seq(1, 9, length.out = 5)],
+    name = "Distance to Coast (km)"
+  ) +
+  labs(x = "Normalised Error", y = "Distance to Coast Quintiles") +
+  theme_ridges() +
+  theme(legend.position = "none")
+
+ggsave(
+  file.path(
+    fig_path,
+    "error_by_dist_coast_rdens.pdf"
+  ),
+  width = 6,
+  height = 4
+)
+
+fig_df %>%
+  ggplot() +
+  geom_density(
+    aes(x = error0, fill = dist_coast_g5),
+    alpha = 0.5
+  ) +
+  scale_fill_manual(
+    values = blues9[seq(1, 9, length.out = 5)],
+    name = "Distance to Coast (km)"
+  ) +
+  labs(x = "Normalised Error", y = "density") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+ggsave(
+  file.path(
+    fig_path,
+    "error_by_dist_coast_dens.pdf"
+  ),
+  width = 6,
+  height = 4
+)
+
+
+## error by distance to coast and tech type -----
+fig_df %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(x = error0, y = dist_coast_g5, fill = dist_coast_g5),
+    alpha = 0.7
+  ) +
+  facet_wrap(~tech_typ) +
+  scale_fill_manual(
+    values = blues9[seq(1, 9, length.out = 5)],
+    name = "Distance to Coast (km)"
+  ) +
+  labs(x = "Normalised Error", y = "Distance to Coast Quintiles") +
+  theme_ridges() +
+  theme(legend.position = "none")
+
+ggsave(
+  file.path(
+    fig_path,
+    "error_by_dist_coast_tech_rdens.pdf"
+  ),
+  width = 6,
+  height = 4
+)
+
+fig_df %>%
+  ggplot() +
+  geom_density(
+    aes(x = error0, fill = dist_coast_g5),
+    alpha = 0.5
+  ) +
+  facet_wrap(~tech_typ) +
+  scale_fill_manual(
+    values = blues9[seq(1, 9, length.out = 5)],
+    name = "Distance to Coast (km)"
+  ) +
+  labs(x = "Normalised Error", y = "density") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+ggsave(
+  file.path(
+    fig_path,
+    "error_by_dist_coast_tech_dens.pdf"
+  ),
+  width = 6,
+  height = 4
+)
+
+## error by elevation -----
+fig_df %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(x = error0, y = elevation_g5, fill = elevation_g5),
+    alpha = 0.7
+  ) +
+  scale_fill_manual(
+    values = blues9[seq(1, 9, length.out = 5)],
+    name = "Elevation (m)"
+  ) +
+  labs(x = "Normalised Error", y = "Elevation Quintiles") +
+  theme_ridges() +
+  theme(legend.position = "none")
+ggsave(
+  file.path(
+    fig_path,
+    "error_by_elevation_rdens.pdf"
+  ),
+  width = 6,
+  height = 4
+)
+
+fig_df %>%
+  ggplot() +
+  geom_density(
+    aes(x = error0, fill = elevation_g5),
+    alpha = 0.5
+  ) +
+  scale_fill_manual(
+    values = blues9[seq(1, 9, length.out = 5)],
+    name = "Elevation (m)"
+  ) +
+  labs(x = "Normalised Error", y = "density") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+ggsave(
+  file.path(
+    fig_path,
+    "error_by_elevation_dens.pdf"
+  ),
+  width = 6,
+  height = 4
+)
+
+# pwr_curv_df %>%
+#   ggplot(aes(x = dist_coast, y = ws_h)) +
+#   geom_hex()
