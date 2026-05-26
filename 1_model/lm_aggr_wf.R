@@ -147,6 +147,12 @@ gb_day_df %>%
   labs(fill = "Regime") +
   scale_fill_manual(values = regime_palette)
 
+ggsave(
+  "fig/daily_generation_by_regime.pdf",
+  width = 6,
+  height = 4
+)
+
 set.seed(1)
 # sample 1 day per regime
 sampled_days <- gb_day_df %>%
@@ -328,6 +334,174 @@ model_AIC1 <- step(
 summary(model_AIC1)
 
 ## 2.1.2 Inlabru ####
+
+### 2.1.2.1 Model fitting ####
+
+#### mesh building #####
+cat("Building spatial mesh\n")
+
+loc_unique <- wf_df_frag %>%
+  distinct(x, y) %>%
+  as.matrix()
+
+# bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
+# bnd <- fm_extensions(loc_unique, convex = c(-.08, -.3))
+bnd <- fm_extensions(loc_unique, convex = c(-.1, -.35))
+# bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
+# ggplot() + geom_sf(data = bnd[[2]])
+bndin <- bnd[[1]]
+bndout <- bnd[[2]]
+# uk_map <- rnaturalearth::ne_countries(
+#   scale = "medium",
+#   country = "United Kingdom",
+#   returnclass = "sf"
+# )
+uk_map <- rnaturalearth::ne_countries(
+  scale = "medium",
+  country = "United Kingdom",
+  returnclass = "sf"
+)
+uk_map <- uk_map %>%
+  st_transform(crs = 27700) %>%
+  st_geometry() %>%
+  (\(g) g / 1000)() %>%
+  st_set_geometry(uk_map, .)
+
+
+hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = 60)
+# ggplot() +
+#   geom_sf(data = uk_map, fill = NA, color = "black") +
+#   geom_sf(data = hex_0) +
+#   geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+#   theme_void()
+
+# wf.mesh <- fm_mesh_2d(
+#   # loc = loc_unique,
+#   loc = fm_hexagon_lattice(bnd[[1]], edge_len = 30),
+#   boundary = bnd,
+#   max.edge = c(60, 120), # km
+#   # offset = -0.2,
+#   cutoff = 25
+# )
+
+wf.mesh <- fm_mesh_2d(
+  # loc = loc_unique,
+  loc = hex_0,
+  boundary = bnd,
+  max.edge = c(100, 150), # km
+  min.angle = 30,
+  # offset = -0.2,
+  cutoff = 30,
+  max.n.strict = c(400, 100)
+)
+saveRDS(
+  wf.mesh,
+  file.path(model_path, sprintf("spatial_mesh_coarse_%s.rds", d0_tag))
+)
+ggplot() +
+  geom_sf(data = uk_map, fill = NA, color = "black") +
+  gg(wf.mesh) +
+  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+  theme_void()
+ggsave(
+  sprintf("fig/spatial_mesh_coarse_%s.pdf", d0_tag),
+  width = 4,
+  height = 6
+)
+
+#### mesh assessment #####
+mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 60) %>%
+  st_filter(., bndin)
+
+ggplot() +
+  geom_sf(data = mesh_assessment, aes(col = edge.len)) +
+  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+  geom_sf(data = uk_map, fill = NA, color = "white") +
+  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+  theme_void() +
+  scale_color_viridis_c(option = "D")
+ggsave(
+  sprintf("fig/spatial_mesh_coarse_assessment_edgelen_%s.pdf", d0_tag),
+  width = 4,
+  height = 6
+)
+# sd.dev should be close to 1
+ggplot() +
+  geom_sf(data = mesh_assessment, aes(col = sd.dev)) +
+  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+  geom_sf(data = uk_map, fill = NA, color = "white") +
+  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+  theme_void() +
+  scale_color_viridis_c(option = "D")
+ggsave(
+  sprintf("fig/spatial_mesh_coarse_assessment_sddev_%s.pdf", d0_tag),
+  width = 4,
+  height = 6
+)
+
+## SPDE model ####
+spde <- INLA::inla.spde2.pcmatern(
+  mesh = wf.mesh,
+  prior.range = c(50, 0.5), # P(range < 100 km)=0.5
+  prior.sigma = c(0.2, 0.5) # P(sd > 0.2)=0.5
+)
+
+# components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+#   power_correction(norm_power_est0, model = "linear") + # fixed slope
+#   tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+#   tech_power(tech_typ, model = "iid", weights = norm_power_est0) + # random slope
+#   wind(ws_group, model = "rw2") +
+#   st_field(
+#     geometry,
+#     model = spde,
+#     group = time_id,
+#     control.group = list(model = "ar1")
+#   )
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  power_correction(
+    pow_group,
+    model = "rw2",
+    replicate = tech_typ,
+    constr = TRUE
+  ) + # smooth correction power
+  wind(ws_group, model = "rw2", constr = TRUE) + # smooth correction wind
+  st_field(
+    geometry,
+    model = spde,
+    group = time_id,
+    control.group = list(model = "ar1")
+  ) +
+  dist_coast +
+  elevation
+
+bru0 <- bru(
+  components = components0,
+  formula = norm_potential ~ Intercept +
+    # tech_typ +
+    power_correction +
+    wind +
+    st_field +
+    dist_coast +
+    elevation,
+  family = "gaussian",
+  data = wf_df_frag
+)
+
+# saveRDS(
+#   bru0,
+#   file = file.path(model_path, sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag))
+# )
+bru0 <- readRDS(file.path(
+  model_path,
+  sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag)
+))
+
+## summary and effect plots ####
+summary(bru0)
+
+### 2.1.2.2 Model effects #####
 
 ## 2.1.3 Quantile mapping ####
 qqmod <- fitQmap(

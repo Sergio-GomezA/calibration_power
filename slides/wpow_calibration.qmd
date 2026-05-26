@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2026-05-19"
+date: "2026-05-26"
 format: 
   beamer:
     theme: Rochester
@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "wpow_calibration_slides_26-05-19.pdf"
+    output-file: "wpow_calibration_slides_26-05-26.pdf"
 header-includes:
   - \usepackage{graphicx}
 fontsize: 12pt
@@ -60,31 +60,31 @@ theme_set(theme_bw())
 
 ### New
 \begin{itemize}
-  \item Probabilistic Scenarios article accepted in Spatial Statistics
-  \item Project goal and summaries
+  \item Error diagnostics
   \item Spatiotemporal model for calibration
 \end{itemize}
 
-<!-- 
-  \item Wind drought extremes -->
+### Ongoing
 
+- Model validation
+  - Out-of-sample in time
+  - Out-of-sample in space
+- Consitency under aggregation
+- Low wind events
 
+# Model diagnostics
 
-<!-- ## Updates {#sec-updates .unnumbered .nolink}
+## Model portfolio
 
+- Wind farm level models:
+  - Generic Power Curve (ERA5 + generic PC estimate)
+  - Quantile Mapping
+  - Linear model 
+  - Spatiotemporal model
 
-<!-- ### Next steps
-- Wind direction effects on power curve
-- Compare model against benchmarks: Quantile mapping, GAMs
-- Calibration spatiotemporal model -->
+- Linear model (GB level)
 
-# Project Goal
-
-- Correct ERA5 wind power biases using observed generation data.
-- Reduce error metrics (RMSE/MAE/bias).
-- Ensure spatially consistent estimates that generalise out-of-sample.
-- Capture low-wind events: frequency, duration, and spatial extent.
-
+## 
 
 # Spatiotemporal calibration model
 
@@ -435,6 +435,13 @@ tbl_tech_typ %>%
 
 
 # Appendix 
+
+# Project Goal {-}
+
+- Correct ERA5 wind power biases using observed generation data.
+- Reduce error metrics (RMSE/MAE/bias).
+- Ensure spatially consistent estimates that generalise out-of-sample.
+- Capture low-wind events: frequency, duration, and spatial extent.
 
 ## Spatial correlation {-}
 ::: {.columns}
