@@ -64,6 +64,7 @@ GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
   rename(time = halfHourEndTime) %>%
   mutate(
     err = norm_power_est0 - norm_potential,
+    error0 = norm_potential - norm_power_est0,
     date = as.Date(time)
   )
 

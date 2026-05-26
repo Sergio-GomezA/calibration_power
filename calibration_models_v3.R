@@ -117,6 +117,8 @@ aggr_cat <- pwr_curv_df %>%
     coord_id = as.integer(factor(paste(lon, lat)))
   )
 
+write_parquet(aggr_cat, "data/aggregated_catalogue.parquet")
+
 st_write(
   spatial_feat,
   "data/spatial_features.gpkg",
@@ -134,6 +136,11 @@ pwr_curv_df <- pwr_curv_df %>%
       st_drop_geometry() %>%
       dplyr::select(coord_id, elevation = elevation, dist_coast),
     by = c("coord_id")
+  ) %>%
+  mutate(
+    site_name = site_name %>%
+      gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
+      trimws()
   )
 
 write_parquet(
@@ -341,7 +348,6 @@ ggsave(
 ### mesh assessment #####
 mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 60) %>%
   st_filter(., bndin)
-
 
 ggplot() +
   geom_sf(data = mesh_assessment, aes(col = edge.len)) +

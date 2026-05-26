@@ -46,19 +46,26 @@ require(ggridges)
 require(ggspatial)
 require(elevatr)
 
+require(ModelMetrics)
+
+
 source("aux_funct.R")
 
 
 # 1.1 Load data ----------------------------------------------------------------
 source("read_data.R")
 
-pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet")) %>%
-  mutate(
-    site_name = site_name %>%
-      gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
-      trimws()
-  )
+pwr_curv_df <- read_parquet(file.path(
+  gen_path,
+  "power_curve_all_enriched.parquet"
+))
 
+aggr_cat <- read_parquet(file.path(
+  "data",
+  "aggregated_catalogue.parquet"
+))
+
+spatial_feat <- st_read("data/spatial_features.gpkg")
 
 # 1.2 choose days to run ----------------------------------------------------------------
 ## by regime
@@ -147,7 +154,6 @@ sampled_days <- gb_day_df %>%
   slice_sample(n = 1) %>%
   pull(date)
 
-
 sample_df <- GB_df %>%
   filter(date %in% sampled_days) %>%
   group_by(time) %>%
@@ -197,16 +203,417 @@ ggplot() +
   scale_color_manual(values = regime_palette)
 
 #
+ggsave(
+  "fig/daily_generation_time_series_sampled_days.pdf",
+  width = 6,
+  height = 4
+)
 
-# 2.1 Model for WF ####
+
+# 2.1 Models for WF ####
+
+d0 <- sampled_days
+d0_tag <- "samp_days"
+# n.days <- 1
+wf_df_frag <- pwr_curv_df %>%
+  rename(time = halfHourEndTime) %>%
+  mutate(
+    date = as.Date(time),
+    site_name = site_name %>%
+      gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
+      trimws()
+  ) %>%
+  filter(date %in% sampled_days) %>%
+  arrange(site_name) %>%
+  mutate(
+    site_id = as.integer(factor(site_name)),
+    coord_id = as.integer(factor(paste(lon, lat)))
+  ) %>%
+  group_by(lon, lat, time) %>%
+  summarise(
+    site_name = first(site_name),
+    coord_id = first(coord_id),
+    elevation = first(elevation),
+    dist_coast = first(dist_coast),
+    tech_typ = first(tech_typ),
+    across(c(ws_h, wd10, wd100), mean),
+    ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
+    across(c(potential, power_est0, capacity, curtailment), sum),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    norm_potential = pmin(1, potential / capacity),
+    norm_power_est0 = power_est0 / capacity,
+    error0 = norm_potential - norm_power_est0
+  ) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  mutate(lon = st_coordinates(.)[, 1], lat = st_coordinates(.)[, 2]) %>%
+  st_transform(crs = 27700) %>%
+  mutate(
+    x = st_coordinates(.)[, 1] / 1000,
+    y = st_coordinates(.)[, 2] / 1000,
+  ) %>%
+  # st_drop_geometry() %>%
+  mutate(
+    # site_id = as.integer(factor(site_name)),
+    ws_group = inla.group(ws_h, n = 20, method = "quantile"),
+    pow_group = inla.group(norm_power_est0, n = 20, method = "quantile"),
+    time_id = as.integer(factor(time)),
+    # loc = cbind(x, y)
+  )
+
+wf_df_frag <- wf_df_frag %>%
+  st_geometry() %>%
+  (\(g) g / 1000)() %>%
+  st_set_geometry(wf_df_frag, .)
+
+
+## 2.1.1 Linear model ####
+
+base_model <- lm(
+  norm_potential ~ norm_power_est0,
+  data = wf_df_frag
+)
+
+full_model0 <- lm(
+  norm_potential ~
+    tech_typ *
+    norm_power_est0 +
+    # norm_power_est0 * month +
+    # hour +
+    # dist_coast * tech_typ +
+    # elevation * tech_typ +
+    # dist_coast:tech_typ +
+    # elevation:tech_typ +
+    tech_typ * poly(dist_coast, 2) +
+    tech_typ * poly(elevation, 3) +
+    tech_typ * poly(ws_h_wmean, 3),
+  data = wf_df_frag
+)
+summary(full_model0)
+
+model_AIC0 <- step(
+  base_model,
+  scope = list(lower = base_model, upper = full_model0),
+  # steps = 5,
+  k = 2
+)
+
+summary(model_AIC0)
+
+full_model1 <- lm(
+  norm_potential ~
+    tech_typ *
+    norm_power_est0 +
+    # norm_power_est0 * month +
+    # hour +
+    dist_coast * tech_typ +
+    elevation * tech_typ +
+    # dist_coast:tech_typ +
+    # elevation:tech_typ +
+    # tech_typ * poly(dist_coast, 2) +
+    # tech_typ * poly(elevation, 3) +
+    tech_typ * poly(ws_h_wmean, 3),
+  data = wf_df_frag
+)
+summary(full_model1)
+
+model_AIC1 <- step(
+  base_model,
+  scope = list(lower = base_model, upper = full_model1),
+  # steps = 5,
+  k = 2
+)
+
+summary(model_AIC1)
+
+## 2.1.2 Inlabru ####
+
+## 2.1.3 Quantile mapping ####
+qqmod <- fitQmap(
+  obs = wf_df_frag %>% pull(norm_potential),
+  mod = wf_df_frag %>% pull(norm_power_est0),
+  method = "QUANT"
+)
+
+wgen_qm <- with(
+  wf_df_frag,
+  doQmapQUANT(norm_power_est0, qqmod, type = "linear")
+)
 
 ## 2.1.1 Model predictions ####
 
 # 2.2 Model for aggregate ####
 
+samp_gb <- GB_df
+# %>%
+# filter(date %in% sampled_days) %>%
+
+base_model_agg <- lm(
+  norm_potential ~ norm_power_est0,
+  data = samp_gb
+)
+
+full_model0_agg <- lm(
+  norm_potential ~
+    tech_typ *
+    norm_power_est0 +
+    # norm_power_est0 * month +
+    # hour +
+    # dist_coast * tech_typ +
+    # elevation * tech_typ +
+    # dist_coast:tech_typ +
+    # elevation:tech_typ +
+    # tech_typ * poly(dist_coast, 2) +
+    # tech_typ * poly(elevation, 3) +
+    tech_typ * poly(ws_h_wmean, 3),
+  data = samp_gb
+)
+summary(full_model0_agg)
+
+model_AIC0_agg <- step(
+  base_model_agg,
+  scope = list(lower = base_model_agg, upper = full_model0_agg),
+  # steps = 5,
+  k = 2
+)
+
+summary(model_AIC0_agg)
+
 ## 2.2.1 Model predictions ####
 
+mod_labels <- c(
+  "Generic PC",
+  "Linear model",
+  "Spatio-temporal model",
+  "QM",
+  "GB LM"
+)
+est_cols <- c(
+  "norm_power_est0",
+  "lm",
+  "st",
+  "qm",
+  "agg_lm"
+)
+n <- nrow(wf_df_frag)
+names(mod_labels) <- est_cols
+
+
+model_df0 <- wf_df_frag %>%
+  mutate(
+    date = as.Date(time),
+    lm = predict(full_model1, newdata = .),
+    qm = wgen_qm,
+    agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag)
+  ) %>%
+  left_join(
+    gb_day_df %>% dplyr::select(date, p_group3),
+    by = c("date" = "date")
+  )
+
+st_write(
+  model_df0,
+  sprintf("data/calibration_df_%s.gpkg", d0_tag),
+  driver = "GPKG",
+  append = FALSE,
+)
+
+## Reading fitted values ####
+
+model_df0 <- st_read(sprintf("data/calibration_df_%s.gpkg", d0_tag))
+
 # 3.1 Comparison
+
+df_long0 <- model_df0 %>%
+  dplyr::select(
+    date,
+    time,
+    site_name,
+    coord_id,
+    tech_typ,
+    p_group3,
+    norm_potential,
+    any_of(est_cols)
+  ) %>%
+  mutate(hour = hour(time)) %>%
+  pivot_longer(
+    cols = any_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  ) %>%
+  mutate(,
+    err = estimate - norm_potential,
+    p_group3 = forcats::fct_rev(p_group3),
+    model = factor(model, levels = est_cols, labels = mod_labels)
+  )
+
+df_long0 %>%
+  ggplot() +
+  geom_density(
+    aes(x = err, fill = model),
+    alpha = 0.5
+  ) +
+  facet_wrap(~model) +
+  theme_minimal() +
+  labs(
+    title = "Error distribution by model",
+    x = "Error (model estimate - observed)",
+    y = "Density",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = pal_lancet()(5))
+
+ggsave(
+  sprintf("fig/error_distribution_by_model_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    model = mod_labels[model]
+  ) %>%
+  arrange(desc(RMSE))
+
+write.csv(
+  metrics_table,
+  sprintf("summaries/calib_metrics_%s.csv", d0_tag),
+  row.names = FALSE
+)
+
+# by tech type
+df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(tech_typ, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  # mutate(model = mod_labels[model]) %>%
+  arrange(tech_typ, desc(RMSE))
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(err, tech_typ, fill = model),
+    alpha = 0.5,
+    scale = 1
+  ) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by technology type",
+    x = "Error (model estimate - observed)",
+    y = "Technology Type",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = pal_lancet()(4))
+
+ggsave(
+  sprintf("fig/error_distribution_by_tech_type_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+# by regime
+df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(p_group3, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(p_group3, desc(RMSE))
+
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(aes(err, p_group3, fill = model), alpha = 0.5) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by regime",
+    x = "Error (model estimate - observed)",
+    y = "Regime",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = pal_lancet()(4))
+ggsave(
+  sprintf("fig/error_distribution_by_regime_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+
+# by hour of day
+df_long0 %>%
+  mutate(hour = factor(hour, levels = 0:23)) %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(x = err, y = hour, fill = model),
+    alpha = 0.5
+  ) +
+  facet_wrap(~model) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by hour of day",
+    x = "Error (model estimate - observed)",
+    y = "Hour of day",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = pal_lancet()(4))
+
+ggsave(
+  sprintf("fig/error_distribution_by_hourA_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(hour, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model]) %>%
+  arrange(hour, desc(RMSE)) %>%
+  ggplot(aes(hour, RMSE, col = model, group = model)) +
+  geom_line() +
+  theme_minimal() +
+  labs(
+    title = "Model performance by hour of day",
+    x = "Hour of day",
+    y = "RMSE",
+    col = "Model"
+  ) +
+  scale_color_manual(values = pal_lancet()(4))
+
+ggsave(
+  sprintf("fig/model_performance_by_hourS_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
 
 #how performance changes by onshore/offshore, season, hour, and regime and how well farm level predictions aggregate
 
