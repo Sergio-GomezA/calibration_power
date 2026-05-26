@@ -60,31 +60,32 @@ theme_set(theme_bw())
 
 ### New
 \begin{itemize}
+  <!-- \item Probabilistic Scenarios article accepted in Spatial Statistics -->
+  <!-- \item Project goal and summaries -->
   \item Error diagnostics
   \item Spatiotemporal model for calibration
 \end{itemize}
 
-### Ongoing
+<!-- 
+  \item Wind drought extremes -->
 
-- Model validation
-  - Out-of-sample in time
-  - Out-of-sample in space
-- Consitency under aggregation
-- Low wind events
 
-# Model diagnostics
 
-## Model portfolio
+<!-- ## Updates {#sec-updates .unnumbered .nolink}
 
-- Wind farm level models:
-  - Generic Power Curve (ERA5 + generic PC estimate)
-  - Quantile Mapping
-  - Linear model 
-  - Spatiotemporal model
 
-- Linear model (GB level)
+<!-- ### Next steps
+- Wind direction effects on power curve
+- Compare model against benchmarks: Quantile mapping, GAMs
+- Calibration spatiotemporal model -->
 
-## 
+# Project Goal
+
+- Correct ERA5 wind power biases using observed generation data.
+- Reduce error metrics (RMSE/MAE/bias).
+- Ensure spatially consistent estimates that generalise out-of-sample.
+- Capture low-wind events: frequency, duration, and spatial extent.
+
 
 # Spatiotemporal calibration model
 
@@ -435,13 +436,6 @@ tbl_tech_typ %>%
 
 
 # Appendix 
-
-# Project Goal {-}
-
-- Correct ERA5 wind power biases using observed generation data.
-- Reduce error metrics (RMSE/MAE/bias).
-- Ensure spatially consistent estimates that generalise out-of-sample.
-- Capture low-wind events: frequency, duration, and spatial extent.
 
 ## Spatial correlation {-}
 ::: {.columns}
