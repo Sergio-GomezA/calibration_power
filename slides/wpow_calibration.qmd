@@ -74,6 +74,35 @@ theme_set(theme_bw())
 
 # Model diagnostics
 
+## Diagnostics framework
+
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+- Performance metrics:
+  - RMSE
+  - MAE
+  - Bias
+- Evaluate performance at WF level
+- Error under aggregation
+  - GB level
+  - Onshore / offshore
+  - By regime
+  - By hour
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Sampled days for diagnostics
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/daily_generation_time_series_sampled_days.pdf}
+:::
+
+:::
+
 ## Model portfolio
 
 - Wind farm level models:
@@ -86,7 +115,27 @@ theme_set(theme_bw())
 
 ## 
 
-# Spatiotemporal calibration model
+## Error metrics
+
+\small Metrics at wind farm level
+
+
+
+## Metrics at GB level
+
+## Technology type
+
+## Regime
+
+## Hour of the day
+
+## Elevation
+
+## Distance to coast
+
+# Linear model {-}
+
+# Spatiotemporal calibration model {-}
 
 ## Model overview
 
