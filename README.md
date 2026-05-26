@@ -123,7 +123,6 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - [x] Correlation decay
   - [x] Non-stationary spatial patterns
 
-
 - **Model diagnostics**
   - [ ] Aggregate summaries
     - [ ] Scotland / England
@@ -140,11 +139,21 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
     - [ ] no anomalies - many anomalies
     - [ ] storm days
 
+  - [ ] Aggregating summaries
+    - [ ] aggregator GB, Onshore, Offshore, Scotland, rest of GB
+
+
 - **Model validation**
   - [ ] out-of-sample validation
+    - [ ] time GB Onshore, Offshore,
+    - [ ] dense regions, sparse regions,
+    - [ ] low, mid, high generation regimes
+    - [ ] Scotland, rest of GB
   - [ ] UQ and error metrics
   - [ ] Extreme value properties?
   - [ ] Sequences of low wind power
+
+
 
 - **Expansion ideas**
   - Model QM through hierarchical model

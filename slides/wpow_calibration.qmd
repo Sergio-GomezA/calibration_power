@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "wpow_calibration_slides_25-05-19.pdf"
+    output-file: "wpow_calibration_slides_26-05-19.pdf"
 header-includes:
   - \usepackage{graphicx}
 fontsize: 12pt

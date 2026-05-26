@@ -88,6 +88,8 @@ install.packages("sf", type = "source")
 remove.packages("stringi")
 install.packages("stringi", type = "source")
 install.packages("ggthemes", type = "source")
+
+install.packages("elevatr")
 # Sys.getenv("PATH")
 # Sys.which("gdal-config")
 

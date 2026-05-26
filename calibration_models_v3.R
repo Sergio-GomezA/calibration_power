@@ -57,6 +57,93 @@ source("read_data.R")
 # 1.2 full data frame-------------------------------------------------
 pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
 
+## 1.2.1 elevation data
+
+uk_map <- rnaturalearth::ne_countries(
+  scale = "medium",
+  country = "United Kingdom",
+  returnclass = "sf"
+)
+coastline <- uk_map %>%
+  st_transform(crs = 27700) %>%
+  st_boundary()
+
+# ggplot() +
+#   geom_sf(data = uk_map, fill = "lightgray") +
+#   geom_sf(data = coastline, color = "blue") +
+#   theme_minimal()
+spatial_feat <- pwr_curv_df %>%
+  distinct(
+    lon,
+    lat,
+    site_name,
+    bmUnit,
+    capacity,
+    era5lon,
+    era5lat,
+    tech_typ
+  ) %>%
+  arrange(site_name) %>%
+  mutate(
+    site_id = as.integer(factor(site_name)),
+    coord_id = as.integer(factor(paste(lon, lat)))
+  ) %>%
+  group_by(lon, lat, coord_id) %>%
+  summarise(
+    site_name = first(site_name),
+    tech_typ = first(tech_typ),
+    across(c(capacity), sum),
+    .groups = "drop"
+  ) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  get_elev_point(src = "aws") %>%
+  st_transform(crs = 27700) %>%
+  mutate(
+    dist_coast = st_distance(geometry, coastline) %>% as.numeric() / 1000
+  )
+
+# ggplot() +
+#   geom_sf(data = uk_map %>% st_transform(crs = 27700), fill = "lightgray") +
+#   geom_sf(data = coastline, color = "blue") +
+#   geom_sf(data = spatial_feat, aes(size = dist_coast)) +
+#   theme_minimal() +
+#   annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "m")
+
+aggr_cat <- pwr_curv_df %>%
+  distinct(bmUnit, site_name, lon, lat) %>%
+  arrange(site_name) %>%
+  mutate(
+    site_id = as.integer(factor(site_name)),
+    coord_id = as.integer(factor(paste(lon, lat)))
+  )
+
+st_write(
+  spatial_feat,
+  "data/spatial_features.gpkg",
+  driver = "GPKG",
+  append = FALSE,
+)
+
+pwr_curv_df <- pwr_curv_df %>%
+  # head(20) %>%
+  left_join(
+    aggr_cat %>% dplyr::select(bmUnit, coord_id, site_id),
+  ) %>%
+  left_join(
+    spatial_feat %>%
+      st_drop_geometry() %>%
+      dplyr::select(coord_id, elevation = elevation, dist_coast),
+    by = c("coord_id")
+  )
+
+write_parquet(
+  pwr_curv_df,
+  file.path(gen_path, "power_curve_all_enriched.parquet")
+)
+
+temp <- pwr_curv_df %>%
+  distinct(coord_id, site_name, lon, lat, elevation, dist_coast)
+
 # 1.3 EDA ------------------------------------------------------------------------
 
 source("eda_figures.R")
@@ -188,6 +275,7 @@ cat("Building spatial mesh\n")
 loc_unique <- wf_df_frag %>%
   distinct(x, y) %>%
   as.matrix()
+
 # bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
 # bnd <- fm_extensions(loc_unique, convex = c(-.08, -.3))
 bnd <- fm_extensions(loc_unique, convex = c(-.1, -.35))
@@ -195,11 +283,11 @@ bnd <- fm_extensions(loc_unique, convex = c(-.1, -.35))
 # ggplot() + geom_sf(data = bnd[[2]])
 bndin <- bnd[[1]]
 bndout <- bnd[[2]]
-uk_map <- rnaturalearth::ne_countries(
-  scale = "medium",
-  country = "United Kingdom",
-  returnclass = "sf"
-)
+# uk_map <- rnaturalearth::ne_countries(
+#   scale = "medium",
+#   country = "United Kingdom",
+#   returnclass = "sf"
+# )
 
 uk_map <- uk_map %>%
   st_transform(crs = 27700) %>%
