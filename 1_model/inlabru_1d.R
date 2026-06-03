@@ -1,166 +1,17 @@
-#  Calibration models revised
-
-# 1. Load libraries and data ------------------------------------------------
-
-local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
-
-
-require(parallel)
-
-if (local_run) {
-  data_path <- "~/Documents/ERA5_at_wf/"
-  gen_path <- "~/Documents/elexon/"
-  model_path <- "~/Documents/elexon/model_objects"
-} else {
-  data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
-  gen_path <- "/exports/eddie/scratch/s2441782/calibration/data"
-  model_path <- "/exports/eddie/scratch/s2441782/calibration/model_objects"
-  temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
-  .libPaths(temp_lib)
-}
-
-
-# install.packages(
-#   c("qmap"),
-#   temp_lib,
-#   dependencies = TRUE
-# )
-
-require(arrow)
-require(dplyr)
-require(tidyr)
-# require(rnaturalearth)
-# require(rnaturalearthdata)
+require(tidyverse)
 require(sf)
-require(ggplot2)
-require(ggthemes)
-require(ggsci)
-# require(FNN)
-require(data.table)
-# require(parallel)
-library(purrr)
-# require(brms)
-require(INLA)
 require(inlabru)
 require(fmesher)
-require(qmap)
-require(ggridges)
 require(ggspatial)
-require(elevatr)
+require(ModelMetrics)
+require(qmap)
 
-source("aux_funct.R")
+# inlabru model 1 day
 
+# inlabru models by day ------
 
-# 1.1 Load data ----------------------------------------------------------------
-source("read_data.R")
-
-
-# 1.2 full data frame-------------------------------------------------
-pwr_curv_df <- read_parquet(file.path(gen_path, "power_curve_all.parquet"))
-
-## 1.2.1 elevation data
-
-uk_map <- rnaturalearth::ne_countries(
-  scale = "medium",
-  country = "United Kingdom",
-  returnclass = "sf"
-)
-coastline <- uk_map %>%
-  st_transform(crs = 27700) %>%
-  st_boundary()
-
-# ggplot() +
-#   geom_sf(data = uk_map, fill = "lightgray") +
-#   geom_sf(data = coastline, color = "blue") +
-#   theme_minimal()
-spatial_feat <- pwr_curv_df %>%
-  distinct(
-    lon,
-    lat,
-    site_name,
-    bmUnit,
-    capacity,
-    era5lon,
-    era5lat,
-    tech_typ
-  ) %>%
-  arrange(site_name) %>%
-  mutate(
-    site_id = as.integer(factor(site_name)),
-    coord_id = as.integer(factor(paste(lon, lat)))
-  ) %>%
-  group_by(lon, lat, coord_id) %>%
-  summarise(
-    site_name = first(site_name),
-    tech_typ = first(tech_typ),
-    across(c(capacity), sum),
-    .groups = "drop"
-  ) %>%
-  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-  get_elev_point(src = "aws") %>%
-  st_transform(crs = 27700) %>%
-  mutate(
-    dist_coast = st_distance(geometry, coastline) %>% as.numeric() / 1000
-  )
-
-# ggplot() +
-#   geom_sf(data = uk_map %>% st_transform(crs = 27700), fill = "lightgray") +
-#   geom_sf(data = coastline, color = "blue") +
-#   geom_sf(data = spatial_feat, aes(size = dist_coast)) +
-#   theme_minimal() +
-#   annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "m")
-
-aggr_cat <- pwr_curv_df %>%
-  distinct(bmUnit, site_name, lon, lat) %>%
-  arrange(site_name) %>%
-  mutate(
-    site_id = as.integer(factor(site_name)),
-    coord_id = as.integer(factor(paste(lon, lat)))
-  )
-
-write_parquet(aggr_cat, "data/aggregated_catalogue.parquet")
-
-st_write(
-  spatial_feat,
-  "data/spatial_features.gpkg",
-  driver = "GPKG",
-  append = FALSE,
-)
-
-pwr_curv_df <- pwr_curv_df %>%
-  # head(20) %>%
-  left_join(
-    aggr_cat %>% dplyr::select(bmUnit, coord_id, site_id),
-  ) %>%
-  left_join(
-    spatial_feat %>%
-      st_drop_geometry() %>%
-      dplyr::select(coord_id, elevation = elevation, dist_coast),
-    by = c("coord_id")
-  ) %>%
-  mutate(
-    site_name = site_name %>%
-      gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
-      trimws()
-  )
-
-write_parquet(
-  pwr_curv_df,
-  file.path(gen_path, "power_curve_all_enriched.parquet")
-)
-
-temp <- pwr_curv_df %>%
-  distinct(coord_id, site_name, lon, lat, elevation, dist_coast)
-
-# 1.3 EDA ------------------------------------------------------------------------
-
-source("eda_figures.R")
-
-# 1.4 1 day data frame -------------------------------------------------
-
-# d0 <- as.Date("2024-08-10")
-# d0 <- as.Date("2025-08-10")
-d0 <- as.Date("2025-08-10")
+# sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
+# d0 <- sampled_days[2] %>% as.Date()
 
 d0_tag <- format(d0, "%y%m%d")
 n.days <- 1
@@ -172,10 +23,19 @@ wf_df_frag <- pwr_curv_df %>%
       gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
       trimws()
   ) %>%
+  # filter(date %in% sampled_days) %>%
   filter(date >= d0, date <= d0 + n.days - 1) %>%
+  arrange(site_name) %>%
+  mutate(
+    site_id = as.integer(factor(site_name)),
+    coord_id = as.integer(factor(paste(lon, lat)))
+  ) %>%
   group_by(lon, lat, time) %>%
   summarise(
     site_name = first(site_name),
+    coord_id = first(coord_id),
+    elevation = first(elevation),
+    dist_coast = first(dist_coast),
     tech_typ = first(tech_typ),
     across(c(ws_h, wd10, wd100), mean),
     ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
@@ -196,87 +56,18 @@ wf_df_frag <- pwr_curv_df %>%
   ) %>%
   # st_drop_geometry() %>%
   mutate(
-    site_id = as.integer(factor(site_name)),
+    # site_id = as.integer(factor(site_name)),
     ws_group = inla.group(ws_h, n = 20, method = "quantile"),
     pow_group = inla.group(norm_power_est0, n = 20, method = "quantile"),
     time_id = as.integer(factor(time)),
     # loc = cbind(x, y)
   )
+
 wf_df_frag <- wf_df_frag %>%
   st_geometry() %>%
   (\(g) g / 1000)() %>%
   st_set_geometry(wf_df_frag, .)
 
-# 2. Aggregated model ------------------------------------------------------------------
-# Updates:
-# - Adding entire dataset
-# - Adding more covariates NAO, AO, EA, SCAN
-
-## 2.1 LM step AIC selection --------------------------------------------------------------
-
-base_model <- lm(
-  norm_potential ~ norm_power_est0,
-  data = wf_df_frag
-)
-
-# full_model <- lm(
-#   norm_potential ~ tech_typ *
-#     norm_power_est0 +
-#     # norm_power_est0 * month +
-#     # hour +
-#     poly(ws_h_wmean, 3) +
-#     nao * tech_typ +
-#     ao * tech_typ +
-#     ea * tech_typ +
-#     scan * tech_typ,
-#   data = wf_df_frag
-# )
-
-full_model0 <- lm(
-  norm_potential ~ tech_typ *
-    norm_power_est0 +
-    # norm_power_est0 * month +
-    # hour +
-    poly(ws_h_wmean, 3),
-  data = wf_df_frag
-)
-summary(full_model0)
-
-
-# model_AIC <- step(
-#   base_model,
-#   scope = list(lower = base_model, upper = full_model0),
-#   # steps = 5,
-#   k = 2
-# )
-model_AIC0 <- step(
-  base_model,
-  scope = list(lower = base_model, upper = full_model0),
-  # steps = 5,
-  k = 2
-)
-model_AIC0 %>%
-  saveRDS(
-    file.path(
-      model_path,
-      sprintf("lm0_cir%s.rds", d0_tag)
-    )
-  )
-
-# ModelMetrics::rmse(GB_df$norm_potential, model_AIC$fitted.values)
-ModelMetrics::rmse(wf_df_frag$norm_potential, model_AIC0$fitted.values)
-
-# 3. Spatially disaggregated model -----------------------------------------------------
-# Updates:
-# -- Add more locations (previously only 25)
-# -- Add anomaly detection to handle outliers separately
-# -- Add more covariates terrain, NAO, AO, EA, SCAN
-# -- Add non-stationary covariance
-
-## 3.1 Single run attempt --------------------------------------------------------------
-
-## time series figures ####
-source("ts_figures.R")
 
 ## mesh building #####
 cat("Building spatial mesh\n")
@@ -297,39 +88,32 @@ bndout <- bnd[[2]]
 #   country = "United Kingdom",
 #   returnclass = "sf"
 # )
-
+uk_map <- rnaturalearth::ne_countries(
+  scale = "medium",
+  country = "United Kingdom",
+  returnclass = "sf"
+)
+coastline <- uk_map %>%
+  st_transform(crs = 27700) %>%
+  st_boundary()
 uk_map <- uk_map %>%
   st_transform(crs = 27700) %>%
   st_geometry() %>%
   (\(g) g / 1000)() %>%
   st_set_geometry(uk_map, .)
 
-
-hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = 60)
-# ggplot() +
-#   geom_sf(data = uk_map, fill = NA, color = "black") +
-#   geom_sf(data = hex_0) +
-#   geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-#   theme_void()
-
-# wf.mesh <- fm_mesh_2d(
-#   # loc = loc_unique,
-#   loc = fm_hexagon_lattice(bnd[[1]], edge_len = 30),
-#   boundary = bnd,
-#   max.edge = c(60, 120), # km
-#   # offset = -0.2,
-#   cutoff = 25
-# )
+edge_target <- 20 # km
+hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = edge_target)
 
 wf.mesh <- fm_mesh_2d(
   # loc = loc_unique,
   loc = hex_0,
   boundary = bnd,
   max.edge = c(100, 150), # km
-  min.angle = 30,
+  min.angle = 25,
   # offset = -0.2,
-  cutoff = 30,
-  max.n.strict = c(400, 100)
+  cutoff = edge_target,
+  max.n.strict = c(900, 150)
 )
 saveRDS(
   wf.mesh,
@@ -384,17 +168,7 @@ spde <- INLA::inla.spde2.pcmatern(
   prior.sigma = c(0.2, 0.5) # P(sd > 0.2)=0.5
 )
 
-# components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
-#   power_correction(norm_power_est0, model = "linear") + # fixed slope
-#   tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
-#   tech_power(tech_typ, model = "iid", weights = norm_power_est0) + # random slope
-#   wind(ws_group, model = "rw2") +
-#   st_field(
-#     geometry,
-#     model = spde,
-#     group = time_id,
-#     control.group = list(model = "ar1")
-#   )
+
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
   power_correction(
@@ -422,15 +196,14 @@ bru0 <- bru(
   data = wf_df_frag
 )
 
-
-# saveRDS(
-#   bru0,
-#   file = file.path(model_path, sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag))
-# )
-bru0 <- readRDS(file.path(
-  model_path,
-  sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag)
-))
+saveRDS(
+  bru0,
+  file = file.path(model_path, sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag))
+)
+# bru0 <- readRDS(file.path(
+#   model_path,
+#   sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag)
+# ))
 
 ## summary and effect plots ####
 summary(bru0)
@@ -568,10 +341,86 @@ ggsave(
 #   )
 # )
 
+# lm wf version ####
+
+base_model <- lm(
+  norm_potential ~ norm_power_est0,
+  data = wf_df_frag
+)
+
+full_model0 <- lm(
+  norm_potential ~
+    tech_typ *
+    norm_power_est0 +
+    # norm_power_est0 * month +
+    # hour +
+    # dist_coast * tech_typ +
+    # elevation * tech_typ +
+    # dist_coast:tech_typ +
+    # elevation:tech_typ +
+    tech_typ * poly(dist_coast, 2) +
+    tech_typ * poly(elevation, 3) +
+    tech_typ * poly(ws_h_wmean, 3),
+  data = wf_df_frag
+)
+
+
+model_AIC0 <- step(
+  base_model,
+  scope = list(lower = base_model, upper = full_model0),
+  # steps = 5,
+  k = 2
+)
+
+saveRDS(
+  model_AIC0,
+  file.path(model_path, sprintf("lm_model_aic0_%s.rds", d0_tag))
+)
+
+
+# GB lm version #####
+
+samp_gb <- GB_df
+# %>%
+# filter(date %in% sampled_days) %>%
+
+base_model_agg <- lm(
+  norm_potential ~ norm_power_est0,
+  data = samp_gb
+)
+
+full_model0_agg <- lm(
+  norm_potential ~
+    tech_typ *
+    norm_power_est0 +
+    # norm_power_est0 * month +
+    # hour +
+    # dist_coast * tech_typ +
+    # elevation * tech_typ +
+    # dist_coast:tech_typ +
+    # elevation:tech_typ +
+    # tech_typ * poly(dist_coast, 2) +
+    # tech_typ * poly(elevation, 3) +
+    tech_typ * poly(ws_h_wmean, 3),
+  data = samp_gb
+)
+summary(full_model0_agg)
+
+model_AIC0_agg <- step(
+  base_model_agg,
+  scope = list(lower = base_model_agg, upper = full_model0_agg),
+  # steps = 5,
+  k = 2
+)
+saveRDS(
+  model_AIC0_agg,
+  file.path(model_path, sprintf("lm_model_aic0_agg_%s.rds", d0_tag))
+)
+
 # model comparison ####
 model_AIC0 <- readRDS(file.path(
   model_path,
-  sprintf("lm0_cir%s.rds", d0_tag)
+  sprintf("lm_model_aic0_%s.rds", d0_tag)
 ))
 qqmod <- fitQmap(
   obs = wf_df_frag %>% pull(norm_potential),
@@ -588,41 +437,46 @@ mod_labels <- c(
   "Generic PC",
   "Linear model",
   "Spatio-temporal model",
-  "QM"
+  "QM",
+  "GB LM"
 )
 est_cols <- c(
   "norm_power_est0",
   "lm",
   "st",
-  "qm"
+  "qm",
+  "agg_lm"
 )
+n <- nrow(wf_df_frag)
+names(mod_labels) <- est_cols
 # length(wgen_qm)
 # length(wf_df_frag$norm_potential)
 # length(bru0$summary.fitted.values[1:n, "mean"])
 # length(model_AIC0$fitted.values)
 n <- nrow(wf_df_frag)
 names(mod_labels) <- est_cols
-model_df <- wf_df_frag %>%
+
+model_df0 <- wf_df_frag %>%
   mutate(
-    lm = model_AIC0$fitted.values,
+    date = as.Date(time),
+    lm = predict(model_AIC0, newdata = .),
     st = bru0$summary.fitted.values[1:n, "mean"],
-    # ar = full_model_ar1$fitted,
-    # lm_bru = bru0$summary.fitted.values[1:n, "mean"],
-    # ar_bru = bru_ar$summary.fitted.values[1:n, "mean"],
-    # ar_bru2 = bru_ar$summary.fitted.values[1:n, "mean"] -
-    # bru_ar$summary.random$u[1:n, "mean"],
-    qm = wgen_qm
+    qm = wgen_qm,
+    agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag)
+  ) %>%
+  left_join(
+    gb_day_df %>% dplyr::select(date, p_group3),
+    by = c("date" = "date")
   )
 
-# write_parquet(model_df, sprintf("data/calibration_df_%s.parquet", d0_tag))
 st_write(
-  model_df,
+  model_df0,
   sprintf("data/calibration_df_%s.gpkg", d0_tag),
   driver = "GPKG",
   append = FALSE,
 )
 
-## Reading fitted values ####
+## Exploring fitted values ####
 
 model_df <- st_read(sprintf("data/calibration_df_%s.gpkg", d0_tag))
 
@@ -635,13 +489,20 @@ df_long <- model_df %>%
     names_to = "model",
     values_to = "estimate"
   )
-require(ModelMetrics)
+
+# require(ModelMetrics)
 metrics_table <- df_long %>%
   st_drop_geometry() %>%
   group_by(model) %>%
   summarise(
     RMSE = rmse(actual = norm_potential, predicted = estimate),
     MAE = mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
     Bias = mean(estimate - norm_potential, na.rm = TRUE),
     .groups = "drop"
   ) %>%
@@ -653,18 +514,6 @@ write.csv(
   sprintf("summaries/calib_metrics_%s.csv", d0_tag),
   row.names = FALSE
 )
-
-df_long %>%
-  st_drop_geometry() %>%
-  group_by(tech_typ, model) %>%
-  summarise(
-    RMSE = rmse(actual = norm_potential, predicted = estimate),
-    MAE = mae(actual = norm_potential, predicted = estimate),
-    Bias = mean(estimate - norm_potential, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  mutate(model = mod_labels[model]) %>%
-  arrange(tech_typ, desc(RMSE))
 
 ## ts plots #####
 
@@ -789,9 +638,3 @@ ggsave(
   width = 10,
   height = 6
 )
-
-# wf_df_frag %>% pull(site_name) %>% unique() %>% length()
-
-## 3.2 Partitioned run attempt ---------------------------------------------------------
-
-# 4. Spatially disaggregated model with non-stationary parameters ----------------------
