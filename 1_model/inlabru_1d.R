@@ -554,14 +554,8 @@ metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(model) %>%
   summarise(
-    ModelMetrics::rmse = ModelMetrics::rmse(
-      actual = norm_potential,
-      predicted = estimate
-    ),
-    ModelMetrics::mae = ModelMetrics::mae(
-      actual = norm_potential,
-      predicted = estimate
-    ),
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
     MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
     MDAPE = mdape(
       actual = norm_potential,
@@ -574,7 +568,7 @@ metrics_table <- df_long0 %>%
   mutate(
     model = mod_labels[model]
   ) %>%
-  arrange(desc(ModelMetrics::rmse))
+  arrange(desc(RMSE))
 
 write.csv(
   metrics_table,
@@ -594,14 +588,8 @@ metrics_table <- df_long0 %>%
   ) %>%
   group_by(model) %>%
   summarise(
-    ModelMetrics::rmse = ModelMetrics::rmse(
-      actual = norm_potential,
-      predicted = estimate
-    ),
-    ModelMetrics::mae = ModelMetrics::mae(
-      actual = norm_potential,
-      predicted = estimate
-    ),
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
     MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
     MDAPE = mdape(
       actual = norm_potential,
@@ -614,7 +602,7 @@ metrics_table <- df_long0 %>%
   mutate(
     model = mod_labels[model]
   ) %>%
-  arrange(desc(ModelMetrics::rmse))
+  arrange(desc(RMSE))
 metrics_table
 write.csv(
   metrics_table,
@@ -663,14 +651,8 @@ metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(tech_typ, model) %>%
   summarise(
-    ModelMetrics::rmse = ModelMetrics::rmse(
-      actual = norm_potential,
-      predicted = estimate
-    ),
-    ModelMetrics::mae = ModelMetrics::mae(
-      actual = norm_potential,
-      predicted = estimate
-    ),
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
     MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
     MDAPE = mdape(
       actual = norm_potential,
@@ -681,7 +663,7 @@ metrics_table <- df_long0 %>%
     .groups = "drop"
   ) %>%
   # mutate(model = mod_labels[model]) %>%
-  arrange(tech_typ, desc(ModelMetrics::rmse))
+  arrange(tech_typ, desc(RMSE))
 metrics_table
 write.csv(
   metrics_table,
@@ -718,14 +700,8 @@ metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(p_group3, model) %>%
   summarise(
-    ModelMetrics::rmse = ModelMetrics::rmse(
-      actual = norm_potential,
-      predicted = estimate
-    ),
-    ModelMetrics::mae = ModelMetrics::mae(
-      actual = norm_potential,
-      predicted = estimate
-    ),
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
     MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
     MDAPE = mdape(
       actual = norm_potential,
@@ -735,7 +711,7 @@ metrics_table <- df_long0 %>%
     Bias = mean(estimate - norm_potential, na.rm = TRUE),
     .groups = "drop"
   ) %>%
-  arrange(p_group3, desc(ModelMetrics::rmse))
+  arrange(p_group3, desc(RMSE))
 metrics_table
 
 write.csv(
@@ -799,14 +775,8 @@ df_long0 %>%
   st_drop_geometry() %>%
   group_by(hour, model) %>%
   summarise(
-    ModelMetrics::rmse = ModelMetrics::rmse(
-      actual = norm_potential,
-      predicted = estimate
-    ),
-    ModelMetrics::mae = ModelMetrics::mae(
-      actual = norm_potential,
-      predicted = estimate
-    ),
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
     MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
     MDAPE = mdape(
       actual = norm_potential,
@@ -817,14 +787,14 @@ df_long0 %>%
     .groups = "drop"
   ) %>%
   mutate(model = mod_labels[model]) %>%
-  arrange(hour, desc(ModelMetrics::rmse)) %>%
-  ggplot(aes(hour, ModelMetrics::rmse, col = model, group = model)) +
+  arrange(hour, desc(RMSE)) %>%
+  ggplot(aes(hour, RMSE, col = model, group = model)) +
   geom_line() +
   theme_minimal() +
   labs(
     title = "Model performance by hour of day",
     x = "Hour of day",
-    y = "ModelMetrics::rmse",
+    y = "RMSE",
     col = "Model"
   ) +
   scale_color_manual(values = pal_lancet()(n_models))
@@ -841,14 +811,8 @@ metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(dist_coast_g4, model) %>%
   summarise(
-    ModelMetrics::rmse = ModelMetrics::rmse(
-      actual = norm_potential,
-      predicted = estimate
-    ),
-    ModelMetrics::mae = ModelMetrics::mae(
-      actual = norm_potential,
-      predicted = estimate
-    ),
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
     MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
     MDAPE = mdape(
       actual = norm_potential,
@@ -858,7 +822,7 @@ metrics_table <- df_long0 %>%
     Bias = mean(estimate - norm_potential, na.rm = TRUE),
     .groups = "drop"
   ) %>%
-  arrange(dist_coast_g4, desc(ModelMetrics::rmse))
+  arrange(dist_coast_g4, desc(RMSE))
 metrics_table
 
 write.csv(
@@ -896,14 +860,8 @@ metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(elevation_g4, model) %>%
   summarise(
-    ModelMetrics::rmse = ModelMetrics::rmse(
-      actual = norm_potential,
-      predicted = estimate
-    ),
-    ModelMetrics::mae = ModelMetrics::mae(
-      actual = norm_potential,
-      predicted = estimate
-    ),
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
     MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
     MDAPE = mdape(
       actual = norm_potential,
@@ -913,7 +871,7 @@ metrics_table <- df_long0 %>%
     Bias = mean(estimate - norm_potential, na.rm = TRUE),
     .groups = "drop"
   ) %>%
-  arrange(elevation_g4, desc(ModelMetrics::rmse))
+  arrange(elevation_g4, desc(RMSE))
 metrics_table
 
 write.csv(
