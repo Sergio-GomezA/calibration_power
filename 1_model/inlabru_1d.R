@@ -20,6 +20,7 @@ wf_df_frag <- pwr_curv_df %>%
   rename(time = halfHourEndTime) %>%
   mutate(
     date = as.Date(time),
+    elevation = pmax(0, elevation),
     site_name = site_name %>%
       gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
       trimws()
@@ -68,7 +69,7 @@ x <- wf_df_frag$pow_group %>% unique() %>% sort()
 min_jump <- min(diff(sort(x))) / diff(range(x))
 if (min_jump <= 1e-4) {
   wf_df_frag <- wf_df_frag %>%
-    mutate(pow_group = inla.group(norm_power_est0, n = 15, method = "quantile"))
+    mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
 }
 
 wf_df_frag <- wf_df_frag %>%
@@ -262,15 +263,53 @@ ppxl_all <- fm_cprod(
 )
 
 set.seed(1)
-pow_est_st <- predict(
-  bru0,
-  ppxl_all,
-  ~ data.frame(
-    time_id = time_id,
-    norm_potential_est = st_field
-  ),
-  n.samples = 100
+safe_predict <- function(model, newdata, fun, n1 = 100, n2 = 10) {
+  tryCatch(
+    {
+      fun(model, newdata, n.samples = n1)
+    },
+    error = function(e) {
+      message("First predict failed: ", conditionMessage(e))
+      message("Retrying with n.samples = ", n2)
+
+      tryCatch(
+        {
+          fun(model, newdata, n.samples = n2)
+        },
+        error = function(e2) {
+          message("Second predict also failed: ", conditionMessage(e2))
+          stop(e2)
+        }
+      )
+    }
+  )
+}
+pow_est_st <- safe_predict(
+  model = bru0,
+  newdata = ppxl_all,
+  fun = function(model, newdata, n.samples) {
+    predict(
+      model,
+      newdata,
+      ~ data.frame(
+        time_id = time_id,
+        norm_potential_est = st_field
+      ),
+      n.samples = n.samples
+    )
+  },
+  n1 = 100,
+  n2 = 10
 )
+# pow_est_st <- predict(
+#   bru0,
+#   ppxl_all,
+#   ~ data.frame(
+#     time_id = time_id,
+#     norm_potential_est = st_field
+#   ),
+#   n.samples = 100
+# )
 
 # ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf", dims = c(50, 50))
 
