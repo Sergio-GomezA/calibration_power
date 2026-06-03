@@ -5,6 +5,7 @@ require(fmesher)
 require(ggspatial)
 require(ModelMetrics)
 require(qmap)
+require(ggridges)
 
 # inlabru model 1 day
 
@@ -188,12 +189,15 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
 bru0 <- bru(
   components = components0,
   formula = norm_potential ~ Intercept +
-    # tech_typ +
     power_correction +
     wind +
     st_field,
   family = "gaussian",
-  data = wf_df_frag
+  data = wf_df_frag,
+  options = bru_options(
+    bru_verbose = 3,
+    control.inla = list(verbose = TRUE)
+  )
 )
 
 saveRDS(
@@ -207,7 +211,7 @@ saveRDS(
 
 ## summary and effect plots ####
 summary(bru0)
-bru0$summary.fixed[, 1:6]
+# bru0$summary.fixed[, 1:6]
 # bru0$summary.random$tech_typ[, 1:6]
 # bru0$summary.random$tech_power[, 1:6]
 
@@ -258,7 +262,7 @@ pow_est_st <- predict(
     time_id = time_id,
     norm_potential_est = st_field
   ),
-  n.samples = 20
+  n.samples = 100
 )
 
 # ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf", dims = c(50, 50))
@@ -447,6 +451,7 @@ est_cols <- c(
   "qm",
   "agg_lm"
 )
+n_models <- length(est_cols)
 n <- nrow(wf_df_frag)
 names(mod_labels) <- est_cols
 # length(wgen_qm)
@@ -478,20 +483,74 @@ st_write(
 
 ## Exploring fitted values ####
 
-model_df <- st_read(sprintf("data/calibration_df_%s.gpkg", d0_tag))
+model_df0 <- st_read(sprintf("data/calibration_df_%s.gpkg", d0_tag))
 
-# model_df %>% head()
 
-df_long <- model_df %>%
-  dplyr::select(tech_typ, norm_potential, all_of(est_cols)) %>%
+df_long0 <- model_df0 %>%
+  dplyr::select(
+    date,
+    time,
+    site_name,
+    coord_id,
+    elevation,
+    dist_coast,
+    capacity,
+    tech_typ,
+    p_group3,
+    norm_potential,
+    any_of(est_cols)
+  ) %>%
+  mutate(hour = hour(time)) %>%
+  mutate(
+    p_group3 = factor(p_group3, levels = c("low", "mid", "high")),
+    dist_coast_g4 = cut(
+      dist_coast,
+      breaks = quantile(dist_coast, probs = seq(0, 1, 0.25)),
+      include.lowest = TRUE
+    ),
+    elevation_g4 = cut(
+      elevation,
+      breaks = quantile(elevation, probs = seq(0, 1, 0.25)),
+      include.lowest = TRUE
+    )
+  ) %>%
   pivot_longer(
-    cols = all_of(est_cols),
+    cols = any_of(est_cols),
     names_to = "model",
     values_to = "estimate"
+  ) %>%
+  mutate(,
+    err = estimate - norm_potential,
+    p_group3 = forcats::fct_rev(p_group3),
+    model = factor(model, levels = est_cols, labels = mod_labels)
   )
 
-# require(ModelMetrics)
-metrics_table <- df_long %>%
+df_long0 %>%
+  ggplot() +
+  geom_density(
+    aes(x = err, fill = model),
+    alpha = 0.5
+  ) +
+  facet_wrap(~model) +
+  theme_minimal() +
+  labs(
+    title = "Error distribution by model",
+    x = "Error (model estimate - observed)",
+    y = "Density",
+    fill = "Model"
+  ) +
+  coord_cartesian(xlim = c(-0.25, 0.25)) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = pal_lancet()(5))
+
+ggsave(
+  sprintf("fig/error_distribution_by_model_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+
+metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(model) %>%
   summarise(
@@ -506,7 +565,9 @@ metrics_table <- df_long %>%
     Bias = mean(estimate - norm_potential, na.rm = TRUE),
     .groups = "drop"
   ) %>%
-  mutate(model = mod_labels[model]) %>%
+  mutate(
+    model = mod_labels[model]
+  ) %>%
   arrange(desc(RMSE))
 
 write.csv(
@@ -515,10 +576,338 @@ write.csv(
   row.names = FALSE
 )
 
+# aggregated time series version
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(time, model) %>%
+  summarise(
+    across(
+      c(norm_potential, estimate),
+      ~ sum(. * capacity) / sum(capacity)
+    )
+  ) %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    model = mod_labels[model]
+  ) %>%
+  arrange(desc(RMSE))
+metrics_table
+write.csv(
+  metrics_table,
+  sprintf("summaries/calib_metrics_%s_gb.csv", d0_tag),
+  row.names = FALSE
+)
+
+df_long0 %>%
+  group_by(time, model) %>%
+  summarise(
+    across(
+      c(norm_potential, estimate),
+      ~ sum(. * capacity) / sum(capacity)
+    )
+  ) %>%
+  mutate(
+    err = estimate - norm_potential,
+    # model = factor(model, levels = est_cols, labels = mod_labels)
+  ) %>%
+  group_by(model) %>%
+  ggplot() +
+  geom_density(
+    aes(x = err, fill = model),
+    alpha = 0.5
+  ) +
+  facet_wrap(~model) +
+  theme_minimal() +
+  labs(
+    title = "Error distribution by model",
+    x = "Error (model estimate - observed)",
+    y = "Density",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = pal_lancet()(5))
+
+ggsave(
+  sprintf("fig/error_distribution_by_model_%s_gb.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+
+# by tech type
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(tech_typ, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  # mutate(model = mod_labels[model]) %>%
+  arrange(tech_typ, desc(RMSE))
+metrics_table
+write.csv(
+  metrics_table,
+  sprintf("summaries/calib_metrics_%s_tech.csv", d0_tag),
+  row.names = FALSE
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(err, tech_typ, fill = model),
+    alpha = 0.5,
+    scale = 1
+  ) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by technology type",
+    x = "Error (model estimate - observed)",
+    y = "Technology Type",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = pal_lancet()(n_models))
+
+ggsave(
+  sprintf("fig/error_distribution_by_tech_type_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+# by regime
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(p_group3, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(p_group3, desc(RMSE))
+metrics_table
+
+write.csv(
+  metrics_table,
+  sprintf("summaries/calib_metrics_%s_regime.csv", d0_tag),
+  row.names = FALSE
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(err, p_group3, fill = model),
+    alpha = 0.5,
+    scale = 1
+  ) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by regime",
+    x = "Error (model estimate - observed)",
+    y = "Regime",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = pal_lancet()(n_models))
+ggsave(
+  sprintf("fig/error_distribution_by_regime_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+
+# by hour of day
+df_long0 %>%
+  mutate(hour = factor(hour, levels = 0:23)) %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(x = err, y = hour, fill = model),
+    alpha = 0.5
+  ) +
+  facet_wrap(~model) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by hour of day",
+    x = "Error (model estimate - observed)",
+    y = "Hour of day",
+    fill = "Model"
+  ) +
+  theme(legend.position = "none") +
+  coord_cartesian(xlim = c(-0.5, 0.5)) +
+  scale_fill_manual(values = pal_lancet()(n_models))
+
+ggsave(
+  sprintf("fig/error_distribution_by_hourA_%s.pdf", d0_tag),
+  width = 12,
+  height = 8
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(hour, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model]) %>%
+  arrange(hour, desc(RMSE)) %>%
+  ggplot(aes(hour, RMSE, col = model, group = model)) +
+  geom_line() +
+  theme_minimal() +
+  labs(
+    title = "Model performance by hour of day",
+    x = "Hour of day",
+    y = "RMSE",
+    col = "Model"
+  ) +
+  scale_color_manual(values = pal_lancet()(n_models))
+
+ggsave(
+  sprintf("fig/model_performance_by_hourS_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+
+# by distance to coast
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(dist_coast_g4, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(dist_coast_g4, desc(RMSE))
+metrics_table
+
+write.csv(
+  metrics_table,
+  sprintf("summaries/calib_metrics_%s_dist_coast.csv", d0_tag),
+  row.names = FALSE
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(err, dist_coast_g4, fill = model),
+    alpha = 0.5,
+    scale = 1
+  ) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by distance to coast",
+    x = "Error (model estimate - observed)",
+    y = "Distance to Coast",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = pal_lancet()(n_models))
+ggsave(
+  sprintf("fig/error_distribution_by_dist_coast_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+
+# by elevation
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(elevation_g4, model) %>%
+  summarise(
+    RMSE = rmse(actual = norm_potential, predicted = estimate),
+    MAE = mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(elevation_g4, desc(RMSE))
+metrics_table
+
+write.csv(
+  metrics_table,
+  sprintf("summaries/calib_metrics_%s_elevation.csv", d0_tag),
+  row.names = FALSE
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(err, elevation_g4, fill = model),
+    alpha = 0.5,
+    scale = 1
+  ) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by elevation",
+    x = "Error (model estimate - observed)",
+    y = "Elevation",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = pal_lancet()(n_models))
+ggsave(
+  sprintf("fig/error_distribution_by_elevation_%s.pdf", d0_tag),
+  width = 6,
+  height = 4
+)
+
+
 ## ts plots #####
 
 mod_labels2 <- c(mod_labels, "norm_potential" = "Observed")
-model_df_ts <- model_df %>%
+model_df_ts <- model_df0 %>%
   dplyr::select(
     time,
     site_name,
@@ -577,7 +966,7 @@ ggsave(
   height = 6
 )
 
-model_df_ts2 <- model_df %>%
+model_df_ts2 <- model_df0 %>%
   dplyr::select(
     time,
     site_name,
