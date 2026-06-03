@@ -64,6 +64,13 @@ wf_df_frag <- pwr_curv_df %>%
     # loc = cbind(x, y)
   )
 
+x <- wf_df_frag$pow_group %>% unique() %>% sort()
+min_jump <- min(diff(sort(x))) / diff(range(x))
+if (min_jump <= 1e-4) {
+  wf_df_frag <- wf_df_frag %>%
+    mutate(pow_group = inla.group(norm_power_est0, n = 15, method = "quantile"))
+}
+
 wf_df_frag <- wf_df_frag %>%
   st_geometry() %>%
   (\(g) g / 1000)() %>%

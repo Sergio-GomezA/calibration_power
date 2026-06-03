@@ -581,7 +581,7 @@ for (d in sampled_days) {
     "Running models for day %s",
     base::format(as.Date(d), "%Y-%m-%d")
   ))
-  d0 <- d
+  d0 <- as.Date(d)
   source("1_model/inlabru_1d.R")
 }
 ## 2.2.1 Model predictions ####
