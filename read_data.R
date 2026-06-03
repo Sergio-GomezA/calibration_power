@@ -1,8 +1,8 @@
 # ELEXON + ERA5 Data ------------------------------
 
-data_path <- "~/Documents/ERA5_at_wf/"
-gen_path <- "~/Documents/elexon/"
-model_path <- "~/Documents/elexon/model_objects"
+# data_path <- "~/Documents/ERA5_at_wf/"
+# gen_path <- "~/Documents/elexon/"
+# model_path <- "~/Documents/elexon/model_objects"
 
 # wind farm catalog based on 2025 data
 ref_catalog_2025 <- fread(
