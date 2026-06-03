@@ -573,11 +573,17 @@ summary(model_AIC0_agg)
 ## Looping through days #####
 
 for (d0 in sampled_days) {
-  cat("Running models for day", d0, "\n")
-
-  source("1_model/inlabru_1d.R")
+  cat(sprintf("Running models for day %s", format(d0, "%Y-%m-%d")))
 }
 
+for (d in sampled_days) {
+  message(sprintf(
+    "Running models for day %s",
+    base::format(as.Date(d), "%Y-%m-%d")
+  ))
+  d0 <- d
+  source("1_model/inlabru_1d.R")
+}
 ## 2.2.1 Model predictions ####
 
 mod_labels <- c(
