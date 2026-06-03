@@ -72,15 +72,16 @@ theme_set(theme_bw())
 - Consitency under aggregation
 - Low wind events
 
-# Model diagnostics
+# Model performance assessment
 
-## Diagnostics framework
+## Assessment framework
 
 
 ::: {.columns}
 
 ::: {.column width="50%"}
 
+- Run models on a sample of days
 - Performance metrics:
   - RMSE
   - MAE
@@ -96,7 +97,7 @@ theme_set(theme_bw())
 
 ::: {.column width="50%"}
 \centering
-\small Sampled days for diagnostics
+\small Sampled days for performance assessment
 
 \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/daily_generation_time_series_sampled_days.pdf}
 :::
@@ -105,35 +106,200 @@ theme_set(theme_bw())
 
 ## Model portfolio
 
+
 - Wind farm level models:
   - Generic Power Curve (ERA5 + generic PC estimate)
   - Quantile Mapping
   - Linear model 
   - Spatiotemporal model
 
-- Linear model (GB level)
+- Linear model at Great Britain (GB) level
 
-## 
 
 ## Error metrics
 
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
 \small Metrics at wind farm level
 
+```{r}
+d0_tag <- "samp_days"
+metrics_table <- read.csv(sprintf("../summaries/calib_metrics_%s.csv", d0_tag))
+# metrics_table <- read.csv(sprintf("summaries/calib_metrics_%s.csv", d0_tag))
+
+metrics_table %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Error distribution by model
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/error_distribution_by_model_samp_days.pdf}
+:::
+
+:::
+
+## Error metrics aggregated
 
 
-## Metrics at GB level
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\small Metrics at GB level
+
+```{r}
+d0_tag <- "samp_days"
+metrics_table <- read.csv(sprintf("../summaries/calib_metrics_%s_gb.csv", d0_tag))
+# metrics_table <- read.csv(sprintf("summaries/calib_metrics_%s.csv", d0_tag))
+
+metrics_table %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Error distribution by model
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/error_distribution_by_model_samp_days_gb.pdf}
+:::
+
+:::
+
 
 ## Technology type
+\centering
+\small Metrics by technology type
+
+```{r}
+d0_tag <- "samp_days"
+metrics_table <- read.csv(sprintf("../summaries/calib_metrics_%s_tech.csv", d0_tag))
+# metrics_table <- read.csv(sprintf("summaries/calib_metrics_%s.csv", d0_tag))
+
+metrics_table %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+## Technology type
+\centering
+\small Error distribution by technology type
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/error_distribution_by_tech_type_samp_days.pdf}
 
 ## Regime
 
+\centering
+\footnotesize Metrics by regime
+
+```{r}
+d0_tag <- "samp_days"
+metrics_table <- read.csv(sprintf("../summaries/calib_metrics_%s_regime.csv", d0_tag))
+# metrics_table <- read.csv(sprintf("summaries/calib_metrics_%s.csv", d0_tag))
+
+metrics_table %>% 
+  mutate(p_group3 = factor(p_group3, levels = c("low", "mid", "high"))) %>%
+  arrange(p_group3) %>%
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+## Regime
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_distribution_by_regime_samp_days.pdf}
+
 ## Hour of the day
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_distribution_by_hourA_samp_days.pdf}
 
 ## Elevation
+\centering
+\tiny Metrics by regime
+
+```{r}
+d0_tag <- "samp_days"
+metrics_table <- read.csv(sprintf("../summaries/calib_metrics_%s_elevation.csv", d0_tag))
+# metrics_table <- read.csv(sprintf("summaries/calib_metrics_%s.csv", d0_tag))
+
+metrics_table %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+## Elevation
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_distribution_by_elevation_samp_days.pdf}
 
 ## Distance to coast
 
+\centering
+\tiny Metrics by distance to coast
+
+```{r}
+d0_tag <- "samp_days"
+metrics_table <- read.csv(sprintf("../summaries/calib_metrics_%s_dist_coast.csv", d0_tag))
+# metrics_table <- read.csv(sprintf("summaries/calib_metrics_%s.csv", d0_tag))
+
+metrics_table %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+## Distance to coast
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_distribution_by_dist_coast_samp_days.pdf}
+
 # Linear model {-}
+\tiny
+```{r}
+model_path <- "~/Documents/elexon/model_objects"
+
+model_AIC0 <- readRDS(file.path(model_path, sprintf("lm_model_aic0_%s.rds", d0_tag)))
+model_AIC0_agg <- readRDS(file.path(model_path, sprintf("lm_model_aic0_agg_%s.rds", d0_tag)))
+
+library(modelsummary)
+
+# modelsummary::modelsummary(
+#   # list("LM WF" =  model_AIC0, "LM GB aggr." = model_AIC0_agg),
+#   model_AIC0,
+#   output = "latex",
+#   stars = TRUE,
+#   # model_names = "LM",
+#   escape = FALSE,
+#   shape = term ~ model + statistic,
+#   # align = "l",
+#   fmt = 3
+# )
+
+```
+
 
 # Spatiotemporal calibration model {-}
 

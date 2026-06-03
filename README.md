@@ -143,6 +143,13 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
     - [ ] aggregator GB, Onshore, Offshore, Scotland, rest of GB
 
 
+time series plots with estimate and CI
+
+models by day
+
+high wind speed / altitude/ distance coast onshore / 
+
+
 - **Model validation**
   - [ ] out-of-sample validation
     - [ ] time GB Onshore, Offshore,
