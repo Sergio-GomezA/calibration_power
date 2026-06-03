@@ -91,6 +91,11 @@ install.packages("ggthemes", type = "source")
 install.packages("hexbin")
 
 install.packages("elevatr")
+
+
+install.packages("modelsummary")
+install.packages("tinytex")
+tinytex::install_tinytex()
 # Sys.getenv("PATH")
 # Sys.which("gdal-config")
 

@@ -1772,3 +1772,31 @@ plot.effects <- function(
   }
   invisible(list(data = plot_data, fig = p1))
 }
+
+
+mape <- function(actual, predicted, pos_only = FALSE, ...) {
+  if (pos_only) {
+    idx <- actual > 0 & !is.na(actual) & !is.na(predicted)
+    return(mean(abs((actual[idx] - predicted[idx]) / actual[idx]), ...) * 100)
+  } else {
+    return(
+      mean(
+        abs((actual - predicted) / actual) * 100,
+        ...
+      )
+    )
+  }
+}
+mdape <- function(actual, predicted, pos_only = FALSE, ...) {
+  if (pos_only) {
+    idx <- actual > 0 & !is.na(actual) & !is.na(predicted)
+    return(median(abs((actual[idx] - predicted[idx]) / actual[idx]), ...) * 100)
+  } else {
+    return(
+      median(
+        abs((actual - predicted) / actual) * 100,
+        ...
+      )
+    )
+  }
+}
