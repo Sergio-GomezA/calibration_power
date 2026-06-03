@@ -48,7 +48,6 @@ require(elevatr)
 
 require(ModelMetrics)
 
-
 source("aux_funct.R")
 
 
@@ -1540,7 +1539,7 @@ df_long <- model_df %>%
     values_to = "estimate"
   )
 
-require(ModelMetrics)
+# require(ModelMetrics)
 metrics_table <- df_long %>%
   st_drop_geometry() %>%
   group_by(model) %>%
