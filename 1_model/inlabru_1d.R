@@ -198,31 +198,35 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     control.group = list(model = "ar1")
   )
 
-bru0 <- bru(
-  components = components0,
-  formula = norm_potential ~ Intercept +
-    power_correction +
-    wind +
-    st_field,
-  family = "gaussian",
-  data = wf_df_frag,
-  options = bru_options(
-    bru_verbose = 3,
-    control.inla = list(verbose = TRUE)
-  )
+model_fname <- file.path(
+  model_path,
+  sprintf("st_bru0_%s_mesh_%s.rds", mesh_label, d0_tag)
 )
 
-saveRDS(
-  bru0,
-  file = file.path(
-    model_path,
-    sprintf("st_bru0_%s_mesh_%s.rds", mesh_label, d0_tag)
+if (!file.exists(model_fname)) {
+  cat("Fitting inlabru model\n")
+  bru0 <- bru(
+    components = components0,
+    formula = norm_potential ~ Intercept +
+      power_correction +
+      wind +
+      st_field,
+    family = "gaussian",
+    data = wf_df_frag,
+    options = bru_options(
+      bru_verbose = 3,
+      control.inla = list(verbose = TRUE)
+    )
   )
-)
-# bru0 <- readRDS(file.path(
-#   model_path,
-#   sprintf("st_bru0_%s_mesh_%s.rds", mesh_label, d0_tag)
-# ))
+
+  saveRDS(
+    bru0,
+    file = model_fname
+  )
+} else {
+  cat("Loading existing model\n")
+  bru0 <- readRDS(model_fname)
+}
 
 ## summary and effect plots ####
 summary(bru0)
@@ -304,7 +308,7 @@ pow_est_st <- safe_predict(
       newdata,
       ~ data.frame(
         time_id = time_id,
-        norm_potential_est = st_field
+        norm_potential_est = pmax(0, pmin(1, st_field)) # should i cap this?
       ),
       n.samples = n.samples
     )
@@ -312,6 +316,7 @@ pow_est_st <- safe_predict(
   n1 = 100,
   n2 = 10
 )
+# pow_est_st$ %>% class()
 # pow_est_st <- predict(
 #   bru0,
 #   ppxl_all,
