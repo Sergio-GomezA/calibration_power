@@ -523,6 +523,10 @@ model_df0 <- wf_df_frag %>%
     qm = wgen_qm,
     agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag)
   ) %>%
+  mutate(
+    st_low = bru0$summary.fitted.values[1:n, "0.025quant"],
+    st_high = bru0$summary.fitted.values[1:n, "0.975quant"]
+  ) %>%
   left_join(
     gb_day_df %>% dplyr::select(date, p_group3),
     by = c("date" = "date")
@@ -581,8 +585,9 @@ df_long0 <- model_df0 %>%
     norm_potential,
     any_of(est_cols)
   ) %>%
-  mutate(hour = hour(time), elevation = pmax(0, elevation), ) %>%
   mutate(
+    hour = hour(time),
+    elevation = pmax(0, elevation),
     p_group3 = factor(p_group3, levels = c("low", "mid", "high")),
     dist_coast_g4 = cut(
       dist_coast,
@@ -611,7 +616,8 @@ df_long0 <- model_df0 %>%
     names_to = "model",
     values_to = "estimate"
   ) %>%
-  mutate(,
+  mutate(
+    estimate = pmin(1, pmax(0, estimate)), # clipping estimates to [0, 1]
     err = estimate - norm_potential,
     p_group3 = forcats::fct_rev(p_group3),
     model = factor(model, levels = est_cols, labels = mod_labels)
@@ -998,6 +1004,7 @@ ggsave(
 
 ## ts plots #####
 
+### aggregated time series version #####
 mod_labels2 <- c(mod_labels, "norm_potential" = "Observed")
 model_df_ts <- model_df0 %>%
   dplyr::select(
@@ -1058,6 +1065,50 @@ ggsave(
   height = 6
 )
 
+### some locations time series ####
+####
+set.seed(1)
+sample_sites <- model_df0 %>%
+  group_by(tech_typ) %>%
+  distinct(site_name) %>%
+  slice_sample(n = 2) %>%
+  pull(site_name)
+sample_sites
+
+model_df_ts %>%
+  filter(site_name %in% sample_sites) %>%
+  mutate(model = mod_labels2[model]) %>%
+  ggplot() +
+  geom_line(
+    aes(time, estimate, group = model, col = model),
+    # alpha = 0.5
+  ) +
+  theme_minimal() +
+  facet_wrap(
+    ~ sprintf(
+      "%s (%s)",
+      site_name,
+      gsub("Wind", "", tech_typ) %>% trimws()
+    ),
+    ncol = 2
+  ) +
+  scale_x_datetime(date_labels = "%H:%M") +
+  labs(
+    title = sprintf("Power estimates Time Series %s", d0),
+    x = "Time",
+    y = "Generation (% of capacity)",
+    col = ""
+  ) +
+  # scale_fill_manual(values = pal_lancet()(n_models)) +
+  theme(legend.position = "bottom")
+ggsave(
+  sprintf("fig/power_estimates_time_series_sampWF_%s.pdf", d0_tag),
+  width = 10,
+  height = 6
+)
+
+
+### aggregated error time series version ####
 model_df_ts2 <- model_df0 %>%
   dplyr::select(
     time,
@@ -1105,7 +1156,7 @@ model_df_ts2 %>%
   facet_wrap(~model, ncol = 3, labeller = as_labeller(mod_labels)) +
   scale_x_datetime(date_labels = "%H:%M") +
   labs(
-    title = sprintf("Power estimates Time Series %s", d0),
+    title = sprintf("Estimation Error Time Series %s", d0),
     x = "Time",
     y = "Error (% of capacity)",
     col = ""
