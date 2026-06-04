@@ -111,7 +111,7 @@ uk_map <- uk_map %>%
   (\(g) g / 1000)() %>%
   st_set_geometry(uk_map, .)
 
-edge_target <- 25 # km
+edge_target <- mesh_edge_par # km
 mesh_label <- ifelse(edge_target >= 20, "coarse", "fine")
 hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = edge_target * 2)
 
