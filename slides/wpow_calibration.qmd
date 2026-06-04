@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2026-05-26"
+date: "2026-06-04"
 format: 
   beamer:
     theme: Rochester
@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "wpow_calibration_slides_26-05-26.pdf"
+    output-file: "wpow_calibration_slides_26-06-04.pdf"
 header-includes:
   - \usepackage{graphicx}
 fontsize: 12pt
@@ -275,30 +275,6 @@ metrics_table %>%
 ## Distance to coast
 \centering
 \includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_distribution_by_dist_coast_samp_days.pdf}
-
-# Linear model {-}
-\tiny
-```{r}
-model_path <- "~/Documents/elexon/model_objects"
-
-model_AIC0 <- readRDS(file.path(model_path, sprintf("lm_model_aic0_%s.rds", d0_tag)))
-model_AIC0_agg <- readRDS(file.path(model_path, sprintf("lm_model_aic0_agg_%s.rds", d0_tag)))
-
-library(modelsummary)
-
-# modelsummary::modelsummary(
-#   # list("LM WF" =  model_AIC0, "LM GB aggr." = model_AIC0_agg),
-#   model_AIC0,
-#   output = "latex",
-#   stars = TRUE,
-#   # model_names = "LM",
-#   escape = FALSE,
-#   shape = term ~ model + statistic,
-#   # align = "l",
-#   fmt = 3
-# )
-
-```
 
 
 # Spatiotemporal calibration model {-}
