@@ -512,8 +512,8 @@ names(mod_labels) <- est_cols
 # length(wf_df_frag$norm_potential)
 # length(bru0$summary.fitted.values[1:n, "mean"])
 # length(model_AIC0$fitted.values)
-n <- nrow(wf_df_frag)
-names(mod_labels) <- est_cols
+# n <- nrow(wf_df_frag)
+# names(mod_labels) <- est_cols
 
 model_df0 <- wf_df_frag %>%
   mutate(
@@ -537,7 +537,34 @@ st_write(
 
 ## Exploring fitted values ####
 
+mod_labels <- c(
+  "Generic PC",
+  "Linear model",
+  "Spatio-temporal model",
+  "QM",
+  "GB LM"
+)
+est_cols <- c(
+  "norm_power_est0",
+  "lm",
+  "st",
+  "qm",
+  "agg_lm"
+)
+n_models <- length(est_cols)
+n <- nrow(wf_df_frag)
+names(mod_labels) <- est_cols
 model_df0 <- st_read(sprintf("data/calibration_df_%s.gpkg", d0_tag))
+
+pos_breaks <- with(
+  model_df0,
+  quantile(elevation[elevation > 0], probs = seq(0, 1, 1 / 3))
+)
+pos_levels <- levels(cut(
+  model_df0$elevation[model_df0$elevation > 0],
+  breaks = pos_breaks,
+  include.lowest = TRUE
+))
 
 
 df_long0 <- model_df0 %>%
@@ -554,7 +581,7 @@ df_long0 <- model_df0 %>%
     norm_potential,
     any_of(est_cols)
   ) %>%
-  mutate(hour = hour(time)) %>%
+  mutate(hour = hour(time), elevation = pmax(0, elevation), ) %>%
   mutate(
     p_group3 = factor(p_group3, levels = c("low", "mid", "high")),
     dist_coast_g4 = cut(
@@ -562,10 +589,21 @@ df_long0 <- model_df0 %>%
       breaks = quantile(dist_coast, probs = seq(0, 1, 0.25)),
       include.lowest = TRUE
     ),
-    elevation_g4 = cut(
-      elevation,
-      breaks = quantile(elevation, probs = seq(0, 1, 0.25)),
-      include.lowest = TRUE
+    elevation_g4 = ifelse(
+      elevation == 0,
+      "0",
+      as.character(
+        cut(
+          elevation,
+          breaks = pos_breaks,
+          include.lowest = TRUE,
+          # labels = c("Low", "Mid", "High")
+        )
+      )
+    ),
+    elevation_g4 = factor(
+      elevation_g4,
+      levels = c("0", pos_levels)
     )
   ) %>%
   pivot_longer(
