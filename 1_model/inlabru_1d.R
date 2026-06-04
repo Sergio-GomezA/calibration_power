@@ -146,7 +146,7 @@ ggsave(
 
 ### mesh assessment #####
 mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70) %>%
-  st_filter(., bndin)
+  st_filter(., bndout)
 
 ggplot() +
   geom_sf(data = mesh_assessment, aes(col = edge.len)) +
