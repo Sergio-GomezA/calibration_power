@@ -537,7 +537,7 @@ model_df0 <- wf_df_frag %>%
 
 st_write(
   model_df0,
-  sprintf("data/calibration_df_%s.gpkg", d0_tag),
+  sprintf("data/calibration_df_%s_%s.gpkg", mesh_label, d0_tag),
   driver = "GPKG",
   append = FALSE,
 )
@@ -561,7 +561,11 @@ est_cols <- c(
 n_models <- length(est_cols)
 n <- nrow(wf_df_frag)
 names(mod_labels) <- est_cols
-model_df0 <- st_read(sprintf("data/calibration_df_%s.gpkg", d0_tag))
+model_df0 <- st_read(sprintf(
+  "data/calibration_df_%s_%s.gpkg",
+  mesh_label,
+  d0_tag
+))
 
 pos_breaks <- with(
   model_df0,
@@ -645,7 +649,7 @@ df_long0 %>%
   scale_fill_manual(values = pal_lancet()(5))
 
 ggsave(
-  sprintf("fig/error_distribution_by_model_%s.pdf", d0_tag),
+  sprintf("fig/error_distribution_by_model_%s_%s.pdf", mesh_label, d0_tag),
   width = 6,
   height = 4
 )
@@ -673,7 +677,7 @@ metrics_table <- df_long0 %>%
 
 write.csv(
   metrics_table,
-  sprintf("summaries/calib_metrics_%s.csv", d0_tag),
+  sprintf("summaries/calib_metrics_%s_%s.csv", mesh_label, d0_tag),
   row.names = FALSE
 )
 
@@ -707,7 +711,7 @@ metrics_table <- df_long0 %>%
 metrics_table
 write.csv(
   metrics_table,
-  sprintf("summaries/calib_metrics_%s_gb.csv", d0_tag),
+  sprintf("summaries/calib_metrics_%s_%s_gb.csv", mesh_label, d0_tag),
   row.names = FALSE
 )
 
@@ -741,7 +745,7 @@ df_long0 %>%
   scale_fill_manual(values = pal_lancet()(5))
 
 ggsave(
-  sprintf("fig/error_distribution_by_model_%s_gb.pdf", d0_tag),
+  sprintf("fig/error_distribution_by_model_%s_%s_gb.pdf", mesh_label, d0_tag),
   width = 6,
   height = 4
 )
@@ -768,7 +772,7 @@ metrics_table <- df_long0 %>%
 metrics_table
 write.csv(
   metrics_table,
-  sprintf("summaries/calib_metrics_%s_tech.csv", d0_tag),
+  sprintf("summaries/calib_metrics_%s_%s_tech.csv", mesh_label, d0_tag),
   row.names = FALSE
 )
 
@@ -791,7 +795,7 @@ df_long0 %>%
   scale_fill_manual(values = pal_lancet()(n_models))
 
 ggsave(
-  sprintf("fig/error_distribution_by_tech_type_%s.pdf", d0_tag),
+  sprintf("fig/error_distribution_by_tech_type_%s_%s.pdf", mesh_label, d0_tag),
   width = 6,
   height = 4
 )
@@ -817,7 +821,7 @@ metrics_table
 
 write.csv(
   metrics_table,
-  sprintf("summaries/calib_metrics_%s_regime.csv", d0_tag),
+  sprintf("summaries/calib_metrics_%s_%s_regime.csv", mesh_label, d0_tag),
   row.names = FALSE
 )
 
@@ -839,7 +843,7 @@ df_long0 %>%
   theme(legend.position = "bottom") +
   scale_fill_manual(values = pal_lancet()(n_models))
 ggsave(
-  sprintf("fig/error_distribution_by_regime_%s.pdf", d0_tag),
+  sprintf("fig/error_distribution_by_regime_%s_%s.pdf", mesh_label, d0_tag),
   width = 6,
   height = 4
 )
@@ -867,7 +871,7 @@ df_long0 %>%
   scale_fill_manual(values = pal_lancet()(n_models))
 
 ggsave(
-  sprintf("fig/error_distribution_by_hourA_%s.pdf", d0_tag),
+  sprintf("fig/error_distribution_by_hourA_%s_%s.pdf", mesh_label, d0_tag),
   width = 12,
   height = 8
 )
@@ -901,7 +905,7 @@ df_long0 %>%
   scale_color_manual(values = pal_lancet()(n_models))
 
 ggsave(
-  sprintf("fig/model_performance_by_hourS_%s.pdf", d0_tag),
+  sprintf("fig/model_performance_by_hourS_%s_%s.pdf", mesh_label, d0_tag),
   width = 6,
   height = 4
 )
@@ -928,7 +932,7 @@ metrics_table
 
 write.csv(
   metrics_table,
-  sprintf("summaries/calib_metrics_%s_dist_coast.csv", d0_tag),
+  sprintf("summaries/calib_metrics_%s_%s_dist_coast.csv", mesh_label, d0_tag),
   row.names = FALSE
 )
 
@@ -950,7 +954,7 @@ df_long0 %>%
   theme(legend.position = "bottom") +
   scale_fill_manual(values = pal_lancet()(n_models))
 ggsave(
-  sprintf("fig/error_distribution_by_dist_coast_%s.pdf", d0_tag),
+  sprintf("fig/error_distribution_by_dist_coast_%s_%s.pdf", mesh_label, d0_tag),
   width = 6,
   height = 4
 )
@@ -977,7 +981,7 @@ metrics_table
 
 write.csv(
   metrics_table,
-  sprintf("summaries/calib_metrics_%s_elevation.csv", d0_tag),
+  sprintf("summaries/calib_metrics_%s_%s_elevation.csv", mesh_label, d0_tag),
   row.names = FALSE
 )
 
@@ -999,7 +1003,7 @@ df_long0 %>%
   theme(legend.position = "bottom") +
   scale_fill_manual(values = pal_lancet()(n_models))
 ggsave(
-  sprintf("fig/error_distribution_by_elevation_%s.pdf", d0_tag),
+  sprintf("fig/error_distribution_by_elevation_%s_%s.pdf", mesh_label, d0_tag),
   width = 6,
   height = 4
 )
@@ -1063,7 +1067,7 @@ model_df_ts %>%
   ) +
   theme(legend.position = "bottom")
 ggsave(
-  sprintf("fig/power_estimates_time_series_%s.pdf", d0_tag),
+  sprintf("fig/power_estimates_time_series_%s_%s.pdf", mesh_label, d0_tag),
   width = 10,
   height = 6
 )
@@ -1105,7 +1109,11 @@ model_df_ts %>%
   # scale_fill_manual(values = pal_lancet()(n_models)) +
   theme(legend.position = "bottom")
 ggsave(
-  sprintf("fig/power_estimates_time_series_sampWF_%s.pdf", d0_tag),
+  sprintf(
+    "fig/power_estimates_time_series_%s_sampWF_%s.pdf",
+    mesh_label,
+    d0_tag
+  ),
   width = 10,
   height = 6
 )
@@ -1169,7 +1177,11 @@ model_df_ts2 %>%
   ) +
   theme(legend.position = "bottom")
 ggsave(
-  sprintf("fig/power_estimates_error_time_series_%s.pdf", d0_tag),
+  sprintf(
+    "fig/power_estimates_error_time_series_%s_%s.pdf",
+    mesh_label,
+    d0_tag
+  ),
   width = 10,
   height = 6
 )
