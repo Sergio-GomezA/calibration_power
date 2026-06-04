@@ -87,16 +87,19 @@ loc_unique <- wf_df_frag %>%
 
 # bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
 # bnd <- fm_extensions(loc_unique, convex = c(-.08, -.3))
-bnd <- fm_extensions(loc_unique, convex = c(-.1, -.35))
+if (mesh_edge_par <= 20) {
+  conv_par <- c(-.05, -.35)
+  max_n <- c(900, 300)
+} else {
+  conv_par <- c(-.1, -.35)
+  max_n <- c(900, 150)
+}
+bnd <- fm_extensions(loc_unique, convex = conv_par)
 # bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
-# ggplot() + geom_sf(data = bnd[[2]])
+# ggplot() + geom_sf(data = bnd[[1]])
 bndin <- bnd[[1]]
 bndout <- bnd[[2]]
-# uk_map <- rnaturalearth::ne_countries(
-#   scale = "medium",
-#   country = "United Kingdom",
-#   returnclass = "sf"
-# )
+
 uk_map <- rnaturalearth::ne_countries(
   scale = "medium",
   country = "United Kingdom",
@@ -123,7 +126,7 @@ wf.mesh <- fm_mesh_2d(
   min.angle = 30,
   # offset = -0.2,
   cutoff = edge_target,
-  max.n.strict = c(900, 150)
+  max.n.strict = max_n
 )
 saveRDS(
   wf.mesh,
