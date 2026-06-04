@@ -351,7 +351,7 @@ pow_est_st <- safe_predict(
       newdata,
       ~ data.frame(
         time_id = time_id,
-        norm_potential_est = pmax(0, pmin(1, st_field)) # should i cap this?
+        norm_potential_est = pmax(-1, pmin(1, st_field)) # should i cap this?
       ),
       n.samples = n.samples
     )

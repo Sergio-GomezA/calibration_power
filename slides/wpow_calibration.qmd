@@ -121,15 +121,15 @@ theme_set(theme_bw())
 # Low wind speed {-}
 ## Hyperparameters
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_coarse_200814.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_fine_200814.pdf}
 
 ## Estimated spatial field - median
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_median_200814.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_median_200814.pdf}
 
 ## Estimated spatial field - standard deviation
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_sd_200814.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_sd_200814.pdf}
 
 ## Effect of wind speed and power regime
 
@@ -139,14 +139,14 @@ theme_set(theme_bw())
 
 \centering
 Wind speed effect
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_coarse_200814.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_fine_200814.pdf}
 
 :::
 
 ::: {.column width="50%"}
 \centering
 Power regime effect
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_coarse_200814.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_fine_200814.pdf}
 :::
 
 :::
@@ -154,16 +154,97 @@ Power regime effect
 ## Power estimates 
 
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_200814.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_200814.pdf}
 
 ## Power estimates sampled wind farms
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_sampWF_200814.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_sampWF_200814.pdf}
 
 
 # Medium wind speed {-}
+## Hyperparameters
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_fine_240417.pdf}
+
+## Estimated spatial field - median
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_median_240417.pdf}
+
+## Estimated spatial field - standard deviation
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_sd_240417.pdf}
+
+## Effect of wind speed and power regime
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+\centering
+Wind speed effect
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_fine_240417.pdf}
+
+:::
+
+::: {.column width="50%"}
+\centering
+Power regime effect
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_fine_240417.pdf}
+:::
+
+:::
+
+## Power estimates 
+
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_240417.pdf}
+
+## Power estimates sampled wind farms
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_sampWF_240417.pdf}
+
 
 # High wind speed {-} 
+## Hyperparameters
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_fine_240412.pdf}
+
+## Estimated spatial field - median
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_median_240412.pdf}
+
+## Estimated spatial field - standard deviation
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_sd_240412.pdf}
+
+## Effect of wind speed and power regime
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+\centering
+Wind speed effect
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_fine_240412.pdf}
+
+:::
+
+::: {.column width="50%"}
+\centering
+Power regime effect
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_fine_240412.pdf}
+:::
+
+:::
+
+## Power estimates 
+
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_240412.pdf}
+
+## Power estimates sampled wind farms
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_sampWF_240412.pdf}
 
 # August 10th, 2024 {-}
 ## Error metrics
