@@ -572,7 +572,8 @@ summary(model_AIC0_agg)
 
 ## Looping through days #####
 
-mesh_edge_par <- 25
+# mesh_edge_par <- 25
+mesh_edge_par <- 10
 for (d in sampled_days) {
   message(sprintf(
     "Running models for day %s",

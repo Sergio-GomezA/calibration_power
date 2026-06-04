@@ -104,6 +104,7 @@ theme_set(theme_bw())
 
 :::
 
+
 ## Model portfolio
 
 
@@ -115,7 +116,56 @@ theme_set(theme_bw())
 
 - Linear model at Great Britain (GB) level
 
+# Perfomance under different regimes
 
+# Low wind speed {-}
+## Hyperparameters
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_coarse_200814.pdf}
+
+## Estimated spatial field - median
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_median_200814.pdf}
+
+## Estimated spatial field - standard deviation
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_sd_200814.pdf}
+
+## Effect of wind speed and power regime
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+\centering
+Wind speed effect
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_coarse_200814.pdf}
+
+:::
+
+::: {.column width="50%"}
+\centering
+Power regime effect
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_coarse_200814.pdf}
+:::
+
+:::
+
+## Power estimates 
+
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_200814.pdf}
+
+## Power estimates sampled wind farms
+\centering
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_sampWF_200814.pdf}
+
+
+# Medium wind speed {-}
+
+# High wind speed {-} 
+
+# August 10th, 2024 {-}
 ## Error metrics
 
 ::: {.columns}

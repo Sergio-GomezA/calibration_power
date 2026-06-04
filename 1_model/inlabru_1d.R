@@ -145,6 +145,7 @@ ggsave(
 )
 
 ### mesh assessment #####
+cat("Assessing spatial mesh\n")
 mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70)
 
 ggplot() +
