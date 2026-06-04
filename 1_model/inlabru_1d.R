@@ -145,11 +145,14 @@ ggsave(
 )
 
 ### mesh assessment #####
-mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70) %>%
-  st_filter(., bndout)
+mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70)
 
 ggplot() +
-  geom_sf(data = mesh_assessment, aes(col = edge.len)) +
+  geom_sf(
+    data = mesh_assessment %>%
+      st_filter(., bndout),
+    aes(col = edge.len)
+  ) +
   geom_point(data = loc_unique, aes(x, y), color = "darkred") +
   geom_sf(data = uk_map, fill = NA, color = "white") +
   annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
@@ -162,7 +165,11 @@ ggsave(
 )
 # sd.dev should be close to 1
 ggplot() +
-  gg(data = mesh_assessment, aes(col = sd.dev)) +
+  gg(
+    data = mesh_assessment %>%
+      st_filter(., bndout),
+    aes(col = sd.dev)
+  ) +
   geom_point(data = loc_unique, aes(x, y), color = "darkred") +
   geom_sf(data = uk_map, fill = NA, color = "white") +
   annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
@@ -170,6 +177,41 @@ ggplot() +
 # scale_color_viridis_c(option = "D")
 ggsave(
   sprintf("fig/spatial_mesh_%s_assessment_sddev_%s.pdf", mesh_label, d0_tag),
+  width = 4,
+  height = 6
+)
+
+
+ggplot() +
+  geom_sf(
+    data = mesh_assessment %>%
+      st_filter(., bndin),
+    aes(col = edge.len)
+  ) +
+  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+  geom_sf(data = uk_map, fill = NA, color = "white") +
+  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+  theme_void() +
+  scale_color_viridis_c(option = "D")
+ggsave(
+  sprintf("fig/spatial_mesh_%s_assessment2_edgelen_%s.pdf", mesh_label, d0_tag),
+  width = 4,
+  height = 6
+)
+# sd.dev should be close to 1
+ggplot() +
+  gg(
+    data = mesh_assessment %>%
+      st_filter(., bndin),
+    aes(col = sd.dev)
+  ) +
+  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+  geom_sf(data = uk_map, fill = NA, color = "white") +
+  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+  theme_void() #+
+# scale_color_viridis_c(option = "D")
+ggsave(
+  sprintf("fig/spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag),
   width = 4,
   height = 6
 )
@@ -316,29 +358,6 @@ pow_est_st <- safe_predict(
   n1 = 100,
   n2 = 10
 )
-# pow_est_st$ %>% class()
-# pow_est_st <- predict(
-#   bru0,
-#   ppxl_all,
-#   ~ data.frame(
-#     time_id = time_id,
-#     norm_potential_est = st_field
-#   ),
-#   n.samples = 100
-# )
-
-# ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf", dims = c(50, 50))
-
-# pow_est_st <- predict(
-#   bru0,
-#   ppxl,
-#   ~ data.frame(
-#     time_id = time_id,
-#     norm_potential_est = st_field
-#   ),
-#   n.samples = 20
-# )
-# predict(bru0, ppxl, n.samples = 20)
 
 p_median <- ggplot() +
   gg(pow_est_st, geom = "tile", aes(fill = q0.5)) +
