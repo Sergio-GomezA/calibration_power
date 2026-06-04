@@ -111,22 +111,23 @@ uk_map <- uk_map %>%
   (\(g) g / 1000)() %>%
   st_set_geometry(uk_map, .)
 
-edge_target <- 20 # km
-hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = edge_target)
+edge_target <- 15 # km
+mesh_label <- ifelse(edge_target >= 20, "coarse", "fine")
+hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = edge_target * 2)
 
 wf.mesh <- fm_mesh_2d(
   # loc = loc_unique,
   loc = hex_0,
   boundary = bnd,
-  max.edge = c(100, 150), # km
-  min.angle = 25,
+  # max.edge = c(100, 150), # km
+  min.angle = 30,
   # offset = -0.2,
   cutoff = edge_target,
   max.n.strict = c(900, 150)
 )
 saveRDS(
   wf.mesh,
-  file.path(model_path, sprintf("spatial_mesh_coarse_%s.rds", d0_tag))
+  file.path(model_path, sprintf("spatial_mesh_%s_%s.rds", mesh_label, d0_tag))
 )
 ggplot() +
   geom_sf(data = uk_map, fill = NA, color = "black") +
@@ -135,13 +136,13 @@ ggplot() +
   annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
   theme_void()
 ggsave(
-  sprintf("fig/spatial_mesh_coarse_%s.pdf", d0_tag),
+  sprintf("fig/spatial_mesh_%s_%s.pdf", mesh_label, d0_tag),
   width = 4,
   height = 6
 )
 
 ### mesh assessment #####
-mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 60) %>%
+mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70) %>%
   st_filter(., bndin)
 
 ggplot() +
@@ -152,20 +153,20 @@ ggplot() +
   theme_void() +
   scale_color_viridis_c(option = "D")
 ggsave(
-  sprintf("fig/spatial_mesh_coarse_assessment_edgelen_%s.pdf", d0_tag),
+  sprintf("fig/spatial_mesh_%s_assessment_edgelen_%s.pdf", mesh_label, d0_tag),
   width = 4,
   height = 6
 )
 # sd.dev should be close to 1
 ggplot() +
-  geom_sf(data = mesh_assessment, aes(col = sd.dev)) +
+  gg(data = mesh_assessment, aes(col = sd.dev)) +
   geom_point(data = loc_unique, aes(x, y), color = "darkred") +
   geom_sf(data = uk_map, fill = NA, color = "white") +
   annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
-  theme_void() +
-  scale_color_viridis_c(option = "D")
+  theme_void() #+
+# scale_color_viridis_c(option = "D")
 ggsave(
-  sprintf("fig/spatial_mesh_coarse_assessment_sddev_%s.pdf", d0_tag),
+  sprintf("fig/spatial_mesh_%s_assessment_sddev_%s.pdf", mesh_label, d0_tag),
   width = 4,
   height = 6
 )
@@ -210,11 +211,14 @@ bru0 <- bru(
 
 saveRDS(
   bru0,
-  file = file.path(model_path, sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag))
+  file = file.path(
+    model_path,
+    sprintf("st_bru0_%s_mesh_%s.rds", mesh_label, d0_tag)
+  )
 )
 # bru0 <- readRDS(file.path(
 #   model_path,
-#   sprintf("st_bru0_coarse_mesh_%s.rds", d0_tag)
+#   sprintf("st_bru0_%s_mesh_%s.rds", mesh_label, d0_tag)
 # ))
 
 ## summary and effect plots ####
@@ -225,7 +229,11 @@ summary(bru0)
 
 # source("aux_funct.R")
 plot.effects(bru0, "wind", show.plot = TRUE)
-ggsave(sprintf("fig/wind_effect_coarse_%s.pdf", d0_tag), width = 6, height = 4)
+ggsave(
+  sprintf("fig/wind_effect_%s_%s.pdf", mesh_label, d0_tag),
+  width = 6,
+  height = 4
+)
 plot.effects(
   bru0,
   "power_correction",
@@ -234,13 +242,13 @@ plot.effects(
   replicate_names = c("Offshore", "Onshore")
 )
 ggsave(
-  sprintf("fig/power_correction_effect_coarse_%s.pdf", d0_tag),
+  sprintf("fig/power_correction_effect_%s_%s.pdf", mesh_label, d0_tag),
   width = 6,
   height = 4
 )
 plot.hyper.dens(bru0)
 ggsave(
-  sprintf("fig/hyperparameters_coarse_%s.pdf", d0_tag),
+  sprintf("fig/hyperparameters_%s_%s.pdf", mesh_label, d0_tag),
   width = 6,
   height = 4
 )
@@ -338,7 +346,7 @@ p_median <- ggplot() +
   theme_void()
 p_median
 ggsave(
-  sprintf("fig/coarse_spatial_field_median_%s.pdf", d0_tag),
+  sprintf("fig/%s_spatial_field_median_%s.pdf", mesh_label, d0_tag),
   width = 10,
   height = 6
 )
@@ -357,7 +365,7 @@ p_sd <- ggplot() +
   theme_void()
 p_sd
 ggsave(
-  sprintf("fig/coarse_spatial_field_sd_%s.pdf", d0_tag),
+  sprintf("fig/%s_spatial_field_sd_%s.pdf", mesh_label, d0_tag),
   width = 10,
   height = 6
 )
