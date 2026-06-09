@@ -14,6 +14,9 @@ require(ggridges)
 # sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 # d0 <- sampled_days[2] %>% as.Date()
 
+# 1. data preparation ####
+
+cat("Preparing data for model fitting\n")
 d0_tag <- base::format(d0, "%y%m%d")
 n.days <- 1
 wf_df_frag <- pwr_curv_df %>%
@@ -72,158 +75,189 @@ if (min_jump <= 1e-4) {
     mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
 }
 
+cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
+
+cat("Converting coordinates to km\n")
 wf_df_frag <- wf_df_frag %>%
   st_geometry() %>%
   (\(g) g / 1000)() %>%
   st_set_geometry(wf_df_frag, .)
 
 
-## mesh building #####
+## 1.1 mesh building #####
 cat("Building spatial mesh\n")
-
-loc_unique <- wf_df_frag %>%
-  distinct(x, y) %>%
-  as.matrix()
-
-# bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
-# bnd <- fm_extensions(loc_unique, convex = c(-.08, -.3))
-if (mesh_edge_par <= 20) {
-  conv_par <- c(-.05, -.35)
-  max_n <- c(900, 300)
-} else {
-  conv_par <- c(-.1, -.35)
-  max_n <- c(900, 150)
-}
-bnd <- fm_extensions(loc_unique, convex = conv_par)
-# bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
-# ggplot() + geom_sf(data = bnd[[1]])
-bndin <- bnd[[1]]
-bndout <- bnd[[2]]
-
-uk_map <- rnaturalearth::ne_countries(
-  scale = "medium",
-  country = "United Kingdom",
-  returnclass = "sf"
-)
-coastline <- uk_map %>%
-  st_transform(crs = 27700) %>%
-  st_boundary()
-uk_map <- uk_map %>%
-  st_transform(crs = 27700) %>%
-  st_geometry() %>%
-  (\(g) g / 1000)() %>%
-  st_set_geometry(uk_map, .)
 
 edge_target <- mesh_edge_par # km
 mesh_label <- ifelse(edge_target >= 20, "coarse", "fine")
-hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = edge_target * 2)
-
-wf.mesh <- fm_mesh_2d(
-  # loc = loc_unique,
-  loc = hex_0,
-  boundary = bnd,
-  # max.edge = c(100, 150), # km
-  min.angle = 30,
-  # offset = -0.2,
-  cutoff = edge_target,
-  max.n.strict = max_n
-)
-saveRDS(
-  wf.mesh,
-  file.path(model_path, sprintf("spatial_mesh_%s_%s.rds", mesh_label, d0_tag))
-)
-ggplot() +
-  geom_sf(data = uk_map, fill = NA, color = "black") +
-  gg(wf.mesh) +
-  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
-  theme_void()
-ggsave(
-  sprintf("fig/spatial_mesh_%s_%s.pdf", mesh_label, d0_tag),
-  width = 4,
-  height = 6
+mesh_fname <- file.path(
+  model_path,
+  sprintf("spatial_mesh_%s_%s.rds", mesh_label, d0_tag)
 )
 
-### mesh assessment #####
-cat("Assessing spatial mesh\n")
-mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70)
+if (!file.exists(mesh_fname)) {
+  cat("Mesh file not found, building new mesh\n")
 
-ggplot() +
-  geom_sf(
-    data = mesh_assessment %>%
-      st_filter(., bndout),
-    aes(col = edge.len)
-  ) +
-  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-  geom_sf(data = uk_map, fill = NA, color = "white") +
-  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
-  theme_void() +
-  scale_color_viridis_c(option = "D")
-ggsave(
-  sprintf("fig/spatial_mesh_%s_assessment_edgelen_%s.pdf", mesh_label, d0_tag),
-  width = 4,
-  height = 6
-)
-# sd.dev should be close to 1
-ggplot() +
-  gg(
-    data = mesh_assessment %>%
-      st_filter(., bndout),
-    aes(col = sd.dev)
-  ) +
-  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-  geom_sf(data = uk_map, fill = NA, color = "white") +
-  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
-  theme_void() #+
-# scale_color_viridis_c(option = "D")
-ggsave(
-  sprintf("fig/spatial_mesh_%s_assessment_sddev_%s.pdf", mesh_label, d0_tag),
-  width = 4,
-  height = 6
-)
+  loc_unique <- wf_df_frag %>%
+    distinct(x, y) %>%
+    as.matrix()
 
+  # bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
+  # bnd <- fm_extensions(loc_unique, convex = c(-.08, -.3))
+  if (mesh_edge_par <= 20) {
+    conv_par <- c(-.05, -.35)
+    max_n <- c(900, 300)
+  } else {
+    conv_par <- c(-.1, -.35)
+    max_n <- c(900, 150)
+  }
+  bnd <- fm_extensions(loc_unique, convex = conv_par)
+  # bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
+  # ggplot() + geom_sf(data = bnd[[1]])
+  bndin <- bnd[[1]]
+  bndout <- bnd[[2]]
 
-ggplot() +
-  geom_sf(
-    data = mesh_assessment %>%
-      st_filter(., bndin),
-    aes(col = edge.len)
-  ) +
-  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-  geom_sf(data = uk_map, fill = NA, color = "white") +
-  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
-  theme_void() +
-  scale_color_viridis_c(option = "D")
-ggsave(
-  sprintf("fig/spatial_mesh_%s_assessment2_edgelen_%s.pdf", mesh_label, d0_tag),
-  width = 4,
-  height = 6
-)
-# sd.dev should be close to 1
-ggplot() +
-  gg(
-    data = mesh_assessment %>%
-      st_filter(., bndin),
-    aes(col = sd.dev)
-  ) +
-  geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-  geom_sf(data = uk_map, fill = NA, color = "white") +
-  annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
-  theme_void() #+
-# scale_color_viridis_c(option = "D")
-ggsave(
-  sprintf("fig/spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag),
-  width = 4,
-  height = 6
-)
+  uk_map <- rnaturalearth::ne_countries(
+    scale = "medium",
+    country = "United Kingdom",
+    returnclass = "sf"
+  )
+  coastline <- uk_map %>%
+    st_transform(crs = 27700) %>%
+    st_boundary()
+  uk_map <- uk_map %>%
+    st_transform(crs = 27700) %>%
+    st_geometry() %>%
+    (\(g) g / 1000)() %>%
+    st_set_geometry(uk_map, .)
 
-## SPDE model ####
+  hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = edge_target * 2)
+
+  wf.mesh <- fm_mesh_2d(
+    # loc = loc_unique,
+    loc = hex_0,
+    boundary = bnd,
+    # max.edge = c(100, 150), # km
+    min.angle = 30,
+    # offset = -0.2,
+    cutoff = edge_target,
+    max.n.strict = max_n
+  )
+  saveRDS(
+    wf.mesh,
+    mesh_fname
+  )
+  ggplot() +
+    geom_sf(data = uk_map, fill = NA, color = "black") +
+    gg(wf.mesh) +
+    geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+    annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+    theme_void()
+  ggsave(
+    sprintf("fig/spatial_mesh_%s_%s.pdf", mesh_label, d0_tag),
+    width = 4,
+    height = 6
+  )
+} else {
+  cat("Loading existing mesh\n")
+  wf.mesh <- readRDS(mesh_fname)
+}
+
+### 1.2 mesh assessment #####
+mesh_assess_fname <- sprintf(
+  "fig/spatial_mesh_%s_assessment2_sddev_%s.pdf",
+  mesh_label,
+  d0_tag
+)
+if (!file.exists(mesh_assess_fname)) {
+  cat("Assessing spatial mesh\n")
+  mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70)
+
+  ggplot() +
+    geom_sf(
+      data = mesh_assessment %>%
+        st_filter(., bndout),
+      aes(col = edge.len)
+    ) +
+    geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+    geom_sf(data = uk_map, fill = NA, color = "white") +
+    annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+    theme_void() +
+    scale_color_viridis_c(option = "D")
+  ggsave(
+    sprintf(
+      "fig/spatial_mesh_%s_assessment_edgelen_%s.pdf",
+      mesh_label,
+      d0_tag
+    ),
+    width = 4,
+    height = 6
+  )
+  # sd.dev should be close to 1
+  ggplot() +
+    gg(
+      data = mesh_assessment %>%
+        st_filter(., bndout),
+      aes(col = sd.dev)
+    ) +
+    geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+    geom_sf(data = uk_map, fill = NA, color = "white") +
+    annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+    theme_void() #+
+  # scale_color_viridis_c(option = "D")
+  ggsave(
+    sprintf("fig/spatial_mesh_%s_assessment_sddev_%s.pdf", mesh_label, d0_tag),
+    width = 4,
+    height = 6
+  )
+
+  ggplot() +
+    geom_sf(
+      data = mesh_assessment %>%
+        st_filter(., bndin),
+      aes(col = edge.len)
+    ) +
+    geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+    geom_sf(data = uk_map, fill = NA, color = "white") +
+    annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+    theme_void() +
+    scale_color_viridis_c(option = "D")
+  ggsave(
+    sprintf(
+      "fig/spatial_mesh_%s_assessment2_edgelen_%s.pdf",
+      mesh_label,
+      d0_tag
+    ),
+    width = 4,
+    height = 6
+  )
+  # sd.dev should be close to 1
+  ggplot() +
+    gg(
+      data = mesh_assessment %>%
+        st_filter(., bndin),
+      aes(col = sd.dev)
+    ) +
+    geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+    geom_sf(data = uk_map, fill = NA, color = "white") +
+    annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+    theme_void() #+
+  # scale_color_viridis_c(option = "D")
+  ggsave(
+    sprintf("fig/spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag),
+    width = 4,
+    height = 6
+  )
+}
+
+# 2. Model fitting ####
+## 2.1 AR1 temporal model ####
+
+## 2.2 ST SPDE model ####
 spde <- INLA::inla.spde2.pcmatern(
   mesh = wf.mesh,
   prior.range = c(50, 0.5), # P(range < 100 km)=0.5
   prior.sigma = c(0.2, 0.5) # P(sd > 0.2)=0.5
 )
-
 
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
@@ -427,92 +461,115 @@ ggsave(
 #   )
 # )
 
-# lm wf version ####
+## 2.3 lm wf version ####
 
-base_model <- lm(
-  norm_potential ~ norm_power_est0,
-  data = wf_df_frag
-)
+lm_wf_modfname <- sprintf("lm_model_aic0_%s.rds", d0_tag)
 
-full_model0 <- lm(
-  norm_potential ~
-    tech_typ *
-    norm_power_est0 +
-    # norm_power_est0 * month +
-    # hour +
-    # dist_coast * tech_typ +
-    # elevation * tech_typ +
-    # dist_coast:tech_typ +
-    # elevation:tech_typ +
-    tech_typ * poly(dist_coast, 2) +
-    tech_typ * poly(elevation, 3) +
-    tech_typ * poly(ws_h_wmean, 3),
-  data = wf_df_frag
-)
+if (!file.exists(file.path(model_path, lm_wf_modfname))) {
+  base_model <- lm(
+    norm_potential ~ norm_power_est0,
+    data = wf_df_frag
+  )
 
+  full_model0 <- lm(
+    norm_potential ~
+      tech_typ *
+      norm_power_est0 +
+      # norm_power_est0 * month +
+      # hour +
+      # dist_coast * tech_typ +
+      # elevation * tech_typ +
+      # dist_coast:tech_typ +
+      # elevation:tech_typ +
+      tech_typ * poly(dist_coast, 2) +
+      tech_typ * poly(elevation, 3) +
+      tech_typ * poly(ws_h_wmean, 3),
+    data = wf_df_frag
+  )
 
-model_AIC0 <- step(
-  base_model,
-  scope = list(lower = base_model, upper = full_model0),
-  # steps = 5,
-  k = 2
-)
+  model_AIC0 <- step(
+    base_model,
+    scope = list(lower = base_model, upper = full_model0),
+    # steps = 5,
+    k = 2
+  )
 
-saveRDS(
-  model_AIC0,
-  file.path(model_path, sprintf("lm_model_aic0_%s.rds", d0_tag))
-)
+  saveRDS(
+    model_AIC0,
+    file.path(model_path, lm_wf_modfname)
+  )
+} else {
+  model_AIC0 <- readRDS(file.path(model_path, lm_wf_modfname))
+}
 
+## 2.4 GB lm version #####
 
-# GB lm version #####
+lm_agg_modfname <- sprintf("lm_model_aic0_agg_%s.rds", d0_tag)
 
-samp_gb <- GB_df
-# %>%
-# filter(date %in% sampled_days) %>%
+if (!file.exists(file.path(model_path, lm_agg_modfname))) {
+  cat("Fitting GB aggregated LM\n")
 
-base_model_agg <- lm(
-  norm_potential ~ norm_power_est0,
-  data = samp_gb
-)
+  samp_gb <- GB_df
+  # %>%
+  # filter(date %in% sampled_days) %>%
 
-full_model0_agg <- lm(
-  norm_potential ~
-    tech_typ *
-    norm_power_est0 +
-    # norm_power_est0 * month +
-    # hour +
-    # dist_coast * tech_typ +
-    # elevation * tech_typ +
-    # dist_coast:tech_typ +
-    # elevation:tech_typ +
-    # tech_typ * poly(dist_coast, 2) +
-    # tech_typ * poly(elevation, 3) +
-    tech_typ * poly(ws_h_wmean, 3),
-  data = samp_gb
-)
-summary(full_model0_agg)
+  base_model_agg <- lm(
+    norm_potential ~ norm_power_est0,
+    data = samp_gb
+  )
 
-model_AIC0_agg <- step(
-  base_model_agg,
-  scope = list(lower = base_model_agg, upper = full_model0_agg),
-  # steps = 5,
-  k = 2
-)
-saveRDS(
-  model_AIC0_agg,
-  file.path(model_path, sprintf("lm_model_aic0_agg_%s.rds", d0_tag))
-)
+  full_model0_agg <- lm(
+    norm_potential ~
+      tech_typ *
+      norm_power_est0 +
+      # norm_power_est0 * month +
+      # hour +
+      # dist_coast * tech_typ +
+      # elevation * tech_typ +
+      # dist_coast:tech_typ +
+      # elevation:tech_typ +
+      # tech_typ * poly(dist_coast, 2) +
+      # tech_typ * poly(elevation, 3) +
+      tech_typ * poly(ws_h_wmean, 3),
+    data = samp_gb
+  )
+  summary(full_model0_agg)
 
-# model comparison ####
-model_AIC0 <- readRDS(file.path(
-  model_path,
-  sprintf("lm_model_aic0_%s.rds", d0_tag)
-))
-qqmod <- fitQmap(
-  obs = wf_df_frag %>% pull(norm_potential),
-  mod = wf_df_frag %>% pull(norm_power_est0),
-  method = "QUANT"
-)
+  model_AIC0_agg <- step(
+    base_model_agg,
+    scope = list(lower = base_model_agg, upper = full_model0_agg),
+    # steps = 5,
+    k = 2
+  )
+  saveRDS(
+    model_AIC0_agg,
+    file.path(model_path, lm_agg_modfname)
+  )
+} else {
+  cat("Loading existing GB aggregated LM\n")
+  model_AIC0_agg <- readRDS(file.path(
+    model_path,
+    lm_agg_modfname
+  ))
+}
+
+## 2.5 QM version ####
+
+qm_fname <- sprintf("qm_model_%s.rds", d0_tag)
+
+if (!file.exists(file.path(model_path, qm_fname))) {
+  cat("Fitting quantile mapping model\n")
+  qqmod <- fitQmap(
+    obs = wf_df_frag %>% pull(norm_potential),
+    mod = wf_df_frag %>% pull(norm_power_est0),
+    method = "QUANT"
+  )
+} else {
+  cat("Loading existing quantile mapping model\n")
+  qqmod <- readRDS(file.path(model_path, qm_fname))
+}
+
+# 3. model comparison ####
 
 wgen_qm <- with(
   wf_df_frag,
@@ -567,7 +624,7 @@ st_write(
   append = FALSE,
 )
 
-## Exploring fitted values ####
+## 3.1 Exploring fitted values ####
 
 mod_labels <- c(
   "Generic PC",
@@ -706,7 +763,7 @@ write.csv(
   row.names = FALSE
 )
 
-# aggregated time series version
+## 3.2 aggregated time series version ####
 metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(time, model) %>%
@@ -775,8 +832,8 @@ ggsave(
   height = 4
 )
 
-
-# by tech type
+## 3.3 error distribution by covariates ####
+### 3.3.1 by tech type #####
 metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(tech_typ, model) %>%
@@ -825,7 +882,7 @@ ggsave(
   height = 4
 )
 
-# by regime
+### 3.3.2 by regime #####
 metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(p_group3, model) %>%
@@ -874,7 +931,7 @@ ggsave(
 )
 
 
-# by hour of day
+#### 3.3.3 by hour of day #####
 df_long0 %>%
   mutate(hour = factor(hour, levels = 0:23)) %>%
   st_drop_geometry() %>%
@@ -936,7 +993,7 @@ ggsave(
 )
 
 
-# by distance to coast
+#### 3.3.4 by distance to coast #####
 metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(dist_coast_g4, model) %>%
@@ -985,7 +1042,7 @@ ggsave(
 )
 
 
-# by elevation
+#### 3.3.5 by elevation #####
 metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(elevation_g4, model) %>%
@@ -1034,9 +1091,9 @@ ggsave(
 )
 
 
-## ts plots #####
+## 3.4 time series plots #####
 
-### aggregated time series version #####
+### 3.4.1 aggregated time series version #####
 mod_labels2 <- c(mod_labels, "norm_potential" = "Observed")
 model_df_ts <- model_df0 %>%
   dplyr::select(
@@ -1097,8 +1154,8 @@ ggsave(
   height = 6
 )
 
-### some locations time series ####
-####
+### 3.4.2 some locations time series ####
+
 set.seed(1)
 sample_sites <- model_df0 %>%
   group_by(tech_typ) %>%
@@ -1144,7 +1201,7 @@ ggsave(
 )
 
 
-### aggregated error time series version ####
+### 3.4.3 aggregated error time series version ####
 model_df_ts2 <- model_df0 %>%
   dplyr::select(
     time,

@@ -143,6 +143,8 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
     - [ ] aggregator GB, Onshore, Offshore, Scotland, rest of GB
 
 
+More validation OOS
+AR1 model inlabru
 time series plots with estimate and CI
 
 models by day
