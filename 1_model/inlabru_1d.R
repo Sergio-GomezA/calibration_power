@@ -47,6 +47,7 @@ wf_df_frag <- pwr_curv_df %>%
     across(c(potential, power_est0, capacity, curtailment), sum),
     .groups = "drop"
   ) %>%
+  mutate(t = difftime(time, min(time), units = "hours")) %>%
   mutate(
     norm_potential = pmin(1, potential / capacity),
     norm_power_est0 = power_est0 / capacity,
@@ -251,6 +252,78 @@ if (!file.exists(mesh_assess_fname)) {
 
 # 2. Model fitting ####
 ## 2.1 AR1 temporal model ####
+ar_tag <- "ar1"
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  power_correction(
+    pow_group,
+    model = "rw2",
+    replicate = tech_typ,
+    constr = TRUE
+  ) + # smooth correction power
+  wind(ws_group, model = "rw2", constr = TRUE) + # smooth correction wind
+  u(t, model = "ar1", replicate = coord_id)
+
+model_fname <- file.path(
+  model_path,
+  sprintf("ar1_bru0_%s_%s.rds", ar_tag, d0_tag)
+)
+
+if (!file.exists(model_fname)) {
+  cat("Fitting ar1 model\n")
+  bruar1 <- bru(
+    components = components0,
+    formula = norm_potential ~ Intercept +
+      power_correction +
+      wind +
+      t,
+    family = "gaussian",
+    data = wf_df_frag,
+    options = bru_options(
+      bru_verbose = 3,
+      control.inla = list(verbose = TRUE)
+    )
+  )
+
+  saveRDS(
+    bruar1,
+    file = model_fname
+  )
+} else {
+  cat("Loading existing ar1 model\n")
+  bruar1 <- readRDS(model_fname)
+}
+
+summary(bruar1)
+# bruar1$summary.fixed[, 1:6]
+# bruar1$summary.random$tech_typ[, 1:6]
+# bruar1$summary.random$tech_power[, 1:6]
+
+# source("aux_funct.R")
+plot.effects(bruar1, "wind", show.plot = TRUE)
+ggsave(
+  sprintf("fig/wind_effect_%s_%s.pdf", ar_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+plot.effects(
+  bruar1,
+  "power_correction",
+  show.plot = TRUE,
+  n.replicate = 2,
+  replicate_names = c("Offshore", "Onshore")
+)
+ggsave(
+  sprintf("fig/power_correction_effect_%s_%s.pdf", ar_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+plot.hyper.dens(bruar1)
+ggsave(
+  sprintf("fig/hyperparameters_%s_%s.pdf", ar_tag, d0_tag),
+  width = 6,
+  height = 4
+)
 
 ## 2.2 ST SPDE model ####
 spde <- INLA::inla.spde2.pcmatern(
@@ -281,7 +354,7 @@ model_fname <- file.path(
 )
 
 if (!file.exists(model_fname)) {
-  cat("Fitting inlabru model\n")
+  cat("Fitting spatiotemporal model\n")
   bru0 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
@@ -301,7 +374,7 @@ if (!file.exists(model_fname)) {
     file = model_fname
   )
 } else {
-  cat("Loading existing model\n")
+  cat("Loading existing spatiotemporalmodel\n")
   bru0 <- readRDS(model_fname)
 }
 
