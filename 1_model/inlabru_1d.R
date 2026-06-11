@@ -810,7 +810,7 @@ if (!file.exists(model_fname) || override_objects) {
     file = model_fname
   )
 } else {
-  cat("Loading existing spatiotemporalmodel\n")
+  cat("Loading existing spatiotemporal model\n")
   bru0 <- readRDS(model_fname)
 }
 
@@ -1177,10 +1177,6 @@ model_df0 <- wf_df_frag %>%
   mutate(
     st_low = bru0$summary.fitted.values[1:n, "0.025quant"],
     st_high = bru0$summary.fitted.values[1:n, "0.975quant"]
-  ) %>%
-  left_join(
-    gb_day_df %>% dplyr::select(date, p_group3),
-    by = c("date" = "date")
   )
 
 st_write(
