@@ -1692,6 +1692,7 @@ plot.effects <- function(
   window = "all",
   n.replicate = 1,
   replicate_names = NULL,
+  id_override = NULL,
   ...
 ) {
   if (rand.effect == "etaderiv" | rand.effect == "eta+deriv") {
@@ -1722,7 +1723,11 @@ plot.effects <- function(
   # browser()
   # Create a data frame for ggplot
   plot_data <- data.frame(
-    group = spline_summary$ID, # The grouped values for the random effect
+    group = if (!is.null(id_override)) {
+      id_override
+    } else {
+      spline_summary$ID
+    },
     mean = spline_summary$mean, # Posterior mean
     lower = spline_summary$`0.025quant`, # 2.5% quantile (lower credible interval)
     upper = spline_summary$`0.975quant` # 97.5% quantile (upper credible interval)

@@ -1,89 +1,225 @@
+# 0. Setup ####
+
+local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
+
+# 0.1 global parameter #####
+day_id <- 3
+mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
+override_objects <- TRUE
+
+if (local_run) {
+  cat("Running in local mode\n")
+} else {
+  cat("Running in cluster mode\n")
+}
+
+# Get task ID and others from command-line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+# Override defaults only if arguments are provided
+if (length(args) > 0) {
+  day_id <- as.numeric(args[1])
+}
+if (length(args) > 1) {
+  mesh_edge_par <- as.numeric(args[2])
+}
+if (length(args) > 2) {
+  override_objects <- as.logical(args[3])
+}
+
+# 0.2 libraries and paths ####
+require(parallel)
+
+if (local_run) {
+  data_path <- "~/Documents/ERA5_at_wf/"
+  gen_path <- "~/Documents/elexon/"
+  model_path <- "~/Documents/elexon/model_objects"
+  pixel_dims <- c(150, 150)
+} else {
+  data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
+  gen_path <- "/exports/eddie/scratch/s2441782/calibration/data"
+  model_path <- "/exports/eddie/scratch/s2441782/calibration/model_objects"
+  temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
+  pixel_dims <- c(300, 300)
+  .libPaths(temp_lib)
+}
+
 require(tidyverse)
 require(sf)
+require(INLA)
 require(inlabru)
 require(fmesher)
 require(ggspatial)
-# require(ModelMetrics)
+require(ModelMetrics)
 require(qmap)
 require(ggridges)
+require(ggthemes)
+require(ggsci)
+require(arrow)
+# require(ggspatial)
 
-# inlabru model 1 day
+source("aux_funct.R")
 
-# inlabru models by day ------
-
-# sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
-# d0 <- sampled_days[2] %>% as.Date()
 
 # 1. data preparation ####
 
 cat("Preparing data for model fitting\n")
+
+sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
+
+d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
-n.days <- 1
-wf_df_frag <- pwr_curv_df %>%
-  rename(time = halfHourEndTime) %>%
-  mutate(
-    date = as.Date(time),
-    elevation = pmax(0, elevation),
-    site_name = site_name %>%
-      gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
-      trimws()
-  ) %>%
-  # filter(date %in% sampled_days) %>%
-  filter(date >= d0, date <= d0 + n.days - 1) %>%
-  arrange(site_name) %>%
-  mutate(
-    site_id = as.integer(factor(site_name)),
-    coord_id = as.integer(factor(paste(lon, lat)))
-  ) %>%
-  group_by(lon, lat, time) %>%
-  summarise(
-    site_name = first(site_name),
-    coord_id = first(coord_id),
-    elevation = first(elevation),
-    dist_coast = first(dist_coast),
-    tech_typ = first(tech_typ),
-    across(c(ws_h, wd10, wd100), mean),
-    ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
-    across(c(potential, power_est0, capacity, curtailment), sum),
-    .groups = "drop"
-  ) %>%
-  mutate(t = difftime(time, min(time), units = "hours")) %>%
-  mutate(
-    norm_potential = pmin(1, potential / capacity),
-    norm_power_est0 = power_est0 / capacity,
-    error0 = norm_potential - norm_power_est0
-  ) %>%
-  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-  mutate(lon = st_coordinates(.)[, 1], lat = st_coordinates(.)[, 2]) %>%
-  st_transform(crs = 27700) %>%
-  mutate(
-    x = st_coordinates(.)[, 1] / 1000,
-    y = st_coordinates(.)[, 2] / 1000,
-  ) %>%
-  # st_drop_geometry() %>%
-  mutate(
-    # site_id = as.integer(factor(site_name)),
-    ws_group = inla.group(ws_h, n = 20, method = "quantile"),
-    pow_group = inla.group(norm_power_est0, n = 20, method = "quantile"),
-    time_id = as.integer(factor(time)),
-    # loc = cbind(x, y)
+df_pattern <- sprintf("^calibration_df_.*_%s\\.gpkg$", d0_tag)
+files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
+
+if (!override_objects && length(files_found) > 0) {
+  cat(
+    "Calibration data file already exists for this day. Loading existing data.\n"
+  )
+  wf_df_frag <- st_read(files_found[1])
+} else {
+  cat(
+    "No existing calibration data file found for this day. Preparing new data.\n"
   )
 
-x <- wf_df_frag$pow_group %>% unique() %>% sort()
-min_jump <- min(diff(sort(x))) / diff(range(x))
-if (min_jump <= 1e-4) {
+  pwr_curv_df <- read_parquet(file.path(
+    gen_path,
+    "power_curve_all_enriched.parquet"
+  ))
+
+  n.days <- 1
+
+  wf_df_frag <- pwr_curv_df %>%
+    rename(time = halfHourEndTime) %>%
+    mutate(
+      date = as.Date(time),
+      elevation = pmax(0, elevation),
+      site_name = site_name %>%
+        gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
+        trimws()
+    ) %>%
+    # filter(date %in% sampled_days) %>%
+    filter(date >= d0, date <= d0 + n.days - 1) %>%
+    arrange(site_name) %>%
+    mutate(
+      site_id = as.integer(factor(site_name)),
+      coord_id = as.integer(factor(paste(lon, lat)))
+    ) %>%
+    group_by(lon, lat, time) %>%
+    summarise(
+      site_name = first(site_name),
+      coord_id = first(coord_id),
+      elevation = first(elevation),
+      dist_coast = first(dist_coast),
+      tech_typ = first(tech_typ),
+      across(c(ws_h, wd10, wd100), mean),
+      ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
+      across(c(potential, power_est0, capacity, curtailment), sum),
+      .groups = "drop"
+    ) %>%
+    mutate(t = difftime(time, min(time), units = "hours") %>% as.numeric()) %>%
+    mutate(
+      norm_potential = pmin(1, potential / capacity),
+      norm_power_est0 = power_est0 / capacity,
+      error0 = norm_potential - norm_power_est0
+    ) %>%
+    st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+    mutate(lon = st_coordinates(.)[, 1], lat = st_coordinates(.)[, 2]) %>%
+    st_transform(crs = 27700) %>%
+    mutate(
+      x = st_coordinates(.)[, 1] / 1000,
+      y = st_coordinates(.)[, 2] / 1000,
+    ) %>%
+    # st_drop_geometry() %>%
+    mutate(
+      # site_id = as.integer(factor(site_name)),
+      ws_group = inla.group(ws_h, n = 20, method = "quantile"),
+      pow_group = inla.group(norm_power_est0, n = 20, method = "quantile"),
+      time_id = as.integer(factor(time)),
+      # loc = cbind(x, y)
+    )
+
+  x <- wf_df_frag$pow_group %>% unique() %>% sort()
+  min_jump <- min(diff(sort(x))) / diff(range(x))
+  if (min_jump <= 1e-4) {
+    wf_df_frag <- wf_df_frag %>%
+      mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
+  }
+
+  cat("Converting coordinates to km\n")
   wf_df_frag <- wf_df_frag %>%
-    mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
+    st_geometry() %>%
+    (\(g) g / 1000)() %>%
+    st_set_geometry(wf_df_frag, .)
+
+  st_write(
+    wf_df_frag,
+    sprintf("data/calibration_df_%s_%s.gpkg", "base", d0_tag),
+    driver = "GPKG",
+    append = FALSE,
+    quiet = TRUE
+  )
 }
-
 cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
+n <- nrow(wf_df_frag)
 
-cat("Converting coordinates to km\n")
-wf_df_frag <- wf_df_frag %>%
-  st_geometry() %>%
-  (\(g) g / 1000)() %>%
-  st_set_geometry(wf_df_frag, .)
+## 1.0.1 GB daily summary ####
 
+gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
+
+if (!file.exists(gb_day_df_fname) || override_objects) {
+  cat("GB daily summary file not found, creating new summary\n")
+  GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
+    rename(time = halfHourEndTime) %>%
+    mutate(
+      err = norm_power_est0 - norm_potential,
+      error0 = norm_potential - norm_power_est0,
+      date = as.Date(time)
+    )
+
+  gb_day_df <- GB_df %>%
+    group_by(date, tech_typ) %>%
+    summarise(
+      across(
+        c(norm_power_est0, norm_potential),
+        ~ sum(. * capacity) / sum(capacity)
+      ),
+      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+      across(c(capacity), mean)
+    ) %>%
+    summarise(
+      across(
+        c(norm_power_est0, norm_potential),
+        ~ sum(. * capacity) / sum(capacity)
+      ),
+      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+      across(c(capacity), sum),
+      .groups = "drop"
+    )
+
+  cutprobs3 <- c(0.25, 0.75)
+  p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
+  cutprobs7 <- c(0.1, 0.2, 0.25, 0.75, 0.8, 0.9)
+  p_quant7 <- quantile(gb_day_df$norm_potential, probs = cutprobs7)
+
+  gb_day_df <- gb_day_df %>%
+    mutate(
+      p_group3 = cut(
+        norm_potential,
+        breaks = c(-Inf, p_quant3, Inf),
+        labels = c("low", "mid", "high")
+      ),
+      p_group7 = cut(
+        norm_potential,
+        breaks = c(-Inf, p_quant7, Inf)
+      )
+    )
+
+  write_parquet(gb_day_df, gb_day_df_fname)
+} else {
+  cat("Loading existing GB daily summary\n")
+  gb_day_df <- read_parquet(gb_day_df_fname)
+}
 
 ## 1.1 mesh building #####
 cat("Building spatial mesh\n")
@@ -95,7 +231,7 @@ mesh_fname <- file.path(
   sprintf("spatial_mesh_%s_%s.rds", mesh_label, d0_tag)
 )
 
-if (!file.exists(mesh_fname)) {
+if (!file.exists(mesh_fname) || override_objects) {
   cat("Mesh file not found, building new mesh\n")
 
   loc_unique <- wf_df_frag %>%
@@ -169,7 +305,7 @@ mesh_assess_fname <- sprintf(
   mesh_label,
   d0_tag
 )
-if (!file.exists(mesh_assess_fname)) {
+if (!file.exists(mesh_assess_fname) || override_objects) {
   cat("Assessing spatial mesh\n")
   mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70)
 
@@ -262,22 +398,45 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     constr = TRUE
   ) + # smooth correction power
   wind(ws_group, model = "rw2", constr = TRUE) + # smooth correction wind
-  u(t, model = "ar1", replicate = coord_id)
+  u(
+    t,
+    model = "ar1",
+    replicate = coord_id,
+    hyper = list(
+      rho = list(
+        prior = "pc.cor1",
+        param = c(0.6, 0.5)
+      ),
+      # prec = list(
+      #   prior = "pc.prec",
+      #   param = c(50, 0.05)
+      # ),
+      prec = list(initial = log(1000), fixed = TRUE)
+    )
+  )
 
 model_fname <- file.path(
   model_path,
-  sprintf("ar1_bru0_%s_%s.rds", ar_tag, d0_tag)
+  sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
 )
 
-if (!file.exists(model_fname)) {
+if (!file.exists(model_fname) || override_objects) {
   cat("Fitting ar1 model\n")
   bruar1 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
       power_correction +
       wind +
-      t,
+      u,
     family = "gaussian",
+    control.family = list(
+      hyper = list(
+        prec = list(
+          prior = "pc.prec",
+          param = c(50, 0.05)
+        )
+      )
+    ),
     data = wf_df_frag,
     options = bru_options(
       bru_verbose = 3,
@@ -325,7 +484,219 @@ ggsave(
   height = 4
 )
 
-## 2.2 ST SPDE model ####
+# plot(bruar1$summary.fitted.values$mean[1:n], wf_df_frag$norm_potential)
+# plot(bruar1$summary.random$u$mean, wf_df_frag$norm_potential)
+## 2.2 AR2 temporal model ####
+ar_tag <- "ar2"
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  power_correction(
+    pow_group,
+    model = "rw2",
+    replicate = tech_typ,
+    constr = TRUE
+  ) + # smooth correction power
+  wind(ws_group, model = "rw2", constr = TRUE) + # smooth correction wind
+  u(
+    t,
+    model = "ar",
+    order = 2,
+    replicate = coord_id,
+    hyper = list(
+      # rho = list(
+      #   prior = "pc.cor1",
+      #   param = c(0.6, 0.5)
+      # ),
+      # prec = list(
+      #   prior = "pc.prec",
+      #   param = c(50, 0.05)
+      # ),
+      prec = list(initial = log(700), fixed = TRUE)
+    )
+  )
+
+model_fname <- file.path(
+  model_path,
+  sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
+)
+
+if (!file.exists(model_fname) || override_objects) {
+  cat("Fitting ar2 model\n")
+  bruar2 <- bru(
+    components = components0,
+    formula = norm_potential ~ Intercept +
+      power_correction +
+      wind +
+      u,
+    family = "gaussian",
+    data = wf_df_frag,
+    options = bru_options(
+      bru_verbose = 3,
+      control.inla = list(verbose = TRUE)
+    )
+  )
+
+  saveRDS(
+    bruar2,
+    file = model_fname
+  )
+} else {
+  cat("Loading existing ar2 model\n")
+  bruar2 <- readRDS(model_fname)
+}
+
+summary(bruar2)
+# bruar2$summary.fixed[, 1:6]
+# bruar2$summary.random$tech_typ[, 1:6]
+# bruar2$summary.random$tech_power[, 1:6]
+
+# source("aux_funct.R")
+plot.effects(bruar2, "wind", show.plot = TRUE)
+ggsave(
+  sprintf("fig/wind_effect_%s_%s.pdf", ar_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+plot.effects(
+  bruar2,
+  "power_correction",
+  show.plot = TRUE,
+  n.replicate = 2,
+  replicate_names = c("Offshore", "Onshore")
+)
+ggsave(
+  sprintf("fig/power_correction_effect_%s_%s.pdf", ar_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+plot.hyper.dens(bruar2)
+ggsave(
+  sprintf("fig/hyperparameters_%s_%s.pdf", ar_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+# plot(bruar2$summary.fitted.values$mean[1:n], wf_df_frag$norm_potential)
+## 2.3 1D SPDE temporal model ####
+ar_tag <- "1DSPDE"
+mint <- 0
+maxt <- 23
+buffert <- 0
+x <- seq(mint - buffert, maxt + buffert, by = 0.5)
+mesh1D <- fm_mesh_1d(
+  loc = x,
+  interval = c(mint, maxt),
+  degree = 2,
+  boundary = "cyclic"
+)
+
+spde1D <- inla.spde2.pcmatern(
+  mesh = mesh1D,
+  prior.range = c(3, 0.5), # P(range < 1 hour) = 0.5
+  prior.sigma = c(0.03, 0.5) # P(sd > 0.2) = 0.5
+)
+
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  power_correction(
+    pow_group,
+    model = "rw2",
+    replicate = tech_typ,
+    constr = TRUE
+  ) + # smooth correction power
+  wind(ws_group, model = "rw2", constr = TRUE) + # smooth correction wind
+  hour(
+    t,
+    model = spde1D,
+    replicate = coord_id
+    # hyper = list(prec = list(initial = log(1000), fixed = TRUE))
+  )
+
+model_fname <- file.path(
+  model_path,
+  sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
+)
+
+if (!file.exists(model_fname) || override_objects) {
+  cat("Fitting 1D SPDE model\n")
+  bru1d <- bru(
+    components = components0,
+    formula = norm_potential ~ Intercept +
+      # tech_typ +
+      power_correction +
+      wind +
+      hour,
+    family = "gaussian",
+    data = wf_df_frag,
+    options = bru_options(
+      bru_verbose = 3,
+      control.family = list(
+        hyper = list(
+          prec = list(
+            initial = log(30),
+            fixed = TRUE
+          )
+        )
+      ),
+      control.inla = list(verbose = TRUE)
+    )
+  )
+
+  saveRDS(
+    bru1d,
+    file = model_fname
+  )
+} else {
+  cat("Loading existing 1D SPDE model\n")
+  bru1d <- readRDS(model_fname)
+}
+
+summary(bru1d)
+# bru1d$summary.fixed[, 1:6]
+# bru1d$summary.random$tech_typ[, 1:6]
+# test <- bru1d$summary.random$hour
+# plot(bru1d$summary.fitted.values$mean[1:n], wf_df_frag$norm_potential)
+# source("aux_funct.R")
+plot.effects(bru1d, "wind", show.plot = TRUE)
+ggsave(
+  sprintf("fig/wind_effect_%s_%s.pdf", ar_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+plot.effects(
+  bru1d,
+  "power_correction",
+  show.plot = TRUE,
+  n.replicate = 2,
+  replicate_names = c("Offshore", "Onshore")
+)
+ggsave(
+  sprintf("fig/power_correction_effect_%s_%s.pdf", ar_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+# plot.effects(
+#   bru1d,
+#   "hour",
+#   show.plot = TRUE,
+#   n.replicate = 2,
+#   replicate_names = c("Offshore", "Onshore"),
+#   id_override = rep(x[-length(x)], 2)
+# )
+# ggsave(
+#   sprintf("fig/hour_effect_%s_%s.pdf", ar_tag, d0_tag),
+#   width = 6,
+#   height = 4
+# )
+
+plot.hyper.dens(bru1d)
+ggsave(
+  sprintf("fig/hyperparameters_%s_%s.pdf", ar_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+
+
+## 2.4 ST SPDE model ####
 spde <- INLA::inla.spde2.pcmatern(
   mesh = wf.mesh,
   prior.range = c(50, 0.5), # P(range < 100 km)=0.5
@@ -418,7 +789,7 @@ ggsave(
 
 ### plot intensity of spatial field ####
 
-ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf")
+ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf", dims = pixel_dims)
 ppxl_all <- fm_cprod(
   ppxl,
   data.frame(
@@ -466,6 +837,7 @@ pow_est_st <- safe_predict(
   n1 = 100,
   n2 = 10
 )
+
 
 p_median <- ggplot() +
   gg(pow_est_st, geom = "tile", aes(fill = q0.5)) +
@@ -538,7 +910,8 @@ ggsave(
 
 lm_wf_modfname <- sprintf("lm_model_aic0_%s.rds", d0_tag)
 
-if (!file.exists(file.path(model_path, lm_wf_modfname))) {
+if (!file.exists(file.path(model_path, lm_wf_modfname)) || override_objects) {
+  cat("Fitting LM model\n")
   base_model <- lm(
     norm_potential ~ norm_power_est0,
     data = wf_df_frag
@@ -572,6 +945,7 @@ if (!file.exists(file.path(model_path, lm_wf_modfname))) {
     file.path(model_path, lm_wf_modfname)
   )
 } else {
+  cat("Loading existing LM model\n")
   model_AIC0 <- readRDS(file.path(model_path, lm_wf_modfname))
 }
 
@@ -579,7 +953,7 @@ if (!file.exists(file.path(model_path, lm_wf_modfname))) {
 
 lm_agg_modfname <- sprintf("lm_model_aic0_agg_%s.rds", d0_tag)
 
-if (!file.exists(file.path(model_path, lm_agg_modfname))) {
+if (!file.exists(file.path(model_path, lm_agg_modfname)) || override_objects) {
   cat("Fitting GB aggregated LM\n")
 
   samp_gb <- GB_df
@@ -630,12 +1004,16 @@ if (!file.exists(file.path(model_path, lm_agg_modfname))) {
 
 qm_fname <- sprintf("qm_model_%s.rds", d0_tag)
 
-if (!file.exists(file.path(model_path, qm_fname))) {
+if (!file.exists(file.path(model_path, qm_fname)) || override_objects) {
   cat("Fitting quantile mapping model\n")
   qqmod <- fitQmap(
     obs = wf_df_frag %>% pull(norm_potential),
     mod = wf_df_frag %>% pull(norm_power_est0),
     method = "QUANT"
+  )
+  saveRDS(
+    qqmod,
+    file.path(model_path, qm_fname)
   )
 } else {
   cat("Loading existing quantile mapping model\n")
@@ -652,6 +1030,9 @@ wgen_qm <- with(
 mod_labels <- c(
   "Generic PC",
   "Linear model",
+  "AR1 model",
+  "AR2 model",
+  # "1D SPDE model",
   "Spatio-temporal model",
   "QM",
   "GB LM"
@@ -659,6 +1040,9 @@ mod_labels <- c(
 est_cols <- c(
   "norm_power_est0",
   "lm",
+  "ar1",
+  "ar2",
+  # "spde1d",
   "st",
   "qm",
   "agg_lm"
@@ -673,10 +1057,47 @@ names(mod_labels) <- est_cols
 # n <- nrow(wf_df_frag)
 # names(mod_labels) <- est_cols
 
+# ar_test <- predict(
+#   bruar1,
+#   newdata = wf_df_frag,
+#   # ~ data.frame(
+#   #   time_id = time_id,
+#   #   # latent = x,
+#   #   norm_potential_est = (Intercept +
+#   #     power_correction +
+#   #     wind)
+#   # ),
+#   ~ Intercept +
+#     power_correction +
+#     wind +
+#     u,
+#   n.samples = 10
+# )
+# length(ar_test$mean)
+# names(ar_test)
+# plot(ar_test$mean, wf_df_frag$norm_potential)
+
+# set.seed(1)
+# spde1d_pred <- predict(
+#   bru1d,
+#   newdata = wf_df_frag,
+#   ~ Intercept +
+#     power_correction +
+#     wind +
+#     hour,
+#   type = "response",
+#   n.samples = 100,
+#   verbose = TRUE,
+#   used.improved.mean = FALSE
+# )
+
 model_df0 <- wf_df_frag %>%
   mutate(
     date = as.Date(time),
     lm = predict(model_AIC0, newdata = .),
+    ar1 = bruar1$summary.fitted.values[1:n, "mean"],
+    ar2 = bruar2$summary.fitted.values[1:n, "mean"],
+    spde1d = bru1d$summary.fitted.values[1:n, "mean"],
     st = bru0$summary.fitted.values[1:n, "mean"],
     qm = wgen_qm,
     agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag)
@@ -699,23 +1120,23 @@ st_write(
 
 ## 3.1 Exploring fitted values ####
 
-mod_labels <- c(
-  "Generic PC",
-  "Linear model",
-  "Spatio-temporal model",
-  "QM",
-  "GB LM"
-)
-est_cols <- c(
-  "norm_power_est0",
-  "lm",
-  "st",
-  "qm",
-  "agg_lm"
-)
-n_models <- length(est_cols)
-n <- nrow(wf_df_frag)
-names(mod_labels) <- est_cols
+# mod_labels <- c(
+#   "Generic PC",
+#   "Linear model",
+#   "Spatio-temporal model",
+#   "QM",
+#   "GB LM"
+# )
+# est_cols <- c(
+#   "norm_power_est0",
+#   "lm",
+#   "st",
+#   "qm",
+#   "agg_lm"
+# )
+# n_models <- length(est_cols)
+# n <- nrow(wf_df_frag)
+# names(mod_labels) <- est_cols
 model_df0 <- st_read(sprintf(
   "data/calibration_df_%s_%s.gpkg",
   mesh_label,
@@ -791,7 +1212,7 @@ df_long0 %>%
     aes(x = err, fill = model),
     alpha = 0.5
   ) +
-  facet_wrap(~model) +
+  facet_wrap(~model, scales = "free_y") +
   theme_minimal() +
   labs(
     title = "Error distribution by model",
@@ -799,9 +1220,9 @@ df_long0 %>%
     y = "Density",
     fill = "Model"
   ) +
-  coord_cartesian(xlim = c(-0.25, 0.25)) +
+  # coord_cartesian(xlim = c(-0.25, 0.25)) +
   theme(legend.position = "bottom") +
-  scale_fill_manual(values = pal_lancet()(5))
+  scale_fill_manual(values = pal_lancet()(n_models))
 
 ggsave(
   sprintf("fig/error_distribution_by_model_%s_%s.pdf", mesh_label, d0_tag),
@@ -809,14 +1230,13 @@ ggsave(
   height = 4
 )
 
-
 metrics_table <- df_long0 %>%
   st_drop_geometry() %>%
   group_by(model) %>%
   summarise(
     RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
     MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
-    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    # MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
     MDAPE = mdape(
       actual = norm_potential,
       predicted = estimate,
@@ -829,7 +1249,7 @@ metrics_table <- df_long0 %>%
     model = mod_labels[model]
   ) %>%
   arrange(desc(RMSE))
-
+metrics_table
 write.csv(
   metrics_table,
   sprintf("summaries/calib_metrics_%s_%s.csv", mesh_label, d0_tag),
@@ -888,7 +1308,7 @@ df_long0 %>%
     aes(x = err, fill = model),
     alpha = 0.5
   ) +
-  facet_wrap(~model) +
+  facet_wrap(~model, scales = "free_y") +
   theme_minimal() +
   labs(
     title = "Error distribution by model",
@@ -897,7 +1317,7 @@ df_long0 %>%
     fill = "Model"
   ) +
   theme(legend.position = "bottom") +
-  scale_fill_manual(values = pal_lancet()(5))
+  scale_fill_manual(values = pal_lancet()(n_models))
 
 ggsave(
   sprintf("fig/error_distribution_by_model_%s_%s_gb.pdf", mesh_label, d0_tag),
@@ -1182,6 +1602,9 @@ model_df_ts <- model_df0 %>%
     cols = all_of(c("norm_potential", est_cols)),
     names_to = "model",
     values_to = "estimate"
+  ) %>%
+  mutate(
+    estimate = pmin(1, pmax(0, estimate)), # clipping estimates to [0, 1]
   )
 
 model_df_ts %>%
