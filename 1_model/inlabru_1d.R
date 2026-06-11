@@ -597,7 +597,7 @@ effect_names <- names(bruar2$summary.random)
 excluded_effects <- c("u")
 effect_names <- setdiff(effect_names, excluded_effects)
 for (effect in effect_names) {
-  if (effect == "power_correction") {
+  if (effect == "wind") {
     n_repl <- 2
     repl_names <- c("Offshore", "Onshore")
   } else {
@@ -720,7 +720,7 @@ effect_names <- names(bru1d$summary.random)
 excluded_effects <- c("u", "hour")
 effect_names <- setdiff(effect_names, excluded_effects)
 for (effect in effect_names) {
-  if (effect == "power_correction") {
+  if (effect == "wind") {
     n_repl <- 2
     repl_names <- c("Offshore", "Onshore")
   } else {
@@ -825,7 +825,7 @@ effect_names <- names(bru0$summary.random)
 excluded_effects <- c("u", "hour", "st_field")
 effect_names <- setdiff(effect_names, excluded_effects)
 for (effect in effect_names) {
-  if (effect == "power_correction") {
+  if (effect == "wind") {
     n_repl <- 2
     repl_names <- c("Offshore", "Onshore")
   } else {
