@@ -70,7 +70,7 @@ sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
-extension <- ifelse(local_run, "gpkg", "shp")
+extension <- ifelse(local_run, "gpkg", "geojson")
 df_pattern <- sprintf("^calibration_df_.*_%s\\.%s$", d0_tag, extension)
 files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
 
@@ -159,7 +159,7 @@ if (!override_objects && length(files_found) > 0) {
   st_write(
     wf_df_frag,
     sprintf("data/calibration_df_%s_%s.%s", "base", d0_tag, extension),
-    driver = ifelse(local_run, "GPKG", "ESRI Shapefile"),
+    driver = ifelse(local_run, "GPKG", "GeoJSON"),
     append = FALSE,
     quiet = TRUE
   )
@@ -1186,7 +1186,7 @@ model_df0 <- wf_df_frag %>%
 st_write(
   model_df0,
   sprintf("data/calibration_df_%s_%s.%s", mesh_label, d0_tag, extension),
-  driver = ifelse(local_run, "GPKG", "ESRI Shapefile"),
+  driver = ifelse(local_run, "GPKG", "GeoJSON"),
   append = FALSE,
 )
 
