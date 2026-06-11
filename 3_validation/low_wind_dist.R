@@ -82,4 +82,28 @@ model_df0 <- st_read(sprintf(
 ))
 
 
-threshold <- 0.1
+pow_threshold <- 0.1
+
+pwr_curv_df <- read_parquet(file.path(
+  gen_path,
+  "power_curve_all_enriched.parquet"
+))
+
+low_events <- pwr_curv_df %>%
+  rename(time = halfHourEndTime) %>%
+  arrange(coord_id, time) %>%
+  group_by(coord_id) %>%
+  mutate(
+    below = norm_potential < pow_threshold,
+    run_id = cumsum(below != lag(below, default = first(below)))
+  ) %>%
+  group_by(coord_id, run_id, below) %>%
+  summarise(
+    start_time = first(time),
+    end_time = last(time),
+    duration_h = as.numeric(difftime(end_time, start_time, units = "hours")) +
+      1,
+    .groups = "drop"
+  ) %>%
+  filter(below) %>%
+  select(coord_id, start_time, duration_h)

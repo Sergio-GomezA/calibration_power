@@ -197,7 +197,7 @@ if (!override_objects && length(files_found) > 0) {
       d_coast_group = inla.group(dist_coast, n = 10, method = "quantile"),
       elev_group = inla.group(elevation, n = 10, method = "quantile"),
       time_id = as.integer(factor(time)),
-      # loc = cbind(x, y)
+      date = as.Date(time)
     ) %>%
     left_join(
       gb_day_df %>% dplyr::select(date, p_group3),
