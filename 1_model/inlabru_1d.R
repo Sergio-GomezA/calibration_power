@@ -5,7 +5,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 # 0.1 global parameter #####
 day_id <- 2
 mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- TRUE
+override_objects <- FALSE
 prec_init <- log(200)
 
 if (local_run) {
@@ -67,6 +67,63 @@ source("aux_funct.R")
 cat("Preparing data for model fitting\n")
 
 sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
+## 1.0.1 GB daily summary ####
+
+gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
+
+if (!file.exists(gb_day_df_fname) || override_objects) {
+  cat("GB daily summary file not found, creating new summary\n")
+  GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
+    rename(time = halfHourEndTime) %>%
+    mutate(
+      err = norm_power_est0 - norm_potential,
+      error0 = norm_potential - norm_power_est0,
+      date = as.Date(time)
+    )
+
+  gb_day_df <- GB_df %>%
+    group_by(date, tech_typ) %>%
+    summarise(
+      across(
+        c(norm_power_est0, norm_potential),
+        ~ sum(. * capacity) / sum(capacity)
+      ),
+      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+      across(c(capacity), mean)
+    ) %>%
+    summarise(
+      across(
+        c(norm_power_est0, norm_potential),
+        ~ sum(. * capacity) / sum(capacity)
+      ),
+      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+      across(c(capacity), sum),
+      .groups = "drop"
+    )
+
+  cutprobs3 <- c(0.25, 0.75)
+  p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
+  cutprobs7 <- c(0.1, 0.2, 0.25, 0.75, 0.8, 0.9)
+  p_quant7 <- quantile(gb_day_df$norm_potential, probs = cutprobs7)
+
+  gb_day_df <- gb_day_df %>%
+    mutate(
+      p_group3 = cut(
+        norm_potential,
+        breaks = c(-Inf, p_quant3, Inf),
+        labels = c("low", "mid", "high")
+      ),
+      p_group7 = cut(
+        norm_potential,
+        breaks = c(-Inf, p_quant7, Inf)
+      )
+    )
+
+  write_parquet(gb_day_df, gb_day_df_fname)
+} else {
+  cat("Loading existing GB daily summary\n")
+  gb_day_df <- read_parquet(gb_day_df_fname)
+}
 
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
@@ -141,6 +198,10 @@ if (!override_objects && length(files_found) > 0) {
       elev_group = inla.group(elevation, n = 10, method = "quantile"),
       time_id = as.integer(factor(time)),
       # loc = cbind(x, y)
+    ) %>%
+    left_join(
+      gb_day_df %>% dplyr::select(date, p_group3),
+      by = c("date" = "date")
     )
 
   x <- wf_df_frag$pow_group %>% unique() %>% sort()
@@ -173,64 +234,6 @@ n <- nrow(wf_df_frag)
 #   ggplot() +
 #   geom_point(aes(pow_group,error0), bins = 50)+
 #   facet_wrap(~tech_typ, scales = "free_x")
-
-## 1.0.1 GB daily summary ####
-
-gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
-
-if (!file.exists(gb_day_df_fname) || override_objects) {
-  cat("GB daily summary file not found, creating new summary\n")
-  GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
-    rename(time = halfHourEndTime) %>%
-    mutate(
-      err = norm_power_est0 - norm_potential,
-      error0 = norm_potential - norm_power_est0,
-      date = as.Date(time)
-    )
-
-  gb_day_df <- GB_df %>%
-    group_by(date, tech_typ) %>%
-    summarise(
-      across(
-        c(norm_power_est0, norm_potential),
-        ~ sum(. * capacity) / sum(capacity)
-      ),
-      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
-      across(c(capacity), mean)
-    ) %>%
-    summarise(
-      across(
-        c(norm_power_est0, norm_potential),
-        ~ sum(. * capacity) / sum(capacity)
-      ),
-      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
-      across(c(capacity), sum),
-      .groups = "drop"
-    )
-
-  cutprobs3 <- c(0.25, 0.75)
-  p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
-  cutprobs7 <- c(0.1, 0.2, 0.25, 0.75, 0.8, 0.9)
-  p_quant7 <- quantile(gb_day_df$norm_potential, probs = cutprobs7)
-
-  gb_day_df <- gb_day_df %>%
-    mutate(
-      p_group3 = cut(
-        norm_potential,
-        breaks = c(-Inf, p_quant3, Inf),
-        labels = c("low", "mid", "high")
-      ),
-      p_group7 = cut(
-        norm_potential,
-        breaks = c(-Inf, p_quant7, Inf)
-      )
-    )
-
-  write_parquet(gb_day_df, gb_day_df_fname)
-} else {
-  cat("Loading existing GB daily summary\n")
-  gb_day_df <- read_parquet(gb_day_df_fname)
-}
 
 ## 1.1 mesh building #####
 cat("Building spatial mesh\n")
