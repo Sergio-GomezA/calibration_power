@@ -1765,7 +1765,7 @@ plot.effects <- function(
     geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) + # Plot credible intervals
     labs(
       title = paste("Estimated effect for", rand.effect),
-      x = paste(rand.effect, "(Binned Variable)"),
+      x = paste(rand.effect),
       y = "Estimated Effect"
     ) +
     {

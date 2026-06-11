@@ -135,6 +135,8 @@ if (!override_objects && length(files_found) > 0) {
       # site_id = as.integer(factor(site_name)),
       ws_group = inla.group(ws_h, n = 20, method = "quantile"),
       pow_group = inla.group(norm_power_est0, n = 20, method = "quantile"),
+      d_coast_group = inla.group(dist_coast, n = 10, method = "quantile"),
+      elev_group = inla.group(elevation, n = 10, method = "quantile"),
       time_id = as.integer(factor(time)),
       # loc = cbind(x, y)
     )
@@ -162,6 +164,13 @@ if (!override_objects && length(files_found) > 0) {
 }
 cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
 n <- nrow(wf_df_frag)
+# wf_df_frag %>%
+#   ggplot() +
+#   geom_point(aes(pow_group,error0), bins = 50)
+# wf_df_frag %>%
+#   ggplot() +
+#   geom_point(aes(pow_group,error0), bins = 50)+
+#   facet_wrap(~tech_typ, scales = "free_x")
 
 ## 1.0.1 GB daily summary ####
 
@@ -394,10 +403,20 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   power_correction(
     pow_group,
     model = "rw2",
-    replicate = tech_typ,
+    # replicate = tech_typ,
     constr = TRUE
   ) + # smooth correction power
-  wind(ws_group, model = "rw2", constr = TRUE) + # smooth correction wind
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
   u(
     t,
     model = "ar1",
@@ -411,7 +430,7 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
       #   prior = "pc.prec",
       #   param = c(50, 0.05)
       # ),
-      prec = list(initial = log(1000), fixed = TRUE)
+      prec = list(initial = log(100), fixed = TRUE)
     )
   )
 
@@ -426,6 +445,8 @@ if (!file.exists(model_fname) || override_objects) {
     components = components0,
     formula = norm_potential ~ Intercept +
       power_correction +
+      d_coast +
+      elev +
       wind +
       u,
     family = "gaussian",
@@ -458,25 +479,32 @@ summary(bruar1)
 # bruar1$summary.random$tech_typ[, 1:6]
 # bruar1$summary.random$tech_power[, 1:6]
 
-# source("aux_funct.R")
-plot.effects(bruar1, "wind", show.plot = TRUE)
-ggsave(
-  sprintf("fig/wind_effect_%s_%s.pdf", ar_tag, d0_tag),
-  width = 6,
-  height = 4
-)
-plot.effects(
-  bruar1,
-  "power_correction",
-  show.plot = TRUE,
-  n.replicate = 2,
-  replicate_names = c("Offshore", "Onshore")
-)
-ggsave(
-  sprintf("fig/power_correction_effect_%s_%s.pdf", ar_tag, d0_tag),
-  width = 6,
-  height = 4
-)
+source("aux_funct.R")
+effect_names <- names(bruar1$summary.random)
+excluded_effects <- c("u")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect == "wind") {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  plot.effects(
+    bruar1,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf("fig/%s_effect_%s_%s.pdf", effect, ar_tag, d0_tag),
+    width = 6,
+    height = 4
+  )
+}
+
 plot.hyper.dens(bruar1)
 ggsave(
   sprintf("fig/hyperparameters_%s_%s.pdf", ar_tag, d0_tag),
@@ -493,10 +521,20 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   power_correction(
     pow_group,
     model = "rw2",
-    replicate = tech_typ,
+    # replicate = tech_typ,
     constr = TRUE
   ) + # smooth correction power
-  wind(ws_group, model = "rw2", constr = TRUE) + # smooth correction wind
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
   u(
     t,
     model = "ar",
@@ -510,8 +548,8 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
       # prec = list(
       #   prior = "pc.prec",
       #   param = c(50, 0.05)
-      # ),
-      prec = list(initial = log(700), fixed = TRUE)
+      # )
+      prec = list(initial = log(100), fixed = TRUE)
     )
   )
 
@@ -526,6 +564,8 @@ if (!file.exists(model_fname) || override_objects) {
     components = components0,
     formula = norm_potential ~ Intercept +
       power_correction +
+      d_coast +
+      elev +
       wind +
       u,
     family = "gaussian",
@@ -551,24 +591,30 @@ summary(bruar2)
 # bruar2$summary.random$tech_power[, 1:6]
 
 # source("aux_funct.R")
-plot.effects(bruar2, "wind", show.plot = TRUE)
-ggsave(
-  sprintf("fig/wind_effect_%s_%s.pdf", ar_tag, d0_tag),
-  width = 6,
-  height = 4
-)
-plot.effects(
-  bruar2,
-  "power_correction",
-  show.plot = TRUE,
-  n.replicate = 2,
-  replicate_names = c("Offshore", "Onshore")
-)
-ggsave(
-  sprintf("fig/power_correction_effect_%s_%s.pdf", ar_tag, d0_tag),
-  width = 6,
-  height = 4
-)
+effect_names <- names(bruar2$summary.random)
+excluded_effects <- c("u")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect == "power_correction") {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  plot.effects(
+    bruar2,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf("fig/%s_effect_%s_%s.pdf", effect, ar_tag, d0_tag),
+    width = 6,
+    height = 4
+  )
+}
 plot.hyper.dens(bruar2)
 ggsave(
   sprintf("fig/hyperparameters_%s_%s.pdf", ar_tag, d0_tag),
@@ -600,10 +646,20 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   power_correction(
     pow_group,
     model = "rw2",
-    replicate = tech_typ,
+    # replicate = tech_typ,
     constr = TRUE
   ) + # smooth correction power
-  wind(ws_group, model = "rw2", constr = TRUE) + # smooth correction wind
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
   hour(
     t,
     model = spde1D,
@@ -623,6 +679,8 @@ if (!file.exists(model_fname) || override_objects) {
     formula = norm_potential ~ Intercept +
       # tech_typ +
       power_correction +
+      d_coast +
+      elev +
       wind +
       hour,
     family = "gaussian",
@@ -656,37 +714,30 @@ summary(bru1d)
 # test <- bru1d$summary.random$hour
 # plot(bru1d$summary.fitted.values$mean[1:n], wf_df_frag$norm_potential)
 # source("aux_funct.R")
-plot.effects(bru1d, "wind", show.plot = TRUE)
-ggsave(
-  sprintf("fig/wind_effect_%s_%s.pdf", ar_tag, d0_tag),
-  width = 6,
-  height = 4
-)
-plot.effects(
-  bru1d,
-  "power_correction",
-  show.plot = TRUE,
-  n.replicate = 2,
-  replicate_names = c("Offshore", "Onshore")
-)
-ggsave(
-  sprintf("fig/power_correction_effect_%s_%s.pdf", ar_tag, d0_tag),
-  width = 6,
-  height = 4
-)
-# plot.effects(
-#   bru1d,
-#   "hour",
-#   show.plot = TRUE,
-#   n.replicate = 2,
-#   replicate_names = c("Offshore", "Onshore"),
-#   id_override = rep(x[-length(x)], 2)
-# )
-# ggsave(
-#   sprintf("fig/hour_effect_%s_%s.pdf", ar_tag, d0_tag),
-#   width = 6,
-#   height = 4
-# )
+effect_names <- names(bru1d$summary.random)
+excluded_effects <- c("u", "hour")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect == "power_correction") {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  plot.effects(
+    bru1d,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf("fig/%s_effect_%s_%s.pdf", effect, ar_tag, d0_tag),
+    width = 6,
+    height = 4
+  )
+}
 
 plot.hyper.dens(bru1d)
 ggsave(
@@ -708,10 +759,20 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   power_correction(
     pow_group,
     model = "rw2",
-    replicate = tech_typ,
+    # replicate = tech_typ,
     constr = TRUE
   ) + # smooth correction power
-  wind(ws_group, model = "rw2", constr = TRUE) + # smooth correction wind
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
   st_field(
     geometry,
     model = spde,
@@ -730,6 +791,8 @@ if (!file.exists(model_fname)) {
     components = components0,
     formula = norm_potential ~ Intercept +
       power_correction +
+      d_coast +
+      elev +
       wind +
       st_field,
     family = "gaussian",
@@ -756,24 +819,30 @@ summary(bru0)
 # bru0$summary.random$tech_power[, 1:6]
 
 # source("aux_funct.R")
-plot.effects(bru0, "wind", show.plot = TRUE)
-ggsave(
-  sprintf("fig/wind_effect_%s_%s.pdf", mesh_label, d0_tag),
-  width = 6,
-  height = 4
-)
-plot.effects(
-  bru0,
-  "power_correction",
-  show.plot = TRUE,
-  n.replicate = 2,
-  replicate_names = c("Offshore", "Onshore")
-)
-ggsave(
-  sprintf("fig/power_correction_effect_%s_%s.pdf", mesh_label, d0_tag),
-  width = 6,
-  height = 4
-)
+effect_names <- names(bru0$summary.random)
+excluded_effects <- c("u", "hour", "st_field")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect == "power_correction") {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  plot.effects(
+    bru0,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf("fig/%s_effect_%s_%s.pdf", effect, mesh_label, d0_tag),
+    width = 6,
+    height = 4
+  )
+}
 plot.hyper.dens(bru0)
 ggsave(
   sprintf("fig/hyperparameters_%s_%s.pdf", mesh_label, d0_tag),
