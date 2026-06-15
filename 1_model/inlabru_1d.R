@@ -6,7 +6,9 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 day_id <- 1
 mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- TRUE
+re_run_st <- FALSE
 prec_init <- log(200)
+cluster_ext <- "rds" # "geojson" previously
 
 if (local_run) {
   cat("Running in local mode\n")
@@ -36,12 +38,15 @@ if (local_run) {
   gen_path <- "~/Documents/elexon/"
   model_path <- "~/Documents/elexon/model_objects"
   pixel_dims <- c(150, 150)
+  local_ext <- "rds" # previously "gpkg"
+  driver <- "GPKG"
 } else {
   data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
   gen_path <- "/exports/eddie/scratch/s2441782/calibration/data"
   model_path <- "/exports/eddie/scratch/s2441782/calibration/model_objects"
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   pixel_dims <- c(300, 300)
+  driver <- "GeoJSON"
   .libPaths(temp_lib)
 }
 
@@ -128,7 +133,8 @@ if (!file.exists(gb_day_df_fname) || override_objects) {
   gb_day_df <- read_parquet(gb_day_df_fname)
 }
 
-extension <- ifelse(local_run, "gpkg", "geojson")
+
+extension <- ifelse(local_run, local_ext, cluster_ext)
 df_pattern <- sprintf("^calibration_df_.*_%s\\.%s$", d0_tag, extension)
 files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
 
@@ -136,7 +142,11 @@ if (!override_objects && length(files_found) > 0) {
   cat(
     "Calibration data file already exists for this day. Loading existing data.\n"
   )
-  wf_df_frag <- st_read(files_found[1])
+  if (extension != "rds") {
+    wf_df_frag <- st_read(files_found[1])
+  } else {
+    wf_df_frag <- readRDS(files_found[1])
+  }
 } else {
   cat(
     "No existing calibration data file found for this day. Preparing new data.\n"
@@ -227,13 +237,20 @@ if (!override_objects && length(files_found) > 0) {
   if (extension == "geojson" & file.exists(wf_df_fname)) {
     file.remove(wf_df_fname)
   }
-  st_write(
-    wf_df_frag,
-    wf_df_fname,
-    driver = ifelse(local_run, "GPKG", "GeoJSON"),
-    append = FALSE,
-    quiet = TRUE
-  )
+  if (extension != "rds") {
+    st_write(
+      wf_df_frag,
+      wf_df_fname,
+      driver = driver,
+      append = FALSE,
+      quiet = TRUE
+    )
+  } else {
+    saveRDS(
+      wf_df_frag,
+      wf_df_fname
+    )
+  }
 }
 cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
 n <- nrow(wf_df_frag)
@@ -800,7 +817,7 @@ model_fname <- file.path(
   sprintf("st_bru0_%s_mesh_%s.rds", mesh_label, d0_tag)
 )
 
-if (!file.exists(model_fname) || override_objects) {
+if (!file.exists(model_fname) || re_run_st) {
   cat("Fitting spatiotemporal model\n")
   bru0 <- bru(
     components = components0,
@@ -1205,12 +1222,20 @@ if (extension == "geojson" & file.exists(model_df_fname)) {
   file.remove(model_df_fname)
 }
 
-st_write(
-  model_df0,
-  model_df_fname,
-  driver = ifelse(local_run, "GPKG", "GeoJSON"),
-  append = FALSE,
-)
+if (extension != "rds") {
+  st_write(
+    model_df0,
+    model_df_fname,
+    driver = driver,
+    append = FALSE,
+  )
+} else {
+  saveRDS(
+    model_df0,
+    model_df_fname
+  )
+}
+
 
 ## 3.1 Exploring fitted values ####
 
@@ -1231,12 +1256,12 @@ st_write(
 # n_models <- length(est_cols)
 # n <- nrow(wf_df_frag)
 # names(mod_labels) <- est_cols
-model_df0 <- st_read(sprintf(
-  "data/calibration_df_%s_%s.%s",
-  mesh_label,
-  d0_tag,
-  extension
-))
+if (extension != "rds") {
+  model_df0 <- st_read(model_df_fname)
+} else {
+  model_df0 <- readRDS(model_df_fname)
+}
+
 
 pos_breaks <- with(
   model_df0,
