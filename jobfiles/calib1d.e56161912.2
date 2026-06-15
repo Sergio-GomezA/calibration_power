@@ -97,26 +97,9 @@ The following object is masked from ‘package:purrr’:
     transpose
 
 Loading required package: terra
-terra 1.9.27
-
-Attaching package: ‘terra’
-
-The following object is masked from ‘package:data.table’:
-
-    shift
-
-The following object is masked from ‘package:arrow’:
-
-    buffer
-
-The following object is masked from ‘package:MASS’:
-
-    area
-
-The following object is masked from ‘package:tidyr’:
-
-    extract
-
+Error: package or namespace load failed for ‘terra’ in dyn.load(file, DLLpath = DLLpath, ...):
+ unable to load shared object '/exports/eddie3_homes_local/s2441782/lib/terra/libs/terra.so':
+  libgdal.so.30: cannot open shared object file: No such file or directory
 Loading required package: fst
 Loading required package: httr
 Loading required package: jsonlite
@@ -135,9 +118,28 @@ Loading required package: geosphere
 ℹ Use `summarise(.by = c(date, tech_typ))` for per-operation grouping
   (`?dplyr::dplyr_by`) instead.
 writing: substituting ENGCRS["Undefined Cartesian SRS with unknown unit"] for missing CRS
-Warning message:
-In CPL_write_ogr(obj, dsn, layer, driver, as.character(dataset_options),  :
-  GDAL Error 6: DeleteLayer() not supported by this dataset.
+bru: Preprocessing
+Evaluate component inputs for each observation model
+iinla: Start
+iinla: Evaluate component linearisations
+Linearise components for each observation model
+iinla: Evaluate component simplifications
+Simplify component mappers for each observation model
+iinla: Evaluate predictor linearisation
+iinla: Construct inla stack
+iinla: Model initialisation completed
+iinla: Iteration 1 [max: 1]
+
+
+	You ask for 16 x 1 = 16 number of threads,
+	which is more that I got from the system: 8
+	Number of threads is reduced to 8:1:8
+
+iinla: Computation completed
+Loading required package: terra
+Error: package or namespace load failed for ‘terra’ in dyn.load(file, DLLpath = DLLpath, ...):
+ unable to load shared object '/exports/eddie3_homes_local/s2441782/lib/terra/libs/terra.so':
+  libgdal.so.30: cannot open shared object file: No such file or directory
 bru: Preprocessing
 Evaluate component inputs for each observation model
 iinla: Start
@@ -192,24 +194,6 @@ iinla: Iteration 1 [max: 1]
 	Number of threads is reduced to 8:1:8
 
 iinla: Computation completed
-bru: Preprocessing
-Evaluate component inputs for each observation model
-iinla: Start
-iinla: Evaluate component linearisations
-Linearise components for each observation model
-iinla: Evaluate component simplifications
-Simplify component mappers for each observation model
-iinla: Evaluate predictor linearisation
-iinla: Construct inla stack
-iinla: Model initialisation completed
-iinla: Iteration 1 [max: 1]
-
-
-	You ask for 16 x 1 = 16 number of threads,
-	which is more that I got from the system: 8
-	Number of threads is reduced to 8:1:8
-
-iinla: Computation completed
 
 
 	You ask for 16 x 1 = 16 number of threads,
@@ -498,73 +482,3 @@ iinla: Computation completed
 	which is more that I got from the system: 8
 	Number of threads is reduced to 8:1:8
 
-
-
-	You ask for 16 x 1 = 16 number of threads,
-	which is more that I got from the system: 8
-	Number of threads is reduced to 8:1:8
-
-
-
-	You ask for 16 x 1 = 16 number of threads,
-	which is more that I got from the system: 8
-	Number of threads is reduced to 8:1:8
-
-
-
-	You ask for 16 x 1 = 16 number of threads,
-	which is more that I got from the system: 8
-	Number of threads is reduced to 8:1:8
-
-
-
-	You ask for 16 x 1 = 16 number of threads,
-	which is more that I got from the system: 8
-	Number of threads is reduced to 8:1:8
-
-writing: substituting ENGCRS["Undefined Cartesian SRS with unknown unit"] for missing CRS
-Warning message:
-In CPL_write_ogr(obj, dsn, layer, driver, as.character(dataset_options),  :
-  GDAL Error 6: DeleteLayer() not supported by this dataset.
-`summarise()` has regrouped the output.
-ℹ Summaries were computed grouped by time and model.
-ℹ Output is grouped by time.
-ℹ Use `summarise(.groups = "drop_last")` to silence this message.
-ℹ Use `summarise(.by = c(time, model))` for per-operation grouping
-  (`?dplyr::dplyr_by`) instead.
-`summarise()` has regrouped the output.
-ℹ Summaries were computed grouped by time and model.
-ℹ Output is grouped by time.
-ℹ Use `summarise(.groups = "drop_last")` to silence this message.
-ℹ Use `summarise(.by = c(time, model))` for per-operation grouping
-  (`?dplyr::dplyr_by`) instead.
-There were 50 or more warnings (use warnings() to see the first 50)
-Picking joint bandwidth of 0.0208
-Picking joint bandwidth of 0.0208
-Picking joint bandwidth of 0.0163
-Picking joint bandwidth of 0.0163
-Picking joint bandwidth of 0.0509
-Picking joint bandwidth of 0.0386
-Picking joint bandwidth of 0.0155
-Picking joint bandwidth of 0.0159
-Picking joint bandwidth of 0.0197
-Picking joint bandwidth of 0.0395
-Picking joint bandwidth of 0.0393
-Picking joint bandwidth of 0.0509
-Picking joint bandwidth of 0.0386
-Picking joint bandwidth of 0.0155
-Picking joint bandwidth of 0.0159
-Picking joint bandwidth of 0.0197
-Picking joint bandwidth of 0.0395
-Picking joint bandwidth of 0.0393
-Picking joint bandwidth of 0.0212
-Picking joint bandwidth of 0.0212
-Picking joint bandwidth of 0.0212
-Picking joint bandwidth of 0.0212
-There were 50 or more warnings (use warnings() to see the first 50)
-Warning messages:
-1: In st_is_longlat(x) :
-  bounding box has potentially an invalid value range for longlat data
-2: In st_is_longlat(x) :
-  bounding box has potentially an invalid value range for longlat data
-There were 50 or more warnings (use warnings() to see the first 50)
