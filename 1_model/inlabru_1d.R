@@ -5,7 +5,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 # 0.1 global parameter #####
 day_id <- 1
 mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- FALSE
+override_objects <- TRUE
 prec_init <- log(200)
 
 if (local_run) {
@@ -69,6 +69,9 @@ cat("Preparing data for model fitting\n")
 sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 ## 1.0.1 GB daily summary ####
 
+d0 <- sampled_days[day_id] %>% as.Date()
+d0_tag <- base::format(d0, "%y%m%d")
+
 gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
 
 if (!file.exists(gb_day_df_fname) || override_objects) {
@@ -125,8 +128,6 @@ if (!file.exists(gb_day_df_fname) || override_objects) {
   gb_day_df <- read_parquet(gb_day_df_fname)
 }
 
-d0 <- sampled_days[day_id] %>% as.Date()
-d0_tag <- base::format(d0, "%y%m%d")
 extension <- ifelse(local_run, "gpkg", "geojson")
 df_pattern <- sprintf("^calibration_df_.*_%s\\.%s$", d0_tag, extension)
 files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
@@ -160,10 +161,10 @@ if (!override_objects && length(files_found) > 0) {
     # filter(date %in% sampled_days) %>%
     filter(date >= d0, date <= d0 + n.days - 1) %>%
     arrange(site_name) %>%
-    mutate(
-      site_id = as.integer(factor(site_name)),
-      coord_id = as.integer(factor(paste(lon, lat)))
-    ) %>%
+    # mutate(
+    #   site_id = as.integer(factor(site_name)),
+    #   coord_id = as.integer(factor(paste(lon, lat)))
+    # ) %>%
     group_by(lon, lat, time) %>%
     summarise(
       site_name = first(site_name),

@@ -268,14 +268,14 @@ low_events %>%
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
-test <- df_long0 %>%
-  st_drop_geometry() %>%
-  # filter(model == "Spatio-temporal model") %>%
-  arrange(model, coord_id, time) %>%
-  mutate(
-    below = estimate < pow_threshold,
-    run_id = cumsum(below != lag(below, default = first(below)))
-  )
+# test <- df_long0 %>%
+#   st_drop_geometry() %>%
+#   # filter(model == "Spatio-temporal model") %>%
+#   arrange(model, coord_id, time) %>%
+#   mutate(
+#     below = estimate < pow_threshold,
+#     run_id = cumsum(below != lag(below, default = first(below)))
+#   )
 
 low_events_model <- df_long0 %>%
   st_drop_geometry() %>%
