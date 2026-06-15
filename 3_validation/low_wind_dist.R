@@ -72,7 +72,7 @@ sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
-extension <- ifelse(local_run, "gpkg", "geojson")
+extension <- ifelse(!local_run, "gpkg", "geojson")
 
 
 model_df0 <- lapply(
@@ -313,7 +313,7 @@ low_events_model %>%
   #   alpha = 0.5,
   #   binwidth = 1
   # ) +
-  # scale_x_log10(n.breaks = 14) +
+  scale_x_log10(n.breaks = 14) +
   labs(
     title = "Distribution of Low Wind Events Duration",
     x = "Duration (hours)",
