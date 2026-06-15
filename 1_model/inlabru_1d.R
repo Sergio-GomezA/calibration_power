@@ -218,9 +218,18 @@ if (!override_objects && length(files_found) > 0) {
     (\(g) g / 1000)() %>%
     st_set_geometry(wf_df_frag, .)
 
+  wf_df_fname <- sprintf(
+    "data/calibration_df_%s_%s.%s",
+    "base",
+    d0_tag,
+    extension
+  )
+  if (extension == "geojson" & file.exists(wf_df_fname)) {
+    file.remove(wf_df_fname)
+  }
   st_write(
     wf_df_frag,
-    sprintf("data/calibration_df_%s_%s.%s", "base", d0_tag, extension),
+    wf_df_fname,
     driver = ifelse(local_run, "GPKG", "GeoJSON"),
     append = FALSE,
     quiet = TRUE
@@ -1167,6 +1176,7 @@ names(mod_labels) <- est_cols
 # )
 
 ## fitted values df ####
+
 model_df0 <- wf_df_frag %>%
   mutate(
     date = as.Date(time),
@@ -1183,9 +1193,21 @@ model_df0 <- wf_df_frag %>%
     st_high = bru0$summary.fitted.values[1:n, "0.975quant"]
   )
 
+model_df_fname <- sprintf(
+  "data/calibration_df_%s_%s.%s",
+  mesh_label,
+  d0_tag,
+  extension
+)
+
+if (extension == "geojson" & file.exists(model_df_fname)) {
+  cat("GeoJSON file already exists. Overwriting...\n")
+  file.remove(model_df_fname)
+}
+
 st_write(
   model_df0,
-  sprintf("data/calibration_df_%s_%s.%s", mesh_label, d0_tag, extension),
+  model_df_fname,
   driver = ifelse(local_run, "GPKG", "GeoJSON"),
   append = FALSE,
 )
