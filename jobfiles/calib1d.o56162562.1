@@ -1,0 +1,380 @@
+Running in cluster mode
+Preparing data for model fitting
+GB daily summary file not found, creating new summary
+No existing calibration data file found for this day. Preparing new data.
+Converting coordinates to km
+Number of unique locations: 88 
+Building spatial mesh
+Mesh file not found, building new mesh
+Assessing spatial mesh
+Fitting ar1 model
+inlabru version: 2.13.0.9032 
+INLA version: 26.01.26-1 
+Latent components:
+Intercept: main = linear(1)
+power_correction: main = rw2(pow_group)
+d_coast: main = rw2(d_coast_group)
+elev: main = rw2(elev_group)
+wind: main = rw2(ws_group), replicate = iid(tech_typ)
+u: main = ar1(t), replicate = iid(coord_id)
+Observation models:
+  Model tag: <No tag>
+    Family: 'gaussian'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: norm_potential ~ Intercept + power_correction + d_coast + elev + wind + u
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[Intercept, power_correction, d_coast, elev, wind, u], latent[] 
+Time used:
+    Pre = 0.985, Running = 20.3, Post = 0.47, Total = 21.8 
+Fixed effects:
+           mean    sd 0.025quant 0.5quant 0.975quant  mode kld
+Intercept 0.081 0.007      0.067    0.081      0.095 0.081   0
+
+Random effects:
+  Name	  Model
+    power_correction RW2 model
+   d_coast RW2 model
+   elev RW2 model
+   wind RW2 model
+   u AR1 model
+
+Model hyperparameters:
+                                            mean       sd 0.025quant 0.5quant
+Precision for the Gaussian observations 2.16e+05 7173.771   2.06e+05 2.14e+05
+Precision for power_correction          3.68e+03   51.211   3.56e+03 3.68e+03
+Precision for d_coast                   2.23e+03   28.124   2.18e+03 2.23e+03
+Precision for elev                      5.66e+04  898.918   5.46e+04 5.66e+04
+Precision for wind                      6.54e+03   81.575   6.37e+03 6.54e+03
+Rho for u                               8.81e-01    0.001   8.78e-01 8.81e-01
+                                        0.975quant     mode
+Precision for the Gaussian observations   2.33e+05 2.08e+05
+Precision for power_correction            3.76e+03 3.71e+03
+Precision for d_coast                     2.29e+03 2.22e+03
+Precision for elev                        5.81e+04 5.71e+04
+Precision for wind                        6.70e+03 6.55e+03
+Rho for u                                 8.84e-01 8.82e-01
+
+Marginal log-Likelihood:  3411.02 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
+
+Fitting ar2 model
+inlabru version: 2.13.0.9032 
+INLA version: 26.01.26-1 
+Latent components:
+Intercept: main = linear(1)
+power_correction: main = rw2(pow_group)
+d_coast: main = rw2(d_coast_group)
+elev: main = rw2(elev_group)
+wind: main = rw2(ws_group), replicate = iid(tech_typ)
+u: main = ar(t), replicate = iid(coord_id)
+Observation models:
+  Model tag: <No tag>
+    Family: 'gaussian'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: norm_potential ~ Intercept + power_correction + d_coast + elev + wind + u
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[Intercept, power_correction, d_coast, elev, wind, u], latent[] 
+Time used:
+    Pre = 0.688, Running = 9.46, Post = 1.27, Total = 11.4 
+Fixed effects:
+           mean    sd 0.025quant 0.5quant 0.975quant  mode kld
+Intercept 0.081 0.007      0.066    0.081      0.095 0.081   0
+
+Random effects:
+  Name	  Model
+    power_correction RW2 model
+   d_coast RW2 model
+   elev RW2 model
+   wind RW2 model
+   u AR(p) model
+
+Model hyperparameters:
+                                             mean       sd 0.025quant  0.5quant
+Precision for the Gaussian observations 19428.539 1550.439  16353.891 19432.298
+Precision for power_correction            168.131   10.153    148.445   168.002
+Precision for d_coast                    3493.629  290.623   3003.722  3467.694
+Precision for elev                      24167.888 2127.121  19807.447 24224.840
+Precision for wind                       6374.288  470.977   5565.009  6337.160
+PACF1 for u                                 0.896    0.003      0.890     0.896
+PACF2 for u                                -0.116    0.021     -0.154    -0.116
+                                        0.975quant      mode
+Precision for the Gaussian observations  22438.573 19623.948
+Precision for power_correction             188.472   168.224
+Precision for d_coast                     4142.549  3379.844
+Precision for elev                       28081.465 24796.037
+Precision for wind                        7414.266  6208.839
+PACF1 for u                                  0.903     0.896
+PACF2 for u                                 -0.072    -0.120
+
+Marginal log-Likelihood:  3431.18 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
+
+Fitting 1D SPDE model
+inlabru version: 2.13.0.9032 
+INLA version: 26.01.26-1 
+Latent components:
+Intercept: main = linear(1)
+power_correction: main = rw2(pow_group)
+d_coast: main = rw2(d_coast_group)
+elev: main = rw2(elev_group)
+wind: main = rw2(ws_group), replicate = iid(tech_typ)
+hour: main = spde(t), replicate = iid(coord_id)
+Observation models:
+  Model tag: <No tag>
+    Family: 'gaussian'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: norm_potential ~ Intercept + power_correction + d_coast + elev + wind + hour
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[Intercept, power_correction, d_coast, elev, wind, hour], latent[] 
+Time used:
+    Pre = 0.942, Running = 2.74, Post = 0.763, Total = 4.44 
+Fixed effects:
+           mean    sd 0.025quant 0.5quant 0.975quant  mode kld
+Intercept 0.091 0.016       0.06    0.091      0.122 0.091   0
+
+Random effects:
+  Name	  Model
+    power_correction RW2 model
+   d_coast RW2 model
+   elev RW2 model
+   wind RW2 model
+   hour SPDE2 model
+
+Model hyperparameters:
+                                   mean       sd 0.025quant 0.5quant 0.975quant
+Precision for power_correction 8.38e+01   17.095   4.85e+01 8.44e+01   1.12e+02
+Precision for d_coast          1.21e+04  923.920   1.05e+04 1.20e+04   1.41e+04
+Precision for elev             1.27e+03   73.670   1.12e+03 1.27e+03   1.41e+03
+Precision for wind             1.51e+04 1732.137   1.20e+04 1.50e+04   1.88e+04
+Range for hour                 3.64e+03  550.841   2.86e+03 3.55e+03   4.99e+03
+Stdev for hour                 9.00e-03    0.002   7.00e-03 9.00e-03   1.40e-02
+                                   mode
+Precision for power_correction 9.09e+01
+Precision for d_coast          1.17e+04
+Precision for elev             1.29e+03
+Precision for wind             1.49e+04
+Range for hour                 3.25e+03
+Stdev for hour                 8.00e-03
+
+Marginal log-Likelihood:  1218.91 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
+
+Loading existing spatiotemporal model
+inlabru version: 2.13.0.9032 
+INLA version: 26.01.26-1 
+Latent components:
+Intercept: main = linear(1)
+power_correction: main = rw2(pow_group)
+d_coast: main = rw2(d_coast_group)
+elev: main = rw2(elev_group)
+wind: main = rw2(ws_group), replicate = iid(tech_typ)
+st_field: main = spde(geometry), group = ar1(time_id)
+Observation models:
+  Model tag: <No tag>
+    Family: 'gaussian'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: norm_potential ~ Intercept + power_correction + d_coast + elev + wind + st_field
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[Intercept, power_correction, d_coast, elev, wind, st_field], latent[] 
+Time used:
+    Pre = 0.836, Running = 155, Post = 10.3, Total = 167 
+Fixed effects:
+           mean    sd 0.025quant 0.5quant 0.975quant  mode kld
+Intercept 0.147 0.474     -0.776    0.144      1.087 0.144   0
+
+Random effects:
+  Name	  Model
+    power_correction RW2 model
+   d_coast RW2 model
+   elev RW2 model
+   wind RW2 model
+   st_field SPDE2 model
+
+Model hyperparameters:
+                                            mean       sd 0.025quant 0.5quant
+Precision for the Gaussian observations   738.68 2.83e+01     684.11   738.31
+Precision for power_correction             32.24 2.36e+01      10.24    25.64
+Precision for d_coast                     323.58 1.53e+02     112.67   294.75
+Precision for elev                      86362.61 4.75e+04   23445.93 76534.89
+Precision for wind                       4159.90 2.19e+03    1369.33  3688.64
+Range for st_field                         46.57 7.54e+00      33.03    46.13
+Stdev for st_field                          3.59 3.94e-01       2.90     3.56
+GroupRho for st_field                       1.00 0.00e+00       1.00     1.00
+                                        0.975quant     mode
+Precision for the Gaussian observations   7.95e+02   737.93
+Precision for power_correction            9.58e+01    17.17
+Precision for d_coast                     7.00e+02   241.62
+Precision for elev                        2.05e+05 57517.69
+Precision for wind                        9.71e+03  2889.26
+Range for st_field                        6.26e+01    45.54
+Stdev for st_field                        4.45e+00     3.48
+GroupRho for st_field                     1.00e+00     1.00
+
+Marginal log-Likelihood:  2992.54 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
+
+Fitting LM model
+Start:  AIC=-9196.42
+norm_potential ~ norm_power_est0
+
+                      Df Sum of Sq    RSS     AIC
++ poly(dist_coast, 2)  2   0.87313 26.216 -9261.6
++ poly(elevation, 3)   3   0.25129 26.838 -9210.1
++ poly(ws_h_wmean, 3)  3   0.16318 26.926 -9203.2
++ tech_typ             1   0.03204 27.057 -9196.9
+<none>                             27.089 -9196.4
+
+Step:  AIC=-9261.62
+norm_potential ~ norm_power_est0 + poly(dist_coast, 2)
+
+                      Df Sum of Sq    RSS     AIC
++ poly(ws_h_wmean, 3)  3   0.14753 26.068 -9267.5
+<none>                             26.216 -9261.6
++ tech_typ             1   0.00607 26.210 -9260.1
++ poly(elevation, 3)   3   0.04613 26.170 -9259.3
+- poly(dist_coast, 2)  2   0.87313 27.089 -9196.4
+
+Step:  AIC=-9267.54
+norm_potential ~ norm_power_est0 + poly(dist_coast, 2) + poly(ws_h_wmean, 
+    3)
+
+                      Df Sum of Sq    RSS     AIC
+<none>                             26.068 -9267.5
++ poly(elevation, 3)   3   0.05981 26.009 -9266.4
++ tech_typ             1   0.00566 26.063 -9266.0
+- poly(ws_h_wmean, 3)  3   0.14753 26.216 -9261.6
+- poly(dist_coast, 2)  2   0.85748 26.926 -9203.2
+Fitting GB aggregated LM
+Start:  AIC=-585522
+norm_potential ~ norm_power_est0
+
+                      Df Sum of Sq    RSS     AIC
++ poly(ws_h_wmean, 3)  3    249.72 524.03 -631003
++ tech_typ             1    170.07 603.67 -614491
+<none>                             773.74 -585522
+
+Step:  AIC=-631003.2
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3)
+
+                      Df Sum of Sq    RSS     AIC
++ tech_typ             1    172.59 351.44 -677633
+<none>                             524.03 -631003
+- poly(ws_h_wmean, 3)  3    249.72 773.74 -585522
+
+Step:  AIC=-677632.6
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3) + tech_typ
+
+                               Df Sum of Sq    RSS     AIC
++ tech_typ:poly(ws_h_wmean, 3)  3    48.889 302.55 -695111
++ tech_typ:norm_power_est0      1    13.342 338.10 -682148
+<none>                                      351.44 -677633
+- tech_typ                      1   172.585 524.03 -631003
+- poly(ws_h_wmean, 3)           3   252.235 603.67 -614491
+
+Step:  AIC=-695110.7
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3) + tech_typ + 
+    poly(ws_h_wmean, 3):tech_typ
+
+                               Df Sum of Sq    RSS     AIC
++ tech_typ:norm_power_est0      1     0.585 301.97 -695335
+<none>                                      302.55 -695111
+- poly(ws_h_wmean, 3):tech_typ  3    48.889 351.44 -677633
+
+Step:  AIC=-695334.8
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3) + tech_typ + 
+    poly(ws_h_wmean, 3):tech_typ + norm_power_est0:tech_typ
+
+                               Df Sum of Sq    RSS     AIC
+<none>                                      301.97 -695335
+- norm_power_est0:tech_typ      1     0.585 302.55 -695111
+- poly(ws_h_wmean, 3):tech_typ  3    36.133 338.10 -682148
+Fitting quantile mapping model
+# A tibble: 7 × 5
+  model                     RMSE       MAE  MDAPE        Bias
+  <chr>                    <dbl>     <dbl>  <dbl>       <dbl>
+1 Generic PC            0.157    0.0783    85.4    0.0460    
+2 QM                    0.122    0.0560    96.0   -0.000120  
+3 GB LM                 0.116    0.0630    76.2    0.00760   
+4 Linear model          0.111    0.0560    75.1    0.00206   
+5 Spatio-temporal model 0.0309   0.0166    34.2    0.00156   
+6 AR2 model             0.00210  0.00112    2.56   0.0000274 
+7 AR1 model             0.000167 0.0000890  0.197  0.00000184
+# A tibble: 7 × 6
+  model                      RMSE       MAE    MAPE   MDAPE       Bias
+  <chr>                     <dbl>     <dbl>   <dbl>   <dbl>      <dbl>
+1 Generic PC            0.122     0.118     93.3    92.6    0.118     
+2 QM                    0.0483    0.0430    34.0    31.2    0.0429    
+3 GB LM                 0.0299    0.0255    21.1    19.3    0.0246    
+4 Linear model          0.0268    0.0215    17.8    14.2    0.0197    
+5 Spatio-temporal model 0.00468   0.00354    2.87    2.27   0.00127   
+6 AR2 model             0.000653  0.000580   0.465   0.458  0.0000280 
+7 AR1 model             0.0000528 0.0000471  0.0375  0.0347 0.00000185
+# A tibble: 14 × 7
+   tech_typ      model                     RMSE       MAE   MAPE  MDAPE     Bias
+   <chr>         <fct>                    <dbl>     <dbl>  <dbl>  <dbl>    <dbl>
+ 1 Wind Offshore Generic PC            0.238    0.150     1.57e3 85.9    1.03e-1
+ 2 Wind Offshore QM                    0.175    0.104     4.95e2 83.5    1.50e-2
+ 3 Wind Offshore GB LM                 0.160    0.0953    1.49e3 65.1   -1.63e-2
+ 4 Wind Offshore Linear model          0.153    0.0944    1.48e3 69.4   -1.46e-3
+ 5 Wind Offshore Spatio-temporal model 0.0362   0.0224    8.06e2 19.2    8.43e-4
+ 6 Wind Offshore AR2 model             0.00276  0.00177   5.29e1  1.72   9.22e-6
+ 7 Wind Offshore AR1 model             0.000220 0.000142  4.09e0  0.131  1.12e-7
+ 8 Wind Onshore  Generic PC            0.0887   0.0415    1.80e3 85.0    1.68e-2
+ 9 Wind Onshore  GB LM                 0.0851   0.0463    2.81e3 88.8    2.00e-2
+10 Wind Onshore  QM                    0.0811   0.0312    6.99e2 99.4   -7.95e-3
+11 Wind Onshore  Linear model          0.0803   0.0361    1.86e3 79.7    3.88e-3
+12 Wind Onshore  Spatio-temporal model 0.0278   0.0136    7.40e2 49.8    1.92e-3
+13 Wind Onshore  AR2 model             0.00167  0.000776  1.80e1  3.21   3.67e-5
+14 Wind Onshore  AR1 model             0.000132 0.0000618 1.85e0  0.244  2.73e-6
+# A tibble: 7 × 7
+  p_group3 model                     RMSE       MAE    MAPE  MDAPE        Bias
+  <fct>    <fct>                    <dbl>     <dbl>   <dbl>  <dbl>       <dbl>
+1 low      Generic PC            0.157    0.0783    1697.   85.4    0.0460    
+2 low      QM                    0.122    0.0560     611.   96.0   -0.000120  
+3 low      GB LM                 0.116    0.0630    2234.   76.2    0.00760   
+4 low      Linear model          0.111    0.0560    1694.   75.1    0.00206   
+5 low      Spatio-temporal model 0.0309   0.0166     769.   34.2    0.00156   
+6 low      AR2 model             0.00210  0.00112     33.1   2.56   0.0000274 
+7 low      AR1 model             0.000167 0.0000890    2.83  0.197  0.00000184
+# A tibble: 28 × 7
+   dist_coast_g4 model                     RMSE      MAE   MAPE   MDAPE     Bias
+   <fct>         <fct>                    <dbl>    <dbl>  <dbl>   <dbl>    <dbl>
+ 1 [0.382,10.7]  Generic PC            0.151     7.59e-2 2.09e3  90.6    2.46e-2
+ 2 [0.382,10.7]  QM                    0.130     5.67e-2 8.99e2 100     -1.16e-2
+ 3 [0.382,10.7]  GB LM                 0.126     6.51e-2 2.45e3  80.1    4.95e-3
+ 4 [0.382,10.7]  Linear model          0.124     6.40e-2 2.85e3  83.7    7.20e-3
+ 5 [0.382,10.7]  Spatio-temporal model 0.0395    1.91e-2 7.30e2  33.6    2.76e-3
+ 6 [0.382,10.7]  AR2 model             0.00209   1.06e-3 1.58e1   2.76   2.35e-5
+ 7 [0.382,10.7]  AR1 model             0.000169  8.56e-5 1.54e0   0.195  1.46e-6
+ 8 (10.7,19]     Generic PC            0.209     1.28e-1 1.31e3  80.7    7.34e-2
+ 9 (10.7,19]     GB LM                 0.176     1.06e-1 1.80e3  69.6   -2.54e-2
+10 (10.7,19]     QM                    0.175     1.01e-1 6.08e2  79.4   -6.59e-3
+# ℹ 18 more rows
+# A tibble: 28 × 7
+   elevation_g4 model                     RMSE      MAE    MAPE  MDAPE      Bias
+   <fct>        <fct>                    <dbl>    <dbl>   <dbl>  <dbl>     <dbl>
+ 1 0            Generic PC            0.242    0.154    1582.   85.9     1.05e-1
+ 2 0            QM                    0.178    0.107     500.   84.0     1.54e-2
+ 3 0            GB LM                 0.163    0.0978   1503.   65.7    -1.76e-2
+ 4 0            Linear model          0.156    0.0963   1489.   68.7    -2.83e-3
+ 5 0            Spatio-temporal model 0.0368   0.0231    814.   19.2     8.55e-4
+ 6 0            AR2 model             0.00280  0.00182    53.4   1.73    1.61e-6
+ 7 0            AR1 model             0.000224 0.000145    4.13  0.131  -5.26e-7
+ 8 [22,272]     QM                    0.122    0.0484    859.   95.3    -2.33e-2
+ 9 [22,272]     GB LM                 0.120    0.0622   2181.   76.5     6.27e-3
+10 [22,272]     Linear model          0.120    0.0592   2488.   77.1    -1.60e-3
+# ℹ 18 more rows
+[1] "Hornsea 1 - Heron & Njord" "Gwynt y Mor"              
+[3] "Pen Y Cymoedd"             "Edinbane"                 
