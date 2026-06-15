@@ -144,7 +144,6 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
 
 
 More validation OOS
-AR1 model inlabru
 
 clean data of anomalies (onshore /offshore)
 
