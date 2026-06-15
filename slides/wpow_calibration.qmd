@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2026-06-04"
+date: "2026-06-11"
 format: 
   beamer:
     theme: Rochester
@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "wpow_calibration_slides_26-06-04.pdf"
+    output-file: "wpow_calibration_slides_26-06-11.pdf"
 header-includes:
   - \usepackage{graphicx}
 fontsize: 12pt
@@ -117,6 +117,49 @@ theme_set(theme_bw())
 - Linear model at Great Britain (GB) level
 
 # Perfomance under different regimes
+
+## Error metrics by regime
+\tiny
+
+```{r}
+summary_files <- list.files("../summaries/",
+  pattern = "^calib_metrics_coarse.*[0-9]{6}\\.csv$",
+  full.names = TRUE
+)
+# summary_files <- list.files(
+#   "summaries/",
+#   pattern = "^calib_metrics_coarse.*[0-9]{6}\\.csv$",
+#   full.names = TRUE
+# )
+
+summary_tbl <- lapply(summary_files, 
+
+function(x) {
+  read.csv(x) %>% 
+    mutate(regime = case_when(
+      grepl("200814", x) ~ "Low",
+      grepl("240417", x) ~ "Mid",
+      grepl("240412", x) ~ "High",
+      TRUE ~ "All"
+    ))}
+  
+  ) %>%
+  bind_rows()
+  
+summary_tbl%>% 
+  dplyr::select(regime, model, RMSE, MAE,MDAPE, Bias) %>% 
+  mutate(Bias = formatC(Bias, format = "e", digits = 2)) %>% 
+  kable(digits = c(3,3,3,3), format = "latex") %>% 
+  kable_styling(
+    latex_options = c("scale_down")
+  )
+```
+
+## Low wind speed events
+\centering
+Low wind speed events distribution
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/low_wind_duration_dist.pdf}
+
 
 # Low wind speed {-}
 ## Hyperparameters
