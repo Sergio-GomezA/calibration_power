@@ -66,7 +66,7 @@ source("aux_funct.R")
 
 # 1. data preparation ####
 
-cat("Preparing data for model fitting\n")
+cat("Preparing data for low wind events analysis\n")
 
 sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 
@@ -192,6 +192,7 @@ pwr_coord_df <- pwr_curv_df %>%
     date = as.Date(time)
   ) %>%
   filter(date >= d0, date <= d0 + n.days) %>%
+  # filter(date %in% sampled_days) %>%
   mutate(
     elevation = pmax(0, elevation),
     site_name = site_name %>%
@@ -226,17 +227,20 @@ pwr_coord_df <- pwr_curv_df %>%
 
 low_events <- pwr_coord_df %>%
   arrange(coord_id, time) %>%
-  group_by(coord_id) %>%
+  group_by(coord_id, site_name) %>%
   mutate(
     below = norm_potential < pow_threshold,
     run_id = cumsum(below != lag(below, default = first(below)))
   ) %>%
-  group_by(coord_id, run_id, below) %>%
+  group_by(coord_id, site_name, run_id, below) %>%
   summarise(
     start_time = first(time),
     end_time = last(time),
-    duration_h = as.numeric(difftime(end_time, start_time, units = "hours")) +
-      1,
+    duration_h = pmin(
+      100,
+      as.numeric(difftime(end_time, start_time, units = "hours")) +
+        1
+    ),
     .groups = "drop"
   ) %>%
   filter(below) %>%
@@ -251,7 +255,7 @@ low_events %>% pull(duration_h) %>% summary()
 low_events %>%
   filter(duration_h < 1000) %>%
   ggplot(aes(x = duration_h)) +
-  geom_density(fill = blues9[5], alpha = 0.5) +
+  geom_density(fill = blues9[5], alpha = 0.5, bw = 0.14) +
   scale_x_log10(n.breaks = 8) +
   labs(
     title = "Distribution of Low Wind Events Duration",
@@ -264,6 +268,14 @@ low_events %>%
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
+test <- df_long0 %>%
+  st_drop_geometry() %>%
+  # filter(model == "Spatio-temporal model") %>%
+  arrange(model, coord_id, time) %>%
+  mutate(
+    below = estimate < pow_threshold,
+    run_id = cumsum(below != lag(below, default = first(below)))
+  )
 
 low_events_model <- df_long0 %>%
   st_drop_geometry() %>%
@@ -271,7 +283,7 @@ low_events_model <- df_long0 %>%
   arrange(model, coord_id, time) %>%
   group_by(model, coord_id) %>%
   mutate(
-    below = norm_potential < pow_threshold,
+    below = estimate < pow_threshold,
     run_id = cumsum(below != lag(below, default = first(below)))
   ) %>%
   group_by(model, coord_id, run_id, below) %>%
