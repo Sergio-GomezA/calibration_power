@@ -66,22 +66,102 @@ d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
 
 # Read models ####
+mod_labels <- c(
+  "Generic PC",
+  "Linear model",
+  "AR1 model",
+  "AR2 model",
+  "1D SPDE model",
+  "Spatio-temporal model",
+  "QM",
+  "GB LM"
+)
+est_cols <- c(
+  "norm_power_est0",
+  "lm",
+  "ar1",
+  "ar2",
+  "spde1d",
+  "st",
+  "qm",
+  "agg_lm"
+)
+n_models <- length(est_cols)
+
+
 mod_vec <- list.files(model_path, pattern = d0_tag, full.names = TRUE)
-mod_vec <- mod_vec[!grepl("mesh", mod_vec)]
+mod_vec <- mod_vec[!grepl("spatial", mod_vec)]
+
 
 # Predictions for next hours ####
 
 ## prediction df ####
+gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
 
-extension <- ifelse(local_run, "gpkg", "geojson")
-df_pattern <- sprintf("^calibration_df_.*_%s\\.%s$", d0_tag, extension)
+if (!file.exists(gb_day_df_fname) || override_objects) {
+  cat("GB daily summary file not found, creating new summary\n")
+  GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
+    rename(time = halfHourEndTime) %>%
+    mutate(
+      err = norm_power_est0 - norm_potential,
+      error0 = norm_potential - norm_power_est0,
+      date = as.Date(time)
+    )
+
+  gb_day_df <- GB_df %>%
+    group_by(date, tech_typ) %>%
+    summarise(
+      across(
+        c(norm_power_est0, norm_potential),
+        ~ sum(. * capacity) / sum(capacity)
+      ),
+      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+      across(c(capacity), mean)
+    ) %>%
+    summarise(
+      across(
+        c(norm_power_est0, norm_potential),
+        ~ sum(. * capacity) / sum(capacity)
+      ),
+      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+      across(c(capacity), sum),
+      .groups = "drop"
+    )
+
+  cutprobs3 <- c(0.25, 0.75)
+  p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
+  cutprobs7 <- c(0.1, 0.2, 0.25, 0.75, 0.8, 0.9)
+  p_quant7 <- quantile(gb_day_df$norm_potential, probs = cutprobs7)
+
+  gb_day_df <- gb_day_df %>%
+    mutate(
+      p_group3 = cut(
+        norm_potential,
+        breaks = c(-Inf, p_quant3, Inf),
+        labels = c("low", "mid", "high")
+      ),
+      p_group7 = cut(
+        norm_potential,
+        breaks = c(-Inf, p_quant7, Inf)
+      )
+    )
+
+  write_parquet(gb_day_df, gb_day_df_fname)
+} else {
+  cat("Loading existing GB daily summary\n")
+  gb_day_df <- read_parquet(gb_day_df_fname)
+}
+
+# extension <- ifelse(local_run, "gpkg", "geojson")
+extension <- "rds"
+df_pattern <- sprintf("^calibration_preddf_.*_%s\\.%s$", d0_tag, extension)
 files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
 
 if (!override_objects && length(files_found) > 0) {
   cat(
     "Calibration data file already exists for this day. Loading existing data.\n"
   )
-  wf_df_frag <- st_read(files_found[1])
+  wf_df_frag <- readRDS(files_found[1])
 } else {
   cat(
     "No existing calibration data file found for this day. Preparing new data.\n"
@@ -93,6 +173,7 @@ if (!override_objects && length(files_found) > 0) {
   ))
 
   n.days <- 1
+  n.hours <- 3
 
   wf_df_frag <- pwr_curv_df %>%
     rename(time = halfHourEndTime) %>%
@@ -104,12 +185,9 @@ if (!override_objects && length(files_found) > 0) {
         trimws()
     ) %>%
     # filter(date %in% sampled_days) %>%
-    filter(date >= d0, date <= d0 + n.days - 1) %>%
+    # filter(date >= d0, date <= d0 + n.days - 1) %>%
+    filter(time >= d0, time < d0 + n.days + hours(n.hours)) %>%
     arrange(site_name) %>%
-    # mutate(
-    #   site_id = as.integer(factor(site_name)),
-    #   coord_id = as.integer(factor(paste(lon, lat)))
-    # ) %>%
     group_by(lon, lat, time) %>%
     summarise(
       site_name = first(site_name),
@@ -164,26 +242,36 @@ if (!override_objects && length(files_found) > 0) {
     st_set_geometry(wf_df_frag, .)
 
   wf_df_fname <- sprintf(
-    "data/calibration_df_%s_%s.%s",
+    "data/calibration_preddf_%s_%s.%s",
     "base",
     d0_tag,
     extension
   )
-  if (extension == "geojson" & file.exists(wf_df_fname)) {
-    file.remove(wf_df_fname)
-  }
-  st_write(
+  saveRDS(
     wf_df_frag,
-    wf_df_fname,
-    driver = ifelse(local_run, "GPKG", "GeoJSON"),
-    append = FALSE,
-    quiet = TRUE
+    wf_df_fname
   )
 }
 cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
 n <- nrow(wf_df_frag)
 ## linear models ####
+mod_list <- mod_vec[grepl("lm", mod_vec)] %>%
+  map(readRDS)
 
+
+predict(mod_list, newdata = wf_df_frag, interval = "prediction") %>%
+  as.data.frame() %>%
+  rename(
+    lm_fit = fit,
+    lm_lwr = lwr,
+    lm_upr = upr
+  ) %>%
+  bind_cols(wf_df_frag, .) %>%
+  mutate(
+    lm_fit = pmin(1, pmax(0, lm_fit)),
+    lm_lwr = pmin(1, pmax(0, lm_lwr)),
+    lm_upr = pmin(1, pmax(0, lm_upr))
+  ) -> wf_df_frag
 ## quantile mapping ####
 
 ## bru models ####
