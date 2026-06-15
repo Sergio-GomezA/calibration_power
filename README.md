@@ -145,7 +145,23 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
 
 More validation OOS
 AR1 model inlabru
+
+clean data of anomalies (onshore /offshore)
+
 time series plots with estimate and CI
+scatterplots (onshore /offshore)
+insample
+OOS (onshore /offshore)
+cred
+
+space time
+
+Aggregation
+
+wind speed events 
+duration of low wind speed (onshore /offshore)
+power ramps
+
 
 models by day
 
