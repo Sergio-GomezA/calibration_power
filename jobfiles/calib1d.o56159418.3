@@ -1,0 +1,171 @@
+Running in cluster mode
+Preparing data for model fitting
+GB daily summary file not found, creating new summary
+No existing calibration data file found for this day. Preparing new data.
+Converting coordinates to km
+Number of unique locations: 140 
+Building spatial mesh
+Mesh file not found, building new mesh
+Assessing spatial mesh
+Fitting ar1 model
+inlabru version: 2.13.0.9032 
+INLA version: 26.01.26-1 
+Latent components:
+Intercept: main = linear(1)
+power_correction: main = rw2(pow_group)
+d_coast: main = rw2(d_coast_group)
+elev: main = rw2(elev_group)
+wind: main = rw2(ws_group), replicate = iid(tech_typ)
+u: main = ar1(t), replicate = iid(coord_id)
+Observation models:
+  Model tag: <No tag>
+    Family: 'gaussian'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: norm_potential ~ Intercept + power_correction + d_coast + elev + wind + u
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[Intercept, power_correction, d_coast, elev, wind, u], latent[] 
+Time used:
+    Pre = 1.13, Running = 4.97, Post = 0.993, Total = 7.09 
+Fixed effects:
+           mean    sd 0.025quant 0.5quant 0.975quant  mode kld
+Intercept 0.569 0.023      0.524    0.569      0.615 0.569   0
+
+Random effects:
+  Name	  Model
+    power_correction RW2 model
+   d_coast RW2 model
+   elev RW2 model
+   wind RW2 model
+   u AR1 model
+
+Model hyperparameters:
+                                            mean       sd 0.025quant 0.5quant
+Precision for the Gaussian observations 4.67e+01 1.51e+00   4.37e+01 4.66e+01
+Precision for power_correction          2.16e+04 2.22e+04   1.43e+03 1.47e+04
+Precision for d_coast                   1.24e+04 9.80e+03   2.49e+03 9.74e+03
+Precision for elev                      8.19e+04 4.28e+04   2.53e+04 7.32e+04
+Precision for wind                      1.93e+03 1.68e+03   3.31e+02 1.46e+03
+Rho for u                               9.77e-01 4.00e-03   9.69e-01 9.78e-01
+                                        0.975quant     mode
+Precision for the Gaussian observations   4.97e+01 4.66e+01
+Precision for power_correction            8.03e+04 3.91e+03
+Precision for d_coast                     3.84e+04 6.01e+03
+Precision for elev                        1.89e+05 5.72e+04
+Precision for wind                        6.38e+03 8.28e+02
+Rho for u                                 9.84e-01 9.78e-01
+
+Marginal log-Likelihood:  883.96 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
+
+Fitting ar2 model
+inlabru version: 2.13.0.9032 
+INLA version: 26.01.26-1 
+Latent components:
+Intercept: main = linear(1)
+power_correction: main = rw2(pow_group)
+d_coast: main = rw2(d_coast_group)
+elev: main = rw2(elev_group)
+wind: main = rw2(ws_group), replicate = iid(tech_typ)
+u: main = ar(t), replicate = iid(coord_id)
+Observation models:
+  Model tag: <No tag>
+    Family: 'gaussian'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: norm_potential ~ Intercept + power_correction + d_coast + elev + wind + u
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[Intercept, power_correction, d_coast, elev, wind, u], latent[] 
+Time used:
+    Pre = 0.71, Running = 9.69, Post = 1.64, Total = 12 
+Fixed effects:
+           mean    sd 0.025quant 0.5quant 0.975quant  mode kld
+Intercept 0.571 0.023      0.525    0.571      0.616 0.571   0
+
+Random effects:
+  Name	  Model
+    power_correction RW2 model
+   d_coast RW2 model
+   elev RW2 model
+   wind RW2 model
+   u AR(p) model
+
+Model hyperparameters:
+                                             mean       sd 0.025quant  0.5quant
+Precision for the Gaussian observations    47.591 1.57e+00     44.419    47.620
+Precision for power_correction           1389.514 1.20e+03    245.302  1050.872
+Precision for d_coast                   12520.309 1.07e+04   2666.278  9477.822
+Precision for elev                      88149.815 6.03e+04  25781.420 72082.019
+Precision for wind                       1928.061 1.88e+03    353.865  1381.872
+PACF1 for u                                 0.988 3.00e-03      0.979     0.988
+PACF2 for u                                -0.415 1.01e-01     -0.588    -0.423
+                                        0.975quant      mode
+Precision for the Gaussian observations   5.06e+01    47.823
+Precision for power_correction            4.58e+03   605.707
+Precision for d_coast                     4.11e+04  5838.401
+Precision for elev                        2.49e+05 50334.698
+Precision for wind                        6.89e+03   789.339
+PACF1 for u                               9.93e-01     0.989
+PACF2 for u                              -1.93e-01    -0.448
+
+Marginal log-Likelihood:  883.71 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
+
+Fitting 1D SPDE model
+inlabru version: 2.13.0.9032 
+INLA version: 26.01.26-1 
+Latent components:
+Intercept: main = linear(1)
+power_correction: main = rw2(pow_group)
+d_coast: main = rw2(d_coast_group)
+elev: main = rw2(elev_group)
+wind: main = rw2(ws_group), replicate = iid(tech_typ)
+hour: main = spde(t), replicate = iid(coord_id)
+Observation models:
+  Model tag: <No tag>
+    Family: 'gaussian'
+    Data class: 'sf', 'tbl_df', 'tbl', 'data.frame'
+    Response class: 'numeric'
+    Predictor: norm_potential ~ Intercept + power_correction + d_coast + elev + wind + hour
+    Additive/Linear/Rowwise: TRUE/TRUE/TRUE
+    Used components: effect[Intercept, power_correction, d_coast, elev, wind, hour], latent[] 
+Time used:
+    Pre = 1.12, Running = 7.76, Post = 1.63, Total = 10.5 
+Fixed effects:
+          mean    sd 0.025quant 0.5quant 0.975quant  mode kld
+Intercept 0.58 0.032      0.518    0.579      0.644 0.579   0
+
+Random effects:
+  Name	  Model
+    power_correction RW2 model
+   d_coast RW2 model
+   elev RW2 model
+   wind RW2 model
+   hour SPDE2 model
+
+Model hyperparameters:
+                                   mean       sd 0.025quant 0.5quant 0.975quant
+Precision for power_correction 21278.70 1.92e+04   1.70e+03 15535.18   7.13e+04
+Precision for d_coast          40051.52 2.67e+04   8.72e+03 33550.33   1.09e+05
+Precision for elev             81343.72 4.20e+04   2.55e+04 72836.10   1.86e+05
+Precision for wind             16762.75 2.57e+04   1.67e+03  9375.56   7.89e+04
+Range for hour                    20.85 1.24e+00   1.85e+01    20.81   2.34e+01
+Stdev for hour                     0.20 9.00e-03   1.82e-01     0.20   2.19e-01
+                                   mode
+Precision for power_correction 4.86e+03
+Precision for d_coast          2.22e+04
+Precision for elev             5.73e+04
+Precision for wind             3.92e+03
+Range for hour                 2.07e+01
+Stdev for hour                 1.99e-01
+
+Marginal log-Likelihood:  1182.42 
+ is computed 
+Posterior summaries for the linear predictor and the fitted values are computed
+(Posterior marginals needs also 'control.compute=list(return.marginals.predictor=TRUE)')
+
+Fitting spatiotemporal model
