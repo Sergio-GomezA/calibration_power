@@ -67,31 +67,45 @@ d0_tag <- base::format(d0, "%y%m%d")
 
 # Read models ####
 mod_labels <- c(
-  "Generic PC",
+  # "Generic PC",
   "Linear model",
-  "AR1 model",
-  "AR2 model",
-  "1D SPDE model",
-  "Spatio-temporal model",
+  "GB LM",
   "QM",
-  "GB LM"
+  "1D SPDE model",
+  "Spatio-temporal coarse",
+  "Spatio-temporal fine",
+  "AR1 model",
+  "AR2 model"
 )
 est_cols <- c(
-  "norm_power_est0",
+  # "norm_power_est0",
   "lm",
-  "ar1",
-  "ar2",
-  "spde1d",
-  "st",
+  "agg_lm",
   "qm",
-  "agg_lm"
+  "spde1d",
+  "st0_m1",
+  "st0_m2",
+  "ar1",
+  "ar2"
 )
 n_models <- length(est_cols)
 
 
 mod_vec <- list.files(model_path, pattern = d0_tag, full.names = TRUE)
-mod_vec <- mod_vec[!grepl("spatial", mod_vec)]
+mod_vec <- mod_vec[!grepl("spatial", mod_vec)] %>% sort()
 
+model_df <- tibble(
+  label = mod_labels,
+  code = est_cols,
+  fname = mod_vec
+) %>%
+  mutate(
+    type = case_when(
+      grepl("lm", code) ~ "lm",
+      grepl("qm", code) ~ "qm",
+      TRUE ~ "bru"
+    )
+  )
 
 # Predictions for next hours ####
 
@@ -255,25 +269,60 @@ if (!override_objects && length(files_found) > 0) {
 cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
 n <- nrow(wf_df_frag)
 ## linear models ####
-mod_list <- mod_vec[grepl("lm", mod_vec)] %>%
-  map(readRDS)
 
+lm_df <- model_df %>% filter(type == "lm")
 
-predict(mod_list, newdata = wf_df_frag, interval = "prediction") %>%
-  as.data.frame() %>%
-  rename(
-    lm_fit = fit,
-    lm_lwr = lwr,
-    lm_upr = upr
-  ) %>%
-  bind_cols(wf_df_frag, .) %>%
-  mutate(
-    lm_fit = pmin(1, pmax(0, lm_fit)),
-    lm_lwr = pmin(1, pmax(0, lm_lwr)),
-    lm_upr = pmin(1, pmax(0, lm_upr))
-  ) -> wf_df_frag
+lm_df %>% pull(fname) %>% map(readRDS) -> mod_list
+names(mod_list) <- lm_df %>% pull(code)
+
+# predict(mod_list[[1]], newdata = wf_df_frag, interval = "prediction") %>%
+#   as.data.frame() %>%
+#   bind_cols(wf_df_frag, .)
+
+lm_pred <- lapply(
+  names(mod_list),
+  function(mod) {
+    predict(mod_list[[mod]], newdata = wf_df_frag, interval = "prediction") %>%
+      as.data.frame() %>%
+      rename(
+        estimate = fit,
+        lwr = lwr,
+        upr = upr
+      ) %>%
+      bind_cols(
+        wf_df_frag %>%
+          dplyr::select(
+            coord_id,
+            site_name,
+            time,
+            date,
+            norm_potential,
+            norm_power_est0,
+            tech_typ,
+            p_group3
+          ),
+        .
+      ) %>%
+      mutate(
+        estimate = pmin(1, pmax(0, estimate)),
+        lwr = pmin(1, pmax(0, lwr)),
+        upr = pmin(1, pmax(0, upr)),
+        model = mod
+      )
+  }
+) %>%
+  bind_rows()
+
 ## quantile mapping ####
 
 ## bru models ####
+
+bru_df <- model_df %>% filter(type == "bru")
+
+test_bru <- predict(
+  readRDS(bru_df$fname[1]),
+  newdata = wf_df_frag,
+  n.samples = 10
+)
 
 # Plot uncertainty bands ####
