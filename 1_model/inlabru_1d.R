@@ -33,6 +33,9 @@ if (length(args) > 1) {
 if (length(args) > 2) {
   override_objects <- as.logical(args[3])
 }
+if (length(args) > 3) {
+  re_run_st <- as.logical(args[4])
+}
 
 # 0.2 libraries and paths ####
 require(parallel)
