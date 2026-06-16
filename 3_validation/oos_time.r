@@ -330,6 +330,7 @@ mod_temp <- readRDS(bru_df$fname[1])
 
 source("aux_funct.R")
 
+# debug(bru_ci_plot)
 test <- bru_ci_plot(
   bru_model = mod_temp,
   newdata = wf_df_frag,
@@ -393,11 +394,37 @@ test$GB_summary %>%
   geom_line(
     aes(x = time, y = mean),
     color = blues9[9],
-    size = 1
+    lwd = 1
   ) +
   geom_line(
     aes(x = time, y = norm_potential),
     color = "darkred",
-    size = 1
+    lwd = 1
   ) +
+  coord_cartesian(ylim = c(0, 1))
+
+test$sample_df %>% names()
+test$sample_df %>%
+  filter(coord_id %in% c(1, 2, 3)) %>%
+  ggplot() +
+  geom_ribbon(
+    aes(
+      x = time,
+      ymin = lwr,
+      ymax = upr
+    ),
+    fill = blues9[5],
+    alpha = 0.5
+  ) +
+  geom_line(
+    aes(x = time, y = mean),
+    color = blues9[9],
+    lwd = 1
+  ) +
+  geom_line(
+    aes(x = time, y = norm_potential),
+    color = "darkred",
+    lwd = 1
+  ) +
+  facet_wrap(~site_name) +
   coord_cartesian(ylim = c(0, 1))
