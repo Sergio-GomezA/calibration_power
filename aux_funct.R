@@ -1844,12 +1844,15 @@ bru_ci_plot <- function(
        site_name = site_name,
        time = time,
        date = date,
-       pow_st = rnorm(
-       n = %d,
-       mean = %s, 
-       sd = sqrt(1 / (%s)))
-  )",
+       pow_st = rnorm(n = %d, mean = %s, sd = 1 / sqrt(%s)),
+       lwr = qnorm(0.025, mean = %s, sd = 1 / sqrt(%s)),
+       upr = qnorm(0.975, mean = %s, sd = 1 / sqrt(%s))
+       )",
       n,
+      lin_pred,
+      prec_val,
+      lin_pred,
+      prec_val,
       lin_pred,
       prec_val
     )
@@ -1866,7 +1869,9 @@ bru_ci_plot <- function(
   pred_df <- lapply(
     seq_along(samples),
     function(s) {
-      data.frame(pow_st = samples[[s]]$pow_st) %>%
+      data.frame(
+        pow_st = samples[[s]]$pow_st,
+      ) %>%
         mutate(estimate = pmin(1, pmax(0, pow_st)), sim = s) %>%
         bind_cols(
           wf_df_frag %>%
@@ -1918,12 +1923,12 @@ bru_ci_plot <- function(
     geom_line(
       aes(x = time, y = mean),
       color = blues9[9],
-      size = 1
+      lwd = 1
     ) +
     geom_line(
       aes(x = time, y = norm_potential),
       color = "darkred",
-      size = 1
+      lwd = 1
     ) +
     coord_cartesian(ylim = c(0, 1))
 
