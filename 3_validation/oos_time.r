@@ -67,7 +67,7 @@ d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
 
 n.days <- 1
-n.hours <- 3
+n.hours <- 12
 t1 <- d0 + n.days
 th <- t1 + hours(n.hours)
 
@@ -270,7 +270,8 @@ if (!override_objects && length(files_found) > 0) {
     wf_df_fname
   )
 }
-cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
+n_loc <- nrow(wf_df_frag %>% distinct(x, y))
+cat("Number of unique locations:", n_loc, "\n")
 n <- nrow(wf_df_frag)
 ## linear models ####
 
@@ -278,10 +279,6 @@ lm_df <- model_df %>% filter(type == "lm")
 
 lm_df %>% pull(fname) %>% map(readRDS) -> mod_list
 names(mod_list) <- lm_df %>% pull(code)
-
-# predict(mod_list[[1]], newdata = wf_df_frag, interval = "prediction") %>%
-#   as.data.frame() %>%
-#   bind_cols(wf_df_frag, .)
 
 lm_pred <- lapply(
   names(mod_list),
@@ -302,6 +299,7 @@ lm_pred <- lapply(
             date,
             norm_potential,
             norm_power_est0,
+            capacity,
             tech_typ,
             p_group3
           ),
@@ -311,6 +309,7 @@ lm_pred <- lapply(
         estimate = pmin(1, pmax(0, estimate)),
         lwr = pmin(1, pmax(0, lwr)),
         upr = pmin(1, pmax(0, upr)),
+        std_error = summary(mod_list[[mod]])$sigma,
         model = mod
       )
   }
@@ -323,109 +322,64 @@ lm_pred <- lapply(
 
 bru_df <- model_df %>% filter(type == "bru")
 
-test_bru <- predict(
-  readRDS(bru_df$fname[1]),
-  newdata = wf_df_frag,
-  formula = ~n.samples = 10
-)
-?predict.bru
-
-
-test_bru$Predictor %>% nrow()
+# ?predict.bru
 
 mod_temp <- readRDS(bru_df$fname[1])
 
-# get linear predictor formula
-form_raw <- mod_temp$.args$formula
-lin_pred <- str_extract_all(as.character(form_raw)[3], "(?<=f\\()[^,]+")[[
-  1
-]] %>%
-  paste(collapse = " + ")
+# lin_pred <- get_bru_formula(mod_temp)
 
+source("aux_funct.R")
 
-n.samples <- 100
-# formula with data.frame for aggregating
-formula_temp <- as.formula(
-  sprintf(
-    "~ data.frame(
-       coord_id = coord_id,
-       site_name = site_name,
-       time = time,
-       date = date,
-       pow_st = rnorm(
-       n = %d,
-       mean = %s, 
-       sd = %s)
-  )",
-    n,
-    lin_pred,
-    "sqrt(1 / (Precision_for_the_Gaussian_observations))"
-  )
-)
-
-# samples object
-samples <- generate(
-  mod_temp,
+test <- bru_ci_plot(
+  bru_model = mod_temp,
   newdata = wf_df_frag,
-  formula = formula_temp,
-  n.samples = n.samples
+  n.samples = 100,
+  show.fig = TRUE
 )
 
-# samples data frame
-pred_grp <- lapply(
-  seq_along(samples),
-  function(s) {
-    data.frame(pow_st = samples[[s]]$pow_st) %>%
-      mutate(estimate = pmin(1, pmax(0, pow_st)), sim = s) %>%
-      bind_cols(
-        wf_df_frag %>%
-          dplyr::select(
-            coord_id,
-            site_name,
-            time,
-            date,
-            norm_potential,
-            capacity,
-            tech_typ,
-            p_group3
-          )
-      )
-  }
-) %>%
-  bind_rows() %>%
-  st_drop_geometry()
-
-# aggregated summary
-pred_fig_df <- pred_grp %>%
-  group_by(time, sim) %>%
-  # aggregate all sites keep samples
+lm_pred_fig_df <- lm_pred %>%
+  st_drop_geometry() %>%
+  group_by(time, model) %>%
   summarise(
-    estimate = sum(estimate * capacity) / sum(capacity),
+    mean = sum(estimate * capacity) / sum(capacity),
+    std_error = mean(std_error),
     norm_potential = sum(norm_potential * capacity) / sum(capacity),
-    .groups = "drop_last"
-  ) %>%
-  # GB aggregation summary
-  summarise(
-    mean = mean(estimate),
-    lwr = quantile(estimate, 0.025),
-    upr = quantile(estimate, 0.975),
-    norm_potential = mean(norm_potential),
     .groups = "drop"
+  ) %>%
+  mutate(
+    lwr = mean - 1.96 * std_error,
+    upr = mean + 1.96 * std_error,
+    lwr = pmin(1, pmax(0, lwr)),
+    upr = pmin(1, pmax(0, upr))
   )
 
-pred <- predict(
-  mod_temp,
-  newdata = wf_df_frag,
-  formula = formula_temp,
-  n.samples = 100
-)
-# nrow(wf_df_frag)
-# samples[[1]]$pow_st %>% head(28)
-# parse(text = form_temp)[[1]] %>% eval()
-# Plot uncertainty bands ####
+lm_pred_fig_df %>%
+  ggplot() +
+  geom_ribbon(
+    aes(
+      x = time,
+      ymin = lwr,
+      ymax = upr
+    ),
+    fill = blues9[5],
+    alpha = 0.5
+  ) +
+  geom_line(
+    aes(x = time, y = mean),
+    color = blues9[9],
+    size = 1
+  ) +
+  geom_line(
+    aes(x = time, y = norm_potential),
+    color = "darkred",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(0, 1)) +
+  facet_wrap(~model, nrow = 2)
 
-pred_fig_df %>%
-  filter(time >= d0) %>%
+
+test$GB_summary %>%
+  filter(time >= t1) %>%
   ggplot() +
   geom_ribbon(
     aes(

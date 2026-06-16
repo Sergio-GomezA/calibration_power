@@ -1805,3 +1805,134 @@ mdape <- function(actual, predicted, pos_only = FALSE, ...) {
     )
   }
 }
+
+
+get_bru_formula <- function(mod) {
+  # get linear predictor formula
+  form_raw <- mod$.args$formula
+  lin_pred <- str_extract_all(as.character(form_raw)[3], "(?<=f\\()[^,]+")[[
+    1
+  ]] %>%
+    paste(collapse = " + ")
+  return(lin_pred)
+}
+
+
+bru_ci_plot <- function(
+  bru_model,
+  newdata,
+  n.samples = 100,
+  show.fig = TRUE
+) {
+  n <- nrow(newdata)
+  lin_pred <- get_bru_formula(bru_model)
+  # check if prec is fixed
+  fix_prec <- bru_model$.args$control.family[[1]]$hyper$theta1$fixed
+  if (fix_prec) {
+    prec_val <- bru_model$.args$control.family[[1]]$hyper$theta1$initial %>%
+      as.character()
+  } else {
+    prec_val <- bru_model$.args$control.family[[1]]$hyper$theta1$output.name %>%
+      gsub(" ", "_", .) %>%
+      as.character()
+  }
+
+  formula_temp <- as.formula(
+    sprintf(
+      "~ data.frame(
+       coord_id = coord_id,
+       site_name = site_name,
+       time = time,
+       date = date,
+       pow_st = rnorm(
+       n = %d,
+       mean = %s, 
+       sd = sqrt(1 / (%s)))
+  )",
+      n,
+      lin_pred,
+      prec_val
+    )
+  )
+
+  samples <- generate(
+    bru_model,
+    newdata = newdata,
+    formula = formula_temp,
+    n.samples = n.samples
+  )
+
+  # samples data frame
+  pred_df <- lapply(
+    seq_along(samples),
+    function(s) {
+      data.frame(pow_st = samples[[s]]$pow_st) %>%
+        mutate(estimate = pmin(1, pmax(0, pow_st)), sim = s) %>%
+        bind_cols(
+          wf_df_frag %>%
+            dplyr::select(
+              coord_id,
+              site_name,
+              time,
+              date,
+              norm_potential,
+              capacity,
+              tech_typ,
+              p_group3
+            )
+        )
+    }
+  ) %>%
+    bind_rows() %>%
+    st_drop_geometry()
+
+  # aggregated GB summary
+  pred_fig_df <- pred_df %>%
+    group_by(time, sim) %>%
+    # aggregate all sites keep samples
+    summarise(
+      estimate = sum(estimate * capacity) / sum(capacity),
+      norm_potential = sum(norm_potential * capacity) / sum(capacity),
+      .groups = "drop_last"
+    ) %>%
+    # GB aggregation summary
+    summarise(
+      mean = mean(estimate),
+      lwr = quantile(estimate, 0.025),
+      upr = quantile(estimate, 0.975),
+      norm_potential = mean(norm_potential),
+      .groups = "drop"
+    )
+
+  p <- pred_fig_df %>%
+    ggplot() +
+    geom_ribbon(
+      aes(
+        x = time,
+        ymin = lwr,
+        ymax = upr
+      ),
+      fill = blues9[5],
+      alpha = 0.5
+    ) +
+    geom_line(
+      aes(x = time, y = mean),
+      color = blues9[9],
+      size = 1
+    ) +
+    geom_line(
+      aes(x = time, y = norm_potential),
+      color = "darkred",
+      size = 1
+    ) +
+    coord_cartesian(ylim = c(0, 1))
+
+  if (show.fig) {
+    print(p)
+  }
+  invisible(list(
+    sample_df = pred_df,
+    GB_summary = pred_fig_df,
+    fig = p
+  ))
+}
