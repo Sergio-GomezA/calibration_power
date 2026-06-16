@@ -178,6 +178,12 @@ extension <- "rds"
 df_pattern <- sprintf("^calibration_preddf_.*_%s\\.%s$", d0_tag, extension)
 files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
 
+coord_list_fname <- "data/coord_list.csv"
+
+cat("Loading existing coordinate list\n")
+coord_list <- read.csv(coord_list_fname)
+
+
 if (!override_objects && length(files_found) > 0) {
   cat(
     "Calibration data file already exists for this day. Loading existing data.\n"
@@ -205,6 +211,7 @@ if (!override_objects && length(files_found) > 0) {
     # filter(date %in% sampled_days) %>%
     # filter(date >= d0, date <= d0 + n.days - 1) %>%
     filter(time >= d0, time < th) %>%
+    filter(coord_id %in% coord_list$coord_id[coord_list$sampled == TRUE]) %>%
     arrange(site_name) %>%
     group_by(lon, lat, time) %>%
     summarise(
