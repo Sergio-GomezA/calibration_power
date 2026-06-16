@@ -1844,9 +1844,9 @@ bru_ci_plot <- function(
        site_name = site_name,
        time = time,
        date = date,
-       pow_st = rnorm(n = %d, mean = %s, sd = 1 / sqrt(%s)),
-       lwr = qnorm(0.025, mean = %s, sd = 1 / sqrt(%s)),
-       upr = qnorm(0.975, mean = %s, sd = 1 / sqrt(%s))
+       pow_st = rnorm(n = %d, mean = (%s), sd = 1 / sqrt((%s))),
+       lwr = qnorm(0.025, mean = (%s), sd = 1 / sqrt((%s))),
+       upr = qnorm(0.975, mean = (%s), sd = 1 / sqrt((%s)))
        )",
       n,
       lin_pred,
@@ -1870,9 +1870,14 @@ bru_ci_plot <- function(
     seq_along(samples),
     function(s) {
       data.frame(
-        pow_st = samples[[s]]$pow_st,
+        fit = samples[[s]]$pow_st,
+        lwr = samples[[s]]$lwr,
+        upr = samples[[s]]$upr
       ) %>%
-        mutate(estimate = pmin(1, pmax(0, pow_st)), sim = s) %>%
+        mutate(
+          across(c(fit, lwr, upr), ~ pmin(1, pmax(0, .))),
+          sim = s
+        ) %>%
         bind_cols(
           wf_df_frag %>%
             dplyr::select(
@@ -1896,7 +1901,7 @@ bru_ci_plot <- function(
     group_by(time, sim) %>%
     # aggregate all sites keep samples
     summarise(
-      estimate = sum(estimate * capacity) / sum(capacity),
+      estimate = sum(fit * capacity) / sum(capacity),
       norm_potential = sum(norm_potential * capacity) / sum(capacity),
       .groups = "drop_last"
     ) %>%
@@ -1938,6 +1943,7 @@ bru_ci_plot <- function(
   invisible(list(
     sample_df = pred_df,
     GB_summary = pred_fig_df,
-    fig = p
+    fig = p,
+    formula = lin_pred
   ))
 }

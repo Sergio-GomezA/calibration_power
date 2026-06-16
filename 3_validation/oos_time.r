@@ -324,7 +324,8 @@ bru_df <- model_df %>% filter(type == "bru")
 
 # ?predict.bru
 
-mod_temp <- readRDS(bru_df$fname[1])
+mod_temp <- readRDS(bru_df$fname[5])
+# mod_temp$.args$control.family[[1]]$hyper$theta1$fixed
 
 # lin_pred <- get_bru_formula(mod_temp)
 
@@ -334,10 +335,12 @@ source("aux_funct.R")
 test <- bru_ci_plot(
   bru_model = mod_temp,
   newdata = wf_df_frag,
-  n.samples = 100,
+  n.samples = 5,
   show.fig = TRUE
 )
-
+test$formula
+test_wf <- test$sample_df
+test_gb <- test$GB_summary
 lm_pred_fig_df <- lm_pred %>%
   st_drop_geometry() %>%
   group_by(time, model) %>%
@@ -401,11 +404,14 @@ test$GB_summary %>%
     color = "darkred",
     lwd = 1
   ) +
-  coord_cartesian(ylim = c(0, 1))
+  # coord_cartesian(ylim = c(0, 1))+
+  scale_x_datetime()
 
 test$sample_df %>% names()
+test$sample_df %>% head()
+test$sample_df$coord_id %>% unique()
 test$sample_df %>%
-  filter(coord_id %in% c(1, 2, 3)) %>%
+  filter(coord_id %in% c(30 + 1:30)) %>%
   ggplot() +
   geom_ribbon(
     aes(
@@ -417,7 +423,7 @@ test$sample_df %>%
     alpha = 0.5
   ) +
   geom_line(
-    aes(x = time, y = mean),
+    aes(x = time, y = fit),
     color = blues9[9],
     lwd = 1
   ) +
