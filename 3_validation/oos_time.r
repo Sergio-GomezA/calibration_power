@@ -45,6 +45,7 @@ if (local_run) {
   .libPaths(temp_lib)
 }
 
+
 require(tidyverse)
 require(sf)
 require(INLA)
@@ -64,6 +65,12 @@ source("aux_funct.R")
 sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
+
+n.days <- 1
+n.hours <- 3
+t1 <- d0 + n.days
+th <- t1 + hours(n.hours)
+
 
 # Read models ####
 mod_labels <- c(
@@ -186,9 +193,6 @@ if (!override_objects && length(files_found) > 0) {
     "power_curve_all_enriched.parquet"
   ))
 
-  n.days <- 1
-  n.hours <- 3
-
   wf_df_frag <- pwr_curv_df %>%
     rename(time = halfHourEndTime) %>%
     mutate(
@@ -200,7 +204,7 @@ if (!override_objects && length(files_found) > 0) {
     ) %>%
     # filter(date %in% sampled_days) %>%
     # filter(date >= d0, date <= d0 + n.days - 1) %>%
-    filter(time >= d0, time < d0 + n.days + hours(n.hours)) %>%
+    filter(time >= d0, time < th) %>%
     arrange(site_name) %>%
     group_by(lon, lat, time) %>%
     summarise(
@@ -322,7 +326,124 @@ bru_df <- model_df %>% filter(type == "bru")
 test_bru <- predict(
   readRDS(bru_df$fname[1]),
   newdata = wf_df_frag,
-  n.samples = 10
+  formula = ~n.samples = 10
+)
+?predict.bru
+
+
+test_bru$Predictor %>% nrow()
+
+mod_temp <- readRDS(bru_df$fname[1])
+
+# get linear predictor formula
+form_raw <- mod_temp$.args$formula
+lin_pred <- str_extract_all(as.character(form_raw)[3], "(?<=f\\()[^,]+")[[
+  1
+]] %>%
+  paste(collapse = " + ")
+
+
+n.samples <- 100
+# formula with data.frame for aggregating
+formula_temp <- as.formula(
+  sprintf(
+    "~ data.frame(
+       coord_id = coord_id,
+       site_name = site_name,
+       time = time,
+       date = date,
+       pow_st = rnorm(
+       n = %d,
+       mean = %s, 
+       sd = %s)
+  )",
+    n,
+    lin_pred,
+    "sqrt(1 / (Precision_for_the_Gaussian_observations))"
+  )
 )
 
+# samples object
+samples <- generate(
+  mod_temp,
+  newdata = wf_df_frag,
+  formula = formula_temp,
+  n.samples = n.samples
+)
+
+# samples data frame
+pred_grp <- lapply(
+  seq_along(samples),
+  function(s) {
+    data.frame(pow_st = samples[[s]]$pow_st) %>%
+      mutate(estimate = pmin(1, pmax(0, pow_st)), sim = s) %>%
+      bind_cols(
+        wf_df_frag %>%
+          dplyr::select(
+            coord_id,
+            site_name,
+            time,
+            date,
+            norm_potential,
+            capacity,
+            tech_typ,
+            p_group3
+          )
+      )
+  }
+) %>%
+  bind_rows() %>%
+  st_drop_geometry()
+
+# aggregated summary
+pred_fig_df <- pred_grp %>%
+  group_by(time, sim) %>%
+  # aggregate all sites keep samples
+  summarise(
+    estimate = sum(estimate * capacity) / sum(capacity),
+    norm_potential = sum(norm_potential * capacity) / sum(capacity),
+    .groups = "drop_last"
+  ) %>%
+  # GB aggregation summary
+  summarise(
+    mean = mean(estimate),
+    lwr = quantile(estimate, 0.025),
+    upr = quantile(estimate, 0.975),
+    norm_potential = mean(norm_potential),
+    .groups = "drop"
+  )
+
+pred <- predict(
+  mod_temp,
+  newdata = wf_df_frag,
+  formula = formula_temp,
+  n.samples = 100
+)
+# nrow(wf_df_frag)
+# samples[[1]]$pow_st %>% head(28)
+# parse(text = form_temp)[[1]] %>% eval()
 # Plot uncertainty bands ####
+
+pred_fig_df %>%
+  filter(time >= d0) %>%
+  ggplot() +
+  geom_ribbon(
+    aes(
+      x = time,
+      ymin = lwr,
+      ymax = upr
+    ),
+    fill = blues9[5],
+    alpha = 0.5
+  ) +
+  geom_line(
+    aes(x = time, y = mean),
+    color = blues9[9],
+    size = 1
+  ) +
+  geom_line(
+    aes(x = time, y = norm_potential),
+    color = "darkred",
+    size = 1
+  ) +
+  coord_cartesian(ylim = c(0, 1))
