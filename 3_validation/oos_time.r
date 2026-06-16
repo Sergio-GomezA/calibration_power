@@ -78,9 +78,9 @@ mod_labels <- c(
   "Linear model",
   "GB LM",
   "QM",
-  "1D SPDE model",
   "Spatio-temporal coarse",
   "Spatio-temporal fine",
+  "1D SPDE model",
   "AR1 model",
   "AR2 model"
 )
@@ -89,9 +89,9 @@ est_cols <- c(
   "lm",
   "agg_lm",
   "qm",
-  "spde1d",
   "st0_m1",
   "st0_m2",
+  "spde1d",
   "ar1",
   "ar2"
 )
@@ -316,29 +316,6 @@ lm_pred <- lapply(
 ) %>%
   bind_rows()
 
-## quantile mapping ####
-
-## bru models ####
-
-bru_df <- model_df %>% filter(type == "bru")
-
-# ?predict.bru
-
-mod_temp <- readRDS(bru_df$fname[5])
-# mod_temp %>% summary()
-# mod_temp$.args$control.family[[1]]$hyper$theta1$fixed
-
-# lin_pred <- get_bru_formula(mod_temp)
-
-source("aux_funct.R")
-mod_temp <- bru1d
-# debug(bru_ci_plot)
-test <- bru_ci_plot(
-  bru_model = mod_temp,
-  newdata = wf_df_pred,
-  n.samples = 1000,
-  show.fig = TRUE
-)
 
 lm_pred_fig_df <- lm_pred %>%
   st_drop_geometry() %>%
@@ -380,6 +357,30 @@ lm_pred_fig_df %>%
   coord_cartesian(ylim = c(0, 1)) +
   facet_wrap(~model, nrow = 2)
 
+## quantile mapping ####
+
+## bru models ####
+
+bru_df <- model_df %>% filter(type == "bru")
+
+# ?predict.bru
+
+mod_temp <- readRDS(bru_df$fname[1])
+# mod_temp %>% summary()
+# mod_temp$.args$control.family[[1]]$hyper$theta1$fixed
+
+# lin_pred <- get_bru_formula(mod_temp)
+
+source("aux_funct.R")
+mod_temp <- bruar1
+
+test <- bru_ci_plot(
+  bru_model = mod_temp,
+  newdata = wf_df_pred,
+  n.samples = 500,
+  show.fig = TRUE
+)
+
 
 test$GB_summary %>%
   filter(time >= t1) %>%
@@ -408,7 +409,7 @@ test$GB_summary %>%
 
 
 test$wf_summary %>%
-  filter(coord_id %in% c(120 + 1:30)) %>%
+  filter(coord_id %in% c(0 + 1:30)) %>%
   ggplot() +
   geom_ribbon(
     aes(
@@ -429,4 +430,5 @@ test$wf_summary %>%
     color = "darkred",
     lwd = 1
   ) +
-  facet_wrap(~site_name, scales = "free_y")
+  facet_wrap(~site_name, scales = "free_y") +
+  scale_x_datetime(date_labels = "%H:%M")

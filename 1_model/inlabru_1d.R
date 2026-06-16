@@ -5,13 +5,13 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 # 0.1 global parameter #####
 day_id <- 1
 mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- FALSE
+override_objects <- TRUE
 re_run_st <- FALSE
 prec_init <- log(200) # for u
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
-
 fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
+
 cluster_ext <- "rds" # "geojson" previously
 
 if (local_run) {
@@ -161,6 +161,32 @@ if (!override_objects && length(files_found) > 0) {
     "power_curve_all_enriched.parquet"
   ))
 
+  coord_list_fname <- "data/coord_list.csv"
+  if (!file.exists(coord_list_fname)) {
+    cat("Creating new coordinate list\n")
+    set.seed(1)
+    coord_list <- pwr_curv_df %>%
+      distinct(coord_id, tech_typ) %>%
+      arrange(coord_id)
+
+    coord_samp <- coord_list %>%
+      group_by(tech_typ) %>%
+      slice_sample(prop = 0.8)
+
+    coord_list <- coord_list %>%
+      mutate(
+        sampled = ifelse(coord_id %in% coord_samp$coord_id, TRUE, FALSE)
+      )
+    write.csv(
+      coord_list,
+      file = coord_list_fname,
+      row.names = FALSE
+    )
+  } else {
+    cat("Loading existing coordinate list\n")
+    coord_list <- read.csv(coord_list_fname)
+  }
+
   n.days <- 1
 
   wf_df_frag <- pwr_curv_df %>%
@@ -174,11 +200,8 @@ if (!override_objects && length(files_found) > 0) {
     ) %>%
     # filter(date %in% sampled_days) %>%
     filter(date >= d0, date <= d0 + n.days - 1) %>%
+    filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
     arrange(site_name) %>%
-    # mutate(
-    #   site_id = as.integer(factor(site_name)),
-    #   coord_id = as.integer(factor(paste(lon, lat)))
-    # ) %>%
     group_by(lon, lat, time) %>%
     summarise(
       site_name = first(site_name),
@@ -436,6 +459,7 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
 ar_tag <- "ar1"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  norm_power_est0 +
   # power_correction(
   #   pow_group,
   #   model = "rw2",
@@ -480,6 +504,7 @@ if (!file.exists(model_fname) || override_objects) {
   bruar1 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
+      norm_power_est0 +
       # power_correction +
       d_coast +
       elev +
@@ -554,6 +579,7 @@ ggsave(
 ar_tag <- "ar2"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  norm_power_est0 +
   # power_correction(
   #   pow_group,
   #   model = "rw2",
@@ -599,6 +625,7 @@ if (!file.exists(model_fname) || override_objects) {
   bruar2 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
+      norm_power_est0 +
       # power_correction +
       d_coast +
       elev +
@@ -679,6 +706,7 @@ spde1D <- inla.spde2.pcmatern(
 
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  norm_power_est0 +
   # power_correction(
   #   pow_group,
   #   model = "rw2",
@@ -714,6 +742,7 @@ if (!file.exists(model_fname) || override_objects) {
     components = components0,
     formula = norm_potential ~ Intercept +
       # tech_typ +
+      norm_power_est0 +
       # power_correction +
       d_coast +
       elev +
@@ -792,12 +821,13 @@ spde <- INLA::inla.spde2.pcmatern(
 
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
-  power_correction(
-    pow_group,
-    model = "rw2",
-    # replicate = tech_typ,
-    constr = TRUE
-  ) + # smooth correction power
+  norm_power_est0 +
+  # power_correction(
+  #   pow_group,
+  #   model = "rw2",
+  #   # replicate = tech_typ,
+  #   constr = TRUE
+  # ) + # smooth correction power
   d_coast(
     d_coast_group,
     model = "rw2",
@@ -826,7 +856,8 @@ if (!file.exists(model_fname) || re_run_st) {
   bru0 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
-      power_correction +
+      norm_power_est0 +
+      # power_correction +
       d_coast +
       elev +
       wind +
