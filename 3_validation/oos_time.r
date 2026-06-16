@@ -182,7 +182,7 @@ if (!override_objects && length(files_found) > 0) {
   cat(
     "Calibration data file already exists for this day. Loading existing data.\n"
   )
-  wf_df_frag <- readRDS(files_found[1])
+  wf_df_pred <- readRDS(files_found[1])
 } else {
   cat(
     "No existing calibration data file found for this day. Preparing new data.\n"
@@ -193,7 +193,7 @@ if (!override_objects && length(files_found) > 0) {
     "power_curve_all_enriched.parquet"
   ))
 
-  wf_df_frag <- pwr_curv_df %>%
+  wf_df_pred <- pwr_curv_df %>%
     rename(time = halfHourEndTime) %>%
     mutate(
       date = as.Date(time),
@@ -246,18 +246,18 @@ if (!override_objects && length(files_found) > 0) {
       by = c("date" = "date")
     )
 
-  x <- wf_df_frag$pow_group %>% unique() %>% sort()
+  x <- wf_df_pred$pow_group %>% unique() %>% sort()
   min_jump <- min(diff(sort(x))) / diff(range(x))
   if (min_jump <= 1e-4) {
-    wf_df_frag <- wf_df_frag %>%
+    wf_df_pred <- wf_df_pred %>%
       mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
   }
 
   cat("Converting coordinates to km\n")
-  wf_df_frag <- wf_df_frag %>%
+  wf_df_pred <- wf_df_pred %>%
     st_geometry() %>%
     (\(g) g / 1000)() %>%
-    st_set_geometry(wf_df_frag, .)
+    st_set_geometry(wf_df_pred, .)
 
   wf_df_fname <- sprintf(
     "data/calibration_preddf_%s_%s.%s",
@@ -266,13 +266,13 @@ if (!override_objects && length(files_found) > 0) {
     extension
   )
   saveRDS(
-    wf_df_frag,
+    wf_df_pred,
     wf_df_fname
   )
 }
-n_loc <- nrow(wf_df_frag %>% distinct(x, y))
+n_loc <- nrow(wf_df_pred %>% distinct(x, y))
 cat("Number of unique locations:", n_loc, "\n")
-n <- nrow(wf_df_frag)
+n <- nrow(wf_df_pred)
 ## linear models ####
 
 lm_df <- model_df %>% filter(type == "lm")
@@ -283,7 +283,7 @@ names(mod_list) <- lm_df %>% pull(code)
 lm_pred <- lapply(
   names(mod_list),
   function(mod) {
-    predict(mod_list[[mod]], newdata = wf_df_frag, interval = "prediction") %>%
+    predict(mod_list[[mod]], newdata = wf_df_pred, interval = "prediction") %>%
       as.data.frame() %>%
       rename(
         estimate = fit,
@@ -291,7 +291,7 @@ lm_pred <- lapply(
         upr = upr
       ) %>%
       bind_cols(
-        wf_df_frag %>%
+        wf_df_pred %>%
           dplyr::select(
             coord_id,
             site_name,
@@ -325,22 +325,21 @@ bru_df <- model_df %>% filter(type == "bru")
 # ?predict.bru
 
 mod_temp <- readRDS(bru_df$fname[5])
+# mod_temp %>% summary()
 # mod_temp$.args$control.family[[1]]$hyper$theta1$fixed
 
 # lin_pred <- get_bru_formula(mod_temp)
 
 source("aux_funct.R")
-
+mod_temp <- bru1d
 # debug(bru_ci_plot)
 test <- bru_ci_plot(
   bru_model = mod_temp,
-  newdata = wf_df_frag,
-  n.samples = 5,
+  newdata = wf_df_pred,
+  n.samples = 1000,
   show.fig = TRUE
 )
-test$formula
-test_wf <- test$sample_df
-test_gb <- test$GB_summary
+
 lm_pred_fig_df <- lm_pred %>%
   st_drop_geometry() %>%
   group_by(time, model) %>%
@@ -407,11 +406,9 @@ test$GB_summary %>%
   # coord_cartesian(ylim = c(0, 1))+
   scale_x_datetime()
 
-test$sample_df %>% names()
-test$sample_df %>% head()
-test$sample_df$coord_id %>% unique()
-test$sample_df %>%
-  filter(coord_id %in% c(30 + 1:30)) %>%
+
+test$wf_summary %>%
+  filter(coord_id %in% c(120 + 1:30)) %>%
   ggplot() +
   geom_ribbon(
     aes(
@@ -432,5 +429,4 @@ test$sample_df %>%
     color = "darkred",
     lwd = 1
   ) +
-  facet_wrap(~site_name) +
-  coord_cartesian(ylim = c(0, 1))
+  facet_wrap(~site_name, scales = "free_y")

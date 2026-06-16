@@ -1879,7 +1879,7 @@ bru_ci_plot <- function(
           sim = s
         ) %>%
         bind_cols(
-          wf_df_frag %>%
+          newdata %>%
             dplyr::select(
               coord_id,
               site_name,
@@ -1896,6 +1896,16 @@ bru_ci_plot <- function(
     bind_rows() %>%
     st_drop_geometry()
 
+  # summary by site and time
+  wf_summary_df <- pred_df %>%
+    group_by(coord_id, site_name, time) %>%
+    summarise(
+      lwr = quantile(fit, 0.025),
+      upr = quantile(fit, 0.975),
+      fit = mean(fit),
+      norm_potential = mean(norm_potential),
+      .groups = "drop"
+    )
   # aggregated GB summary
   pred_fig_df <- pred_df %>%
     group_by(time, sim) %>%
@@ -1934,16 +1944,18 @@ bru_ci_plot <- function(
       aes(x = time, y = norm_potential),
       color = "darkred",
       lwd = 1
-    ) +
-    coord_cartesian(ylim = c(0, 1))
+    ) #+
+  # coord_cartesian(ylim = c(0, 1))
 
   if (show.fig) {
     print(p)
   }
   invisible(list(
     sample_df = pred_df,
+    wf_summary = wf_summary_df,
     GB_summary = pred_fig_df,
     fig = p,
-    formula = lin_pred
+    formula = lin_pred,
+    df_formula = formula_temp
   ))
 }
