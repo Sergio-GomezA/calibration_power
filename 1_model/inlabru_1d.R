@@ -5,10 +5,13 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 # 0.1 global parameter #####
 day_id <- 1
 mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- TRUE
+override_objects <- FALSE
 re_run_st <- FALSE
-prec_init <- log(200)
+prec_init <- log(200) # for u
+prec_init_gau <- log(30) # for gaussian family 1DSPDE
+
 fixed_ucomp <- FALSE
+fixed_gaus_1DSPE <- FALSE
 cluster_ext <- "rds" # "geojson" previously
 
 if (local_run) {
@@ -433,12 +436,12 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
 ar_tag <- "ar1"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
-  power_correction(
-    pow_group,
-    model = "rw2",
-    # replicate = tech_typ,
-    constr = TRUE
-  ) + # smooth correction power
+  # power_correction(
+  #   pow_group,
+  #   model = "rw2",
+  #   # replicate = tech_typ,
+  #   constr = TRUE
+  # ) + # smooth correction power
   d_coast(
     d_coast_group,
     model = "rw2",
@@ -477,7 +480,7 @@ if (!file.exists(model_fname) || override_objects) {
   bruar1 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
-      power_correction +
+      # power_correction +
       d_coast +
       elev +
       wind +
@@ -551,12 +554,12 @@ ggsave(
 ar_tag <- "ar2"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
-  power_correction(
-    pow_group,
-    model = "rw2",
-    # replicate = tech_typ,
-    constr = TRUE
-  ) + # smooth correction power
+  # power_correction(
+  #   pow_group,
+  #   model = "rw2",
+  #   # replicate = tech_typ,
+  #   constr = TRUE
+  # ) + # smooth correction power
   d_coast(
     d_coast_group,
     model = "rw2",
@@ -596,7 +599,7 @@ if (!file.exists(model_fname) || override_objects) {
   bruar2 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
-      power_correction +
+      # power_correction +
       d_coast +
       elev +
       wind +
@@ -676,12 +679,12 @@ spde1D <- inla.spde2.pcmatern(
 
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
-  power_correction(
-    pow_group,
-    model = "rw2",
-    # replicate = tech_typ,
-    constr = TRUE
-  ) + # smooth correction power
+  # power_correction(
+  #   pow_group,
+  #   model = "rw2",
+  #   # replicate = tech_typ,
+  #   constr = TRUE
+  # ) + # smooth correction power
   d_coast(
     d_coast_group,
     model = "rw2",
@@ -711,7 +714,7 @@ if (!file.exists(model_fname) || override_objects) {
     components = components0,
     formula = norm_potential ~ Intercept +
       # tech_typ +
-      power_correction +
+      # power_correction +
       d_coast +
       elev +
       wind +
@@ -723,8 +726,8 @@ if (!file.exists(model_fname) || override_objects) {
       control.family = list(
         hyper = list(
           prec = list(
-            initial = log(30),
-            fixed = TRUE
+            initial = prec_init_gau,
+            fixed = fixed_gaus_1DSPE
           )
         )
       ),
