@@ -1954,7 +1954,7 @@ bru_ci_plot <- function(
     # sample_df = pred_df,
     wf_summary = wf_summary_df,
     GB_summary = pred_fig_df,
-    fig = p,
+    # fig = p,
     formula = lin_pred
     # df_formula = formula_temp
   ))
