@@ -735,15 +735,15 @@ ggsave(
   # dpi = 300
 )
 ## Correlation exploration ####
-gb_fig_df %>%
-  filter(model %in% c("spde1d", "ar2", "ar1", "st0_m1", "st0_m2")) %>%
-  group_by(model) %>%
-  mutate(
-    error = norm_potential - mean,
-  ) %>%
-  summarise(
-    cor = cor(error, use = "complete.obs")
-  )
+# gb_fig_df %>%
+#   filter(model %in% c("spde1d", "ar2", "ar1", "st0_m1", "st0_m2")) %>%
+#   group_by(model) %>%
+#   mutate(
+#     error = norm_potential - mean,
+#   ) %>%
+#   summarise(
+#     cor = cor(error, use = "complete.obs")
+#   )
 gb_fig_df <- gb_fig_df %>%
   mutate(residual = norm_potential - mean)
 
