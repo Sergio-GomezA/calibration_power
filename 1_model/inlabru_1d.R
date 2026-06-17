@@ -6,7 +6,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 day_id <- 1
 mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- TRUE
-re_run_st <- TRUE
+re_run_st <- FALSE
 prec_init <- log(200) # for u
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
 fixed_ucomp <- FALSE
@@ -191,6 +191,7 @@ if (!override_objects && length(files_found) > 0) {
   }
 
   n.days <- 1
+  n.days.before <- 0
 
   wf_df_frag <- pwr_curv_df %>%
     rename(time = halfHourEndTime) %>%
@@ -202,7 +203,7 @@ if (!override_objects && length(files_found) > 0) {
         trimws()
     ) %>%
     # filter(date %in% sampled_days) %>%
-    filter(date >= d0, date <= d0 + n.days - 1) %>%
+    filter(date >= d0 - n.days.before, date <= d0 + n.days - 1) %>%
     filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
     arrange(site_name) %>%
     group_by(lon, lat, time) %>%
@@ -483,7 +484,7 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   u(
     t,
     model = "ar1",
-    replicate = coord_id,
+    replicate = tech_typ,
     hyper = list(
       rho = list(
         prior = "pc.cor1",
@@ -568,6 +569,21 @@ for (effect in effect_names) {
     height = 4
   )
 }
+# u_comp <- plot.effects(
+#   bruar1,
+#   "u",
+#   n.replicate = length(unique(wf_df_frag$coord_id)),
+#   replicate_names = unique(wf_df_frag$coord_id),
+#   show.plot = TRUE
+# )
+# u_comp$fig +
+#   geom_line(
+#     data = wf_df_frag %>%
+#       dplyr::select(coord_id, t, norm_potential) %>%
+#       st_drop_geometry() %>%
+#       rename(type = coord_id, group = t),
+#     aes(x = group, y = norm_potential)
+#   )
 
 plot.hyper.dens(bruar1)
 ggsave(
@@ -604,7 +620,7 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     t,
     model = "ar",
     order = 2,
-    replicate = coord_id,
+    replicate = tech_typ,
     hyper = list(
       # rho = list(
       #   prior = "pc.cor1",
