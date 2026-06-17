@@ -6,7 +6,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 day_id <- 2
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- TRUE
-rerun_samples <- TRUE
+rerun_samples <- FALSE
 prec_init <- log(200)
 
 
@@ -506,6 +506,15 @@ gb_fig_df <- bind_rows(
     bind_rows()
 )
 
+gb_fig_df %>%
+  filter(model %in% c("spde1d", "ar2", "ar1", "st0_m1", "st0_m2")) %>%
+  group_by(model) %>%
+  mutate(
+    error = norm_potential - mean,
+  ) %>%
+  summarise(
+    cor = cor(error, use = "complete.obs")
+  )
 gb_fig_df %>%
   filter(time >= t1) %>%
   ggplot() +
