@@ -1836,7 +1836,7 @@ bru_ci_plot <- function(
       gsub(" ", "_", .) %>%
       as.character()
     cat(sprintf("Precision is not fixed. Using %s for sampling.\n", prec_val))
-    print(bru_model$summary.hyperpar)
+    # print(bru_model$summary.hyperpar)
   }
 
   formula_temp <- as.formula(

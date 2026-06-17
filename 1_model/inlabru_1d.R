@@ -504,7 +504,9 @@ model_fname <- file.path(
 )
 
 if (!file.exists(model_fname) || override_objects) {
+  cat("----------------------------------\n")
   cat("Fitting ar1 model\n")
+  cat("----------------------------------\n")
   bruar1 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
@@ -640,7 +642,9 @@ model_fname <- file.path(
 )
 
 if (!file.exists(model_fname) || override_objects) {
+  cat("----------------------------------\n")
   cat("Fitting ar2 model\n")
+  cat("----------------------------------\n")
   bruar2 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
@@ -746,7 +750,7 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   hour(
     t,
     model = spde1D,
-    replicate = coord_id
+    replicate = tech_typ,
     # hyper = list(prec = list(initial = log(1000), fixed = TRUE))
   )
 
@@ -756,7 +760,9 @@ model_fname <- file.path(
 )
 
 if (!file.exists(model_fname) || override_objects) {
+  cat("----------------------------------\n")
   cat("Fitting 1D SPDE model\n")
+  cat("----------------------------------\n")
   bru1d <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
@@ -871,7 +877,9 @@ model_fname <- file.path(
 )
 
 if (!file.exists(model_fname) || re_run_st) {
+  cat("----------------------------------\n")
   cat("Fitting spatiotemporal model\n")
+  cat("----------------------------------\n")
   bru0 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
@@ -1066,7 +1074,9 @@ ggsave(
 lm_wf_modfname <- sprintf("lm_model_aic0_%s.rds", d0_tag)
 
 if (!file.exists(file.path(model_path, lm_wf_modfname)) || override_objects) {
+  cat("----------------------------------\n")
   cat("Fitting LM model\n")
+  cat("----------------------------------\n")
   base_model <- lm(
     norm_potential ~ norm_power_est0,
     data = wf_df_frag
@@ -1109,8 +1119,9 @@ if (!file.exists(file.path(model_path, lm_wf_modfname)) || override_objects) {
 lm_agg_modfname <- sprintf("lm_model_aic0_agg_%s.rds", d0_tag)
 
 if (!file.exists(file.path(model_path, lm_agg_modfname)) || override_objects) {
+  cat("----------------------------------\n")
   cat("Fitting GB aggregated LM\n")
-
+  cat("----------------------------------\n")
   samp_gb <- GB_df
   # %>%
   # filter(date %in% sampled_days) %>%
@@ -1160,7 +1171,9 @@ if (!file.exists(file.path(model_path, lm_agg_modfname)) || override_objects) {
 qm_fname <- sprintf("qm_model_%s.rds", d0_tag)
 
 if (!file.exists(file.path(model_path, qm_fname)) || override_objects) {
+  cat("----------------------------------\n")
   cat("Fitting quantile mapping model\n")
+  cat("----------------------------------\n")
   qqmod <- fitQmap(
     obs = wf_df_frag %>% pull(norm_potential),
     mod = wf_df_frag %>% pull(norm_power_est0),
@@ -1328,6 +1341,9 @@ pos_levels <- levels(cut(
 ))
 
 ## summary table for figures and tables #####
+cat("----------------------------------\n")
+cat("Generating summary tables and figures\n")
+cat("----------------------------------\n")
 df_long0 <- model_df0 %>%
   dplyr::select(
     date,
