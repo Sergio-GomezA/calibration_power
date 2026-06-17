@@ -4,8 +4,8 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
 day_id <- 2
-mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- FALSE
+# mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
+override_objects <- TRUE
 prec_init <- log(200)
 
 
@@ -23,10 +23,7 @@ if (length(args) > 0) {
   day_id <- as.numeric(args[1])
 }
 if (length(args) > 1) {
-  mesh_edge_par <- as.numeric(args[2])
-}
-if (length(args) > 2) {
-  override_objects <- as.logical(args[3])
+  override_objects <- as.logical(args[2])
 }
 
 # 0.2 libraries and paths ####
@@ -488,6 +485,7 @@ if (!file.exists(pred_summary_fname) || override_objects) {
   cat("Loading existing prediction band summary\n")
   pred_band_summary <- readRDS(pred_summary_fname)
 }
+
 
 ## Consolidated figures #####
 ### GB aggregation summary ####
