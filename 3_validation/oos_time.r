@@ -6,7 +6,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 day_id <- 2
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
-rerun_samples <- FALSE
+rerun_samples <- TRUE
 prec_init <- log(200)
 
 
@@ -507,15 +507,6 @@ gb_fig_df <- bind_rows(
 )
 
 gb_fig_df %>%
-  filter(model %in% c("spde1d", "ar2", "ar1", "st0_m1", "st0_m2")) %>%
-  group_by(model) %>%
-  mutate(
-    error = norm_potential - mean,
-  ) %>%
-  summarise(
-    cor = cor(error, use = "complete.obs")
-  )
-gb_fig_df %>%
   filter(time >= t1) %>%
   ggplot() +
   geom_ribbon(
@@ -681,3 +672,86 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
 #   facet_wrap(~site_name, scales = "free_y") +
 #   coord_cartesian(ylim = c(0, 1)) +
 #   scale_x_datetime(date_labels = "%H:%M")
+## Bands coverage by model ####
+### wf level
+cov_bands_wf <- wf_fig_df %>%
+  filter(time >= t1) %>%
+  group_by(model, coord_id) %>%
+  summarise(
+    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    .groups = "drop"
+  ) %>%
+  group_by(model) %>%
+  summarise(
+    mean_coverage = mean(coverage),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(mean_coverage)) %>%
+  mutate(
+    model = factor(model, levels = model)
+  )
+cov_bands_wf %>%
+  ggplot(aes(x = model, y = mean_coverage)) +
+  geom_col(fill = blues9[5]) +
+  geom_text(aes(label = round(mean_coverage, 3)), vjust = -0.5) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Model", y = "Mean coverage") +
+  scale_x_discrete(labels = mod_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+### aggregated #####
+cov_bands <- gb_fig_df %>%
+  filter(time >= t1) %>%
+  group_by(model) %>%
+  summarise(
+    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(coverage)) %>%
+  mutate(
+    model = factor(model, levels = model)
+  )
+
+cov_bands %>%
+  ggplot(aes(x = model, y = coverage)) +
+  geom_col(fill = blues9[5]) +
+  geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Model", y = "Coverage") +
+  scale_x_discrete(labels = mod_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+## Correlation exploration ####
+gb_fig_df %>%
+  filter(model %in% c("spde1d", "ar2", "ar1", "st0_m1", "st0_m2")) %>%
+  group_by(model) %>%
+  mutate(
+    error = norm_potential - mean,
+  ) %>%
+  summarise(
+    cor = cor(error, use = "complete.obs")
+  )
+gb_fig_df <- gb_fig_df %>%
+  mutate(residual = norm_potential - mean)
+
+var_emp <- gb_fig_df %>%
+  group_by(model) %>%
+  summarise(var_res = var(residual), sd_res = sd(residual), .groups = "drop")
+
+
+var_wf <- wf_fig_df %>%
+  group_by(model) %>%
+  summarise(
+    var_res = var(norm_potential - fit),
+    sd_res = sd(norm_potential - fit),
+    .groups = "drop"
+  )
+
+var_wf %>%
+  mutate(
+    scaled_var = var_res / n_loc
+  ) %>%
+  left_join(var_emp, by = "model", suffix = c("_wf", "_emp")) %>%
+  mutate(
+    rho_est = (var_res_emp - var_res_wf / n_loc) /
+      (var_res_wf * (1 - 1 / n_loc))
+  )
