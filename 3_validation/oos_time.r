@@ -3,10 +3,11 @@
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
-day_id <- 1
+day_id <- 2
 mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- TRUE
+override_objects <- FALSE
 prec_init <- log(200)
+
 
 if (local_run) {
   cat("Running in local mode\n")
@@ -35,6 +36,7 @@ if (local_run) {
   data_path <- "~/Documents/ERA5_at_wf/"
   gen_path <- "~/Documents/elexon/"
   model_path <- "~/Documents/elexon/model_objects"
+  n_samp <- 100
   pixel_dims <- c(150, 150)
 } else {
   data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
@@ -42,6 +44,7 @@ if (local_run) {
   model_path <- "/exports/eddie/scratch/s2441782/calibration/model_objects"
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   pixel_dims <- c(300, 300)
+  n_samp <- 1000
   .libPaths(temp_lib)
 }
 
@@ -96,10 +99,10 @@ est_cols <- c(
   "ar2"
 )
 n_models <- length(est_cols)
-
+names(mod_labels) <- est_cols
 
 mod_vec <- list.files(model_path, pattern = d0_tag, full.names = TRUE)
-mod_vec <- mod_vec[!grepl("spatial", mod_vec)] %>% sort()
+mod_vec <- mod_vec[!grepl("spatial", mod_vec)] %>% sort() # exclude meshes from st model
 
 model_df <- tibble(
   label = mod_labels,
@@ -120,7 +123,13 @@ model_df <- tibble(
 gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
 
 if (!file.exists(gb_day_df_fname) || override_objects) {
-  cat("GB daily summary file not found, creating new summary\n")
+  if (!file.exists(gb_day_df_fname)) {
+    cat("GB daily summary file not found, creating new summary\n")
+  } else {
+    cat(
+      "GB daily summary file found, but override_objects is TRUE. Recreating summary\n"
+    )
+  }
   GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
     rename(time = halfHourEndTime) %>%
     mutate(
@@ -190,9 +199,15 @@ if (!override_objects && length(files_found) > 0) {
   )
   wf_df_pred <- readRDS(files_found[1])
 } else {
-  cat(
-    "No existing calibration data file found for this day. Preparing new data.\n"
-  )
+  if (override_objects) {
+    cat(
+      "Override_objects is TRUE. Preparing new calibration data for this day.\n"
+    )
+  } else {
+    cat(
+      "No existing calibration data file found for this day. Preparing new data.\n"
+    )
+  }
 
   pwr_curv_df <- read_parquet(file.path(
     gen_path,
@@ -340,102 +355,319 @@ lm_pred_fig_df <- lm_pred %>%
     upr = pmin(1, pmax(0, upr))
   )
 
-lm_pred_fig_df %>%
-  ggplot() +
-  geom_ribbon(
-    aes(
-      x = time,
-      ymin = lwr,
-      ymax = upr
-    ),
-    fill = blues9[5],
-    alpha = 0.5
-  ) +
-  geom_line(
-    aes(x = time, y = mean),
-    color = blues9[9],
-    size = 1
-  ) +
-  geom_line(
-    aes(x = time, y = norm_potential),
-    color = "darkred",
-    size = 1
-  ) +
-  coord_cartesian(ylim = c(0, 1)) +
-  facet_wrap(~model, nrow = 2)
+# lm_pred_fig_df %>%
+#   ggplot() +
+#   geom_ribbon(
+#     aes(
+#       x = time,
+#       ymin = lwr,
+#       ymax = upr
+#     ),
+#     fill = blues9[5],
+#     alpha = 0.5
+#   ) +
+#   geom_line(
+#     aes(x = time, y = mean),
+#     color = blues9[9],
+#     lwd = 1
+#   ) +
+#   geom_line(
+#     aes(x = time, y = norm_potential),
+#     color = "darkred",
+#     lwd = 1
+#   ) +
+#   coord_cartesian(ylim = c(0, 1)) +
+#   facet_wrap(~model, nrow = 2)
 
 ## quantile mapping ####
 
 ## bru models ####
 
 bru_df <- model_df %>% filter(type == "bru")
+# mod_temp <- readRDS(bru_df$fname[1])
+# test <- bru_ci_plot(
+#   bru_model = mod_temp,
+#   newdata = wf_df_pred,
+#   n.samples = 500,
+#   show.fig = TRUE
+# )
+
+# test$GB_summary %>%
+#   filter(time >= t1) %>%
+#   ggplot() +
+#   geom_ribbon(
+#     aes(
+#       x = time,
+#       ymin = lwr,
+#       ymax = upr
+#     ),
+#     fill = blues9[5],
+#     alpha = 0.5
+#   ) +
+#   geom_line(
+#     aes(x = time, y = mean),
+#     color = blues9[9],
+#     lwd = 1
+#   ) +
+#   geom_line(
+#     aes(x = time, y = norm_potential),
+#     color = "darkred",
+#     lwd = 1
+#   ) +
+#   # coord_cartesian(ylim = c(0, 1))+
+#   scale_x_datetime()
+
+# test$wf_summary %>%
+#   filter(coord_id %in% c(0 + 1:30)) %>%
+#   ggplot() +
+#   geom_ribbon(
+#     aes(
+#       x = time,
+#       ymin = lwr,
+#       ymax = upr
+#     ),
+#     fill = blues9[5],
+#     alpha = 0.5
+#   ) +
+#   geom_line(
+#     aes(x = time, y = fit),
+#     color = blues9[9],
+#     lwd = 1
+#   ) +
+#   geom_line(
+#     aes(x = time, y = norm_potential),
+#     color = "darkred",
+#     lwd = 1
+#   ) +
+#   facet_wrap(~site_name, scales = "free_y") +
+#   coord_cartesian(ylim = c(0, 1)) +
+#   scale_x_datetime(date_labels = "%H:%M")
 
 # ?predict.bru
 
-mod_temp <- readRDS(bru_df$fname[1])
 # mod_temp %>% summary()
 # mod_temp$.args$control.family[[1]]$hyper$theta1$fixed
 
 # lin_pred <- get_bru_formula(mod_temp)
 
 source("aux_funct.R")
-mod_temp <- bruar1
+# mod_temp <- bruar1
 
-test <- bru_ci_plot(
-  bru_model = mod_temp,
-  newdata = wf_df_pred,
-  n.samples = 500,
-  show.fig = TRUE
+### loop throgh all models #####
+
+# pred band summary
+pred_summary_fname <- sprintf(
+  "summaries/pred_band_summary_%s.rds",
+  d0_tag
+)
+if (!file.exists(pred_summary_fname) || override_objects) {
+  if (!file.exists(pred_summary_fname)) {
+    cat("Prediction band summary file not found, creating new summary\n")
+  } else {
+    cat(
+      "Prediction band summary file found, but override_objects is TRUE. Recreating summary\n"
+    )
+  }
+  pred_band_summary <- lapply(
+    seq_along(bru_df$fname),
+    function(i) {
+      cat("Processing model:", bru_df$label[i], "\n")
+      mod_temp <- readRDS(bru_df$fname[i])
+      test <- bru_ci_plot(
+        bru_model = mod_temp,
+        newdata = wf_df_pred,
+        n.samples = n_samp,
+        show.fig = FALSE
+      )
+      test
+    }
+  )
+  names(pred_band_summary) <- bru_df$code
+  saveRDS(pred_band_summary, pred_summary_fname)
+} else {
+  cat("Loading existing prediction band summary\n")
+  pred_band_summary <- readRDS(pred_summary_fname)
+}
+
+## Consolidated figures #####
+### GB aggregation summary ####
+gb_fig_df <- bind_rows(
+  lm_pred_fig_df,
+  lapply(
+    bru_df$code,
+    function(code) {
+      pred_band_summary[[code]]$GB_summary %>%
+        mutate(
+          model = code
+        )
+    }
+  ) %>%
+    bind_rows()
 )
 
-
-test$GB_summary %>%
+gb_fig_df %>%
   filter(time >= t1) %>%
   ggplot() +
   geom_ribbon(
     aes(
       x = time,
       ymin = lwr,
-      ymax = upr
+      ymax = upr,
+      fill = "95% CI"
     ),
-    fill = blues9[5],
+    # fill = blues9[5],
     alpha = 0.5
   ) +
   geom_line(
-    aes(x = time, y = mean),
-    color = blues9[9],
+    aes(x = time, y = mean, col = "fit"),
+    # color = blues9[9],
     lwd = 1
   ) +
   geom_line(
-    aes(x = time, y = norm_potential),
-    color = "darkred",
+    aes(x = time, y = norm_potential, col = "observed"),
+    # color = "darkred",
     lwd = 1
   ) +
-  # coord_cartesian(ylim = c(0, 1))+
-  scale_x_datetime()
+  # coord_cartesian(ylim = c(0, 1)) +
+  facet_wrap(~model, nrow = 2, labeller = as_labeller(mod_labels)) +
+  scale_x_datetime(date_labels = "%H:%M") +
+  theme(legend.position = "bottom") +
+  scale_color_manual(values = c("fit" = blues9[9], "observed" = "darkred")) +
+  scale_fill_manual(values = c("95% CI" = blues9[5])) +
+  labs(fill = "", color = "")
 
+ggsave(
+  filename = sprintf("fig/GB_pred_band_%s.pdf", d0_tag),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
 
-test$wf_summary %>%
-  filter(coord_id %in% c(0 + 1:30)) %>%
-  ggplot() +
-  geom_ribbon(
-    aes(
-      x = time,
-      ymin = lwr,
-      ymax = upr
-    ),
-    fill = blues9[5],
-    alpha = 0.5
-  ) +
-  geom_line(
-    aes(x = time, y = fit),
-    color = blues9[9],
-    lwd = 1
-  ) +
-  geom_line(
-    aes(x = time, y = norm_potential),
-    color = "darkred",
-    lwd = 1
-  ) +
-  facet_wrap(~site_name, scales = "free_y") +
-  scale_x_datetime(date_labels = "%H:%M")
+### WF level summary ####
+
+wf_fig_df <- bind_rows(
+  lm_pred %>%
+    dplyr::select(
+      coord_id,
+      site_name,
+      time,
+      norm_potential,
+      # norm_power_est0,
+      # capacity,
+      model,
+      estimate,
+      lwr,
+      upr
+    ) %>%
+    st_drop_geometry() %>%
+    rename(fit = estimate),
+  lapply(
+    bru_df$code,
+    function(code) {
+      pred_band_summary[[code]]$wf_summary %>%
+        mutate(
+          model = code
+        )
+    }
+  ) %>%
+    bind_rows()
+)
+
+for (mod in est_cols[!grepl("qm", est_cols)]) {
+  for (k in 0:2) {
+    # print(k)
+    wf_fig_df %>%
+      filter(model == mod) %>%
+      filter(coord_id %in% c(k * 40 + 1:40)) %>%
+      filter(time >= t1) %>%
+      ggplot() +
+      geom_ribbon(
+        aes(
+          x = time,
+          ymin = lwr,
+          ymax = upr,
+          fill = "95% CI"
+        ),
+        # fill = blues9[5],
+        alpha = 0.5
+      ) +
+      geom_line(
+        aes(x = time, y = fit, col = "fit"),
+        # color = blues9[9],
+        lwd = 1
+      ) +
+      geom_line(
+        aes(x = time, y = norm_potential, col = "observed"),
+        # color = "darkred",
+        lwd = 1
+      ) +
+      facet_wrap(~site_name, scales = "free_y") +
+      coord_cartesian(ylim = c(0, 1)) +
+      scale_x_datetime(date_labels = "%H:%M") +
+      theme(legend.position = "bottom") +
+      scale_color_manual(
+        values = c("fit" = blues9[9], "observed" = "darkred")
+      ) +
+      scale_fill_manual(values = c("95% CI" = blues9[5])) +
+      labs(fill = "", color = "")
+    ggsave(
+      filename = sprintf("fig/WF_pred_band_%s_%s_%d.pdf", mod, d0_tag, k + 1),
+      width = 10,
+      height = 6,
+      # dpi = 300
+    )
+  }
+}
+# wf_fig_df %>%
+#   filter(model == "st0_m1") %>%
+#   filter(coord_id %in% c(80 + 1:40)) %>%
+#   filter(time >= t1) %>%
+#   ggplot() +
+#   geom_ribbon(
+#     aes(
+#       x = time,
+#       ymin = lwr,
+#       ymax = upr
+#     ),
+#     fill = blues9[5],
+#     alpha = 0.5
+#   ) +
+#   geom_line(
+#     aes(x = time, y = fit),
+#     color = blues9[9],
+#     lwd = 1
+#   ) +
+#   geom_line(
+#     aes(x = time, y = norm_potential),
+#     color = "darkred",
+#     lwd = 1
+#   ) +
+#   facet_wrap(~site_name, scales = "free_y") +
+#   # coord_cartesian(ylim = c(0, 1)) +
+
+#   scale_x_datetime(date_labels = "%H:%M")
+# test$wf_summary %>%
+#   filter(coord_id %in% c(0 + 1:30)) %>%
+#   ggplot() +
+#   geom_ribbon(
+#     aes(
+#       x = time,
+#       ymin = lwr,
+#       ymax = upr
+#     ),
+#     fill = blues9[5],
+#     alpha = 0.5
+#   ) +
+#   geom_line(
+#     aes(x = time, y = fit),
+#     color = blues9[9],
+#     lwd = 1
+#   ) +
+#   geom_line(
+#     aes(x = time, y = norm_potential),
+#     color = "darkred",
+#     lwd = 1
+#   ) +
+#   facet_wrap(~site_name, scales = "free_y") +
+#   coord_cartesian(ylim = c(0, 1)) +
+#   scale_x_datetime(date_labels = "%H:%M")
