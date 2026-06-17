@@ -1835,6 +1835,7 @@ bru_ci_plot <- function(
     prec_val <- bru_model$.args$control.family[[1]]$hyper$theta1$output.name %>%
       gsub(" ", "_", .) %>%
       as.character()
+    cat(sprintf("Precision is not fixed. Using %s for sampling.\n", prec_val))
   }
 
   formula_temp <- as.formula(
