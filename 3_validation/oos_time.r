@@ -470,14 +470,16 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
     )
   }
   pred_band_summary <- lapply(
-    seq_along(bru_df$fname) %>% rev(),
+    seq_along(bru_df$fname),
     function(i) {
+      cat("----------------------------------\n")
       cat("Processing model:", bru_df$label[i], "\n")
+      cat("----------------------------------\n")
       mod_temp <- readRDS(bru_df$fname[i])
       test <- bru_ci_plot(
         bru_model = mod_temp,
         newdata = wf_df_pred,
-        n.samples = 10,
+        n.samples = n_samp,
         show.fig = FALSE
       )
       test
@@ -489,7 +491,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
   cat("Loading existing prediction band summary\n")
   pred_band_summary <- readRDS(pred_summary_fname)
 }
-pred_band_summary %>% lapply(., \(z) z$formula)
+# pred_band_summary %>% lapply(., \(z) z$formula)
 
 ## Consolidated figures #####
 ### GB aggregation summary ####
@@ -699,6 +701,12 @@ cov_bands_wf %>%
   labs(x = "Model", y = "Mean coverage") +
   scale_x_discrete(labels = mod_labels) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(
+  filename = sprintf("fig/WF_pred_band_coverage_%s.pdf", d0_tag),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
 ### aggregated #####
 cov_bands <- gb_fig_df %>%
   filter(time >= t1) %>%
@@ -720,7 +728,12 @@ cov_bands %>%
   labs(x = "Model", y = "Coverage") +
   scale_x_discrete(labels = mod_labels) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
+ggsave(
+  filename = sprintf("fig/GB_pred_band_coverage_%s.pdf", d0_tag),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
 ## Correlation exploration ####
 gb_fig_df %>%
   filter(model %in% c("spde1d", "ar2", "ar1", "st0_m1", "st0_m2")) %>%
