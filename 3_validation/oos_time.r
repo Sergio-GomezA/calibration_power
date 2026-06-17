@@ -3,7 +3,7 @@
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
-day_id <- 2
+day_id <- 1
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
 rerun_samples <- TRUE
@@ -122,12 +122,12 @@ model_df <- tibble(
 ## prediction df ####
 gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
 
-if (!file.exists(gb_day_df_fname) || rerun_samples) {
+if (!file.exists(gb_day_df_fname) || override_objects) {
   if (!file.exists(gb_day_df_fname)) {
     cat("GB daily summary file not found, creating new summary\n")
   } else {
     cat(
-      "GB daily summary file found, but rerun_samples is TRUE. Recreating summary\n"
+      "GB daily summary file found, but override_objects is TRUE. Recreating summary\n"
     )
   }
   GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
@@ -384,6 +384,7 @@ lm_pred_fig_df <- lm_pred %>%
 ## bru models ####
 
 bru_df <- model_df %>% filter(type == "bru")
+# mod_temp <- bruar1
 # mod_temp <- readRDS(bru_df$fname[1])
 # test <- bru_ci_plot(
 #   bru_model = mod_temp,
@@ -393,7 +394,7 @@ bru_df <- model_df %>% filter(type == "bru")
 # )
 
 # test$GB_summary %>%
-#   filter(time >= t1) %>%
+#   # filter(time >= t1) %>%
 #   ggplot() +
 #   geom_ribbon(
 #     aes(
@@ -460,23 +461,23 @@ pred_summary_fname <- sprintf(
   "summaries/pred_band_summary_%s.rds",
   d0_tag
 )
-if (!file.exists(pred_summary_fname) || override_objects) {
+if (!file.exists(pred_summary_fname) || rerun_samples) {
   if (!file.exists(pred_summary_fname)) {
     cat("Prediction band summary file not found, creating new summary\n")
   } else {
     cat(
-      "Prediction band summary file found, but override_objects is TRUE. Recreating summary\n"
+      "Prediction band summary file found, but rerun_samples is TRUE. Recreating summary\n"
     )
   }
   pred_band_summary <- lapply(
-    seq_along(bru_df$fname),
+    seq_along(bru_df$fname) %>% rev(),
     function(i) {
       cat("Processing model:", bru_df$label[i], "\n")
       mod_temp <- readRDS(bru_df$fname[i])
       test <- bru_ci_plot(
         bru_model = mod_temp,
         newdata = wf_df_pred,
-        n.samples = n_samp,
+        n.samples = 10,
         show.fig = FALSE
       )
       test
@@ -488,7 +489,7 @@ if (!file.exists(pred_summary_fname) || override_objects) {
   cat("Loading existing prediction band summary\n")
   pred_band_summary <- readRDS(pred_summary_fname)
 }
-
+pred_band_summary %>% lapply(., \(z) z$formula)
 
 ## Consolidated figures #####
 ### GB aggregation summary ####
