@@ -6,6 +6,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 day_id <- 2
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- TRUE
+rerun_samples <- FALSE
 prec_init <- log(200)
 
 
@@ -119,12 +120,12 @@ model_df <- tibble(
 ## prediction df ####
 gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
 
-if (!file.exists(gb_day_df_fname) || override_objects) {
+if (!file.exists(gb_day_df_fname) || rerun_samples) {
   if (!file.exists(gb_day_df_fname)) {
     cat("GB daily summary file not found, creating new summary\n")
   } else {
     cat(
-      "GB daily summary file found, but override_objects is TRUE. Recreating summary\n"
+      "GB daily summary file found, but rerun_samples is TRUE. Recreating summary\n"
     )
   }
   GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
