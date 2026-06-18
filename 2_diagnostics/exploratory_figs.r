@@ -61,6 +61,7 @@ require(ggridges)
 require(ggthemes)
 require(ggsci)
 require(arrow)
+require(kableExtra)
 # require(ggspatial)
 
 source("aux_funct.R")
@@ -302,7 +303,7 @@ gb_fig_df <- lapply(
   1:3,
   function(i) {
     d0 <- sampled_days[i] %>% as.Date()
-    print(i)
+    # print(i)
     d0_tag <- base::format(d0, "%y%m%d")
     readRDS(sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)) %>%
       mutate(
@@ -331,6 +332,7 @@ wf_fig_df <- lapply(
 # calibration fit scatter####
 
 gb_fig_df %>%
+  filter(!oos) %>%
   ggplot(aes(x = norm_potential, y = mean, col = pgroup3)) +
   geom_point() +
   geom_abline(
@@ -352,6 +354,7 @@ gb_fig_df %>%
 ggsave("fig/GB_fit_scatter.pdf", width = 10, height = 6, dpi = 300)
 
 wf_fig_df %>%
+  filter(!oos) %>%
   ggplot(aes(x = norm_potential, y = fit)) +
   geom_hex() +
   geom_abline(
@@ -379,7 +382,7 @@ ggsave("fig/WF_fit_scatter.pdf", width = 10, height = 6, dpi = 300)
 
 ### wf level
 cov_bands_wf <- wf_fig_df %>%
-  # filter(time >= t1) %>%
+  filter(oos) %>%
   group_by(model, coord_id) %>%
   summarise(
     coverage = mean(norm_potential >= lwr & norm_potential <= upr),
@@ -410,7 +413,7 @@ ggsave(
 )
 ### aggregated #####
 cov_bands <- gb_fig_df %>%
-  filter(time >= t1) %>%
+  filter(oos) %>%
   group_by(model) %>%
   summarise(
     coverage = mean(norm_potential >= lwr & norm_potential <= upr),
@@ -435,3 +438,105 @@ ggsave(
   height = 6,
   # dpi = 300
 )
+
+# error metrics ####
+mod_labels <- c(
+  # "Generic PC",
+  "Linear model",
+  "GB LM",
+  "QM",
+  "Spatio-temporal coarse",
+  "Spatio-temporal fine",
+  "1D SPDE model",
+  "AR1 model",
+  "AR2 model"
+)
+est_cols <- c(
+  # "norm_power_est0",
+  "lm",
+  "agg_lm",
+  "qm",
+  "st0_m1",
+  "st0_m2",
+  "spde1d",
+  "ar1",
+  "ar2"
+)
+n_models <- length(est_cols)
+names(mod_labels) <- est_cols
+metrics_table <- wf_fig_df %>%
+  group_by(oos, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = fit),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = fit),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = fit,
+      pos_only = TRUE
+    ),
+    Bias = mean(fit - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    model = mod_labels[model],
+    oos = ifelse(oos, "OOS", "IS")
+  ) %>%
+  pivot_wider(
+    names_from = oos,
+    values_from = c(RMSE, MAE, MDAPE, Bias)
+  )
+metrics_table
+metrics_table %>%
+  mutate(
+    across(
+      c(RMSE_IS, RMSE_OOS, MAE_IS, MAE_OOS, Bias_IS, Bias_OOS),
+      ~ round(., 3)
+    ),
+    across(c(MDAPE_IS, MDAPE_OOS), ~ round(., 1))
+  ) %>%
+  kbl(
+    format = "latex",
+    booktabs = TRUE,
+    align = "lcccccccc",
+    col.names = c(
+      "Model",
+      "IS",
+      "OOS",
+      "IS",
+      "OOS",
+      "IS",
+      "OOS",
+      "IS",
+      "OOS"
+    ),
+    caption = "Performance metrics for in-sample (IS) and out-of-sample (OOS) predictions."
+  ) %>%
+  add_header_above(c(
+    " " = 1,
+    "RMSE" = 2,
+    "MAE" = 2,
+    "MDAPE (%)" = 2,
+    "Bias" = 2
+  )) %>%
+  kable_styling(latex_options = "hold_position")
+
+
+# update currently used figures in overleaf ####
+
+path1 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power_main_doc/spfig"
+path2 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power/fig"
+
+# Files currently in path1
+files1 <- list.files(path1)
+
+# Full paths to matching files in path2
+source_files <- file.path(path2, files1)
+
+# Keep only files that actually exist in path2
+source_files <- source_files[file.exists(source_files)]
+
+# Destination paths in path1
+dest_files <- file.path(path1, basename(source_files))
+
+# Copy and overwrite
+file.copy(source_files, dest_files, overwrite = TRUE)

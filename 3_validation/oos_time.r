@@ -3,7 +3,7 @@
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
-day_id <- 1
+day_id <- 3
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
 rerun_samples <- FALSE
@@ -506,14 +506,15 @@ gb_fig_df <- bind_rows(
     function(code) {
       pred_band_summary[[code]]$GB_summary %>%
         mutate(
-          model = code,
-          oos = ifelse(time >= t1, TRUE, FALSE)
+          model = code
         )
     }
   ) %>%
     bind_rows()
-)
-
+) %>%
+  mutate(
+    oos = ifelse(time >= t1, TRUE, FALSE)
+  )
 saveRDS(
   gb_fig_df,
   sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)
@@ -580,13 +581,15 @@ wf_fig_df <- bind_rows(
     function(code) {
       pred_band_summary[[code]]$wf_summary %>%
         mutate(
-          model = code,
-          oos = ifelse(time >= t1, TRUE, FALSE)
+          model = code
         )
     }
   ) %>%
     bind_rows()
-)
+) %>%
+  mutate(
+    oos = ifelse(time >= t1, TRUE, FALSE)
+  )
 
 saveRDS(
   wf_fig_df,

@@ -107,7 +107,7 @@ mod_labels <- c(
   "Linear model",
   "AR1 model",
   "AR2 model",
-  # "1D SPDE model",
+  "1D SPDE model",
   "Spatio-temporal model",
   "QM",
   "GB LM"
@@ -117,7 +117,7 @@ est_cols <- c(
   "lm",
   "ar1",
   "ar2",
-  # "spde1d",
+  "spde1d",
   "st",
   "qm",
   "agg_lm"
@@ -191,8 +191,8 @@ pwr_coord_df <- pwr_curv_df %>%
   mutate(
     date = as.Date(time)
   ) %>%
-  filter(date >= d0, date <= d0 + n.days) %>%
-  # filter(date %in% sampled_days) %>%
+  # filter(date >= d0, date <= d0 + n.days) %>%
+  filter(date %in% sampled_days) %>%
   mutate(
     elevation = pmax(0, elevation),
     site_name = site_name %>%
@@ -300,11 +300,11 @@ low_events_model <- df_long0 %>%
 
 
 low_events_model %>%
-  filter(duration_h < 1000) %>%
-  filter(
-    model %in%
-      c("observed", "Linear model", "AR1 model", "QM", "Spatio-temporal model")
-  ) %>%
+  filter(duration_h < 25) %>%
+  # filter(
+  #   model %in%
+  #     c("observed", "Linear model", "AR1 model", "QM", "Spatio-temporal model")
+  # ) %>%
   ggplot(aes(x = duration_h)) +
   geom_density(aes(fill = model), alpha = 0.5) +
   # geom_histogram(
@@ -313,7 +313,7 @@ low_events_model %>%
   #   alpha = 0.5,
   #   binwidth = 1
   # ) +
-  scale_x_log10(n.breaks = 14) +
+  # scale_x_log10(n.breaks = 8) +
   labs(
     title = "Distribution of Low Wind Events Duration",
     x = "Duration (hours)",
@@ -328,3 +328,39 @@ low_events_model %>%
   )
 
 ggsave("fig/low_wind_duration_dist.pdf", width = 10, height = 6)
+
+obs <- low_events_model %>%
+  filter(
+    model == "observed",
+    duration_h < 25
+  ) %>%
+  pull(duration_h)
+
+probs <- seq(0, 1, length.out = 100)
+
+qq_df <- low_events_model %>%
+  filter(duration_h < 25) %>%
+  group_by(model) %>%
+  summarise(
+    obs_q = list(quantile(obs, probs = probs, na.rm = TRUE)),
+    model_q = list(quantile(duration_h, probs = probs, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  unnest(c(obs_q, model_q))
+
+ggplot(qq_df, aes(x = obs_q, y = model_q)) +
+  geom_point(size = 1) +
+  geom_abline(slope = 1, intercept = 0, colour = "red") +
+  facet_wrap(~model, scales = "free") +
+  labs(
+    title = "Q-Q Plot of Low Wind Event Durations",
+    x = "Observed quantiles",
+    y = "Model quantiles"
+  ) +
+  # coord_equal() +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+ggsave("fig/low_wind_duration_qq.pdf", width = 10, height = 6)
