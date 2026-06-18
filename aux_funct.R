@@ -16,7 +16,8 @@ theme_set(theme_bw())
 wind.bmus <- fread(file.path("data", "wind_bmu_2.csv.gz"))
 wind.bmus.alt <- read.csv("data/wind_bmu_alt.csv")
 
-mypalette <- pal_aaas()(3)[c(1, 3)]
+mypalette <- pal_aaas()(3)[c(1, 3)] # offshore / onshore
+regime_palette <- pal_lancet()(3)[c(2, 3, 1)]
 ## functions
 
 ## get GWA data

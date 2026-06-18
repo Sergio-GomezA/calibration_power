@@ -5,8 +5,8 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 # 0.1 global parameter #####
 day_id <- 1
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- TRUE
-rerun_samples <- TRUE
+override_objects <- FALSE
+rerun_samples <- FALSE
 prec_init <- log(200)
 
 
@@ -297,16 +297,141 @@ cat("Number of unique locations:", n_loc, "\n")
 n <- nrow(wf_df_pred)
 
 # read summary tables of predictions ######
-gb_fig_df <- readRDS(sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag))
 
-# saveRDS(
-#   gb_fig_df,
-#   sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)
-# )
+gb_fig_df <- lapply(
+  1:3,
+  function(i) {
+    d0 <- sampled_days[i] %>% as.Date()
+    print(i)
+    d0_tag <- base::format(d0, "%y%m%d")
+    readRDS(sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)) %>%
+      mutate(
+        pgroup3 = case_when(
+          i == 1 ~ "low",
+          i == 2 ~ "mid",
+          i == 3 ~ "high"
+        ) %>%
+          factor(levels = c("low", "mid", "high"))
+      )
+  }
+) %>%
+  bind_rows()
 
-# saveRDS(
-#   wf_fig_df,
-#   sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag)
-# )
 
-wf_fig_df <- readRDS(sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag))
+wf_fig_df <- lapply(
+  1:3,
+  function(i) {
+    d0 <- sampled_days[i] %>% as.Date()
+    d0_tag <- base::format(d0, "%y%m%d")
+    readRDS(sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag))
+  }
+) %>%
+  bind_rows()
+
+# calibration fit scatter####
+
+gb_fig_df %>%
+  ggplot(aes(x = norm_potential, y = mean, col = pgroup3)) +
+  geom_point() +
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    color = "darkred"
+  ) +
+  facet_wrap(~model, labeller = as_labeller(mod_labels)) +
+  theme_bw() +
+  # scale_color_lancet() +
+  scale_color_manual(values = regime_palette) +
+  labs(
+    x = "Normalised potential power",
+    y = "Normalised predicted power",
+    col = "regime"
+  )
+
+ggsave("fig/GB_fit_scatter.pdf", width = 10, height = 6, dpi = 300)
+
+wf_fig_df %>%
+  ggplot(aes(x = norm_potential, y = fit)) +
+  geom_hex() +
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    color = "darkred"
+  ) +
+  facet_wrap(~model, labeller = as_labeller(mod_labels)) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  theme_bw() +
+  labs(
+    x = "Normalised potential power",
+    y = "Normalised predicted power",
+    fill = "Count"
+  )
+
+ggsave("fig/WF_fit_scatter.pdf", width = 10, height = 6, dpi = 300)
+
+## Coverage bands #####
+
+### wf level
+cov_bands_wf <- wf_fig_df %>%
+  # filter(time >= t1) %>%
+  group_by(model, coord_id) %>%
+  summarise(
+    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    .groups = "drop"
+  ) %>%
+  group_by(model) %>%
+  summarise(
+    mean_coverage = mean(coverage),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(mean_coverage)) %>%
+  mutate(
+    model = factor(model, levels = model)
+  )
+cov_bands_wf %>%
+  ggplot(aes(x = model, y = mean_coverage)) +
+  geom_col(fill = blues9[7]) +
+  geom_text(aes(label = round(mean_coverage, 3)), vjust = -0.5) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Model", y = "Mean coverage") +
+  scale_x_discrete(labels = mod_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(
+  filename = sprintf("fig/WF_pred_band_coverage.pdf"),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
+### aggregated #####
+cov_bands <- gb_fig_df %>%
+  filter(time >= t1) %>%
+  group_by(model) %>%
+  summarise(
+    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(coverage)) %>%
+  mutate(
+    model = factor(model, levels = model)
+  )
+
+cov_bands %>%
+  ggplot(aes(x = model, y = coverage)) +
+  geom_col(fill = blues9[7]) +
+  geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Model", y = "Coverage") +
+  scale_x_discrete(labels = mod_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(
+  filename = sprintf("fig/GB_pred_band_coverage.pdf"),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
