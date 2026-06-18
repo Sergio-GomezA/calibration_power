@@ -17,4 +17,4 @@ source /etc/profile.d/modules.sh
 module load R/4.5
 
 # Run resolution code
-Rscript 3_validation/oos_time.r $SGE_TASK_ID TRUE TRUE
+Rscript 3_validation/oos_time.r $SGE_TASK_ID TRUE FALSE
