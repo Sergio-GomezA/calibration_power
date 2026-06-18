@@ -295,92 +295,18 @@ if (!override_objects && length(files_found) > 0) {
 n_loc <- nrow(wf_df_pred %>% distinct(x, y))
 cat("Number of unique locations:", n_loc, "\n")
 n <- nrow(wf_df_pred)
-## linear models ####
 
-lm_df <- model_df %>% filter(type == "lm")
+# read summary tables of predictions ######
+gb_fig_df <- readRDS(sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag))
 
-lm_df %>% pull(fname) %>% map(readRDS) -> mod_list
-names(mod_list) <- lm_df %>% pull(code)
+# saveRDS(
+#   gb_fig_df,
+#   sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)
+# )
 
-lm_pred <- lapply(
-  names(mod_list),
-  function(mod) {
-    predict(mod_list[[mod]], newdata = wf_df_pred, interval = "prediction") %>%
-      as.data.frame() %>%
-      rename(
-        estimate = fit,
-        lwr = lwr,
-        upr = upr
-      ) %>%
-      bind_cols(
-        wf_df_pred %>%
-          dplyr::select(
-            coord_id,
-            site_name,
-            time,
-            date,
-            norm_potential,
-            norm_power_est0,
-            capacity,
-            tech_typ,
-            p_group3
-          ),
-        .
-      ) %>%
-      mutate(
-        estimate = pmin(1, pmax(0, estimate)),
-        lwr = pmin(1, pmax(0, lwr)),
-        upr = pmin(1, pmax(0, upr)),
-        std_error = summary(mod_list[[mod]])$sigma,
-        model = mod
-      )
-  }
-) %>%
-  bind_rows()
+# saveRDS(
+#   wf_fig_df,
+#   sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag)
+# )
 
-
-lm_pred_fig_df <- lm_pred %>%
-  st_drop_geometry() %>%
-  group_by(time, model) %>%
-  summarise(
-    mean = sum(estimate * capacity) / sum(capacity),
-    std_error = mean(std_error),
-    norm_potential = sum(norm_potential * capacity) / sum(capacity),
-    .groups = "drop"
-  ) %>%
-  mutate(
-    lwr = mean - 1.96 * std_error,
-    upr = mean + 1.96 * std_error,
-    lwr = pmin(1, pmax(0, lwr)),
-    upr = pmin(1, pmax(0, upr))
-  )
-
-# lm_pred_fig_df %>%
-#   ggplot() +
-#   geom_ribbon(
-#     aes(
-#       x = time,
-#       ymin = lwr,
-#       ymax = upr
-#     ),
-#     fill = blues9[5],
-#     alpha = 0.5
-#   ) +
-#   geom_line(
-#     aes(x = time, y = mean),
-#     color = blues9[9],
-#     lwd = 1
-#   ) +
-#   geom_line(
-#     aes(x = time, y = norm_potential),
-#     color = "darkred",
-#     lwd = 1
-#   ) +
-#   coord_cartesian(ylim = c(0, 1)) +
-#   facet_wrap(~model, nrow = 2)
-
-## quantile mapping ####
-
-## bru models ####
-
-bru_df <- model_df %>% filter(type == "bru")
+wf_fig_df <- readRDS(sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag))
