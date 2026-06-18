@@ -513,6 +513,11 @@ gb_fig_df <- bind_rows(
     bind_rows()
 )
 
+saveRDS(
+  gb_fig_df,
+  sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)
+)
+
 gb_fig_df %>%
   filter(time >= t1) %>%
   ggplot() +
@@ -579,6 +584,11 @@ wf_fig_df <- bind_rows(
     }
   ) %>%
     bind_rows()
+)
+
+saveRDS(
+  wf_fig_df,
+  sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag)
 )
 
 for (mod in est_cols[!grepl("qm", est_cols)]) {
