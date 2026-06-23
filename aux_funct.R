@@ -1720,7 +1720,7 @@ plot.effects <- function(
   if (window != "all" & is.numeric(window)) {
     spline_summary <- spline_summary %>% tail(trunc(window))
   }
-  n_row = nrow(spline_summary)
+  n_row <- nrow(spline_summary)
   # browser()
   # Create a data frame for ggplot
   plot_data <- data.frame(
@@ -1954,7 +1954,7 @@ bru_ci_plot <- function(
     print(p)
   }
   invisible(list(
-    # sample_df = pred_df,
+    sample_df = pred_df,
     wf_summary = wf_summary_df,
     GB_summary = pred_fig_df,
     # fig = p,

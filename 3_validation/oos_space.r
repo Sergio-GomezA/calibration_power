@@ -3,9 +3,9 @@
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
-day_id <- 3
+day_id <- 1
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- FALSE
+override_objects <- TRUE
 rerun_samples <- FALSE
 prec_init <- log(200)
 
@@ -69,8 +69,10 @@ sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
 
-n.days <- 1
-n.hours <- 12
+n.days <- 0
+n.days.before <- 7
+n.hours <- 1
+t0 <- d0 - n.days.before
 t1 <- d0 + n.days
 th <- t1 + hours(n.hours)
 
@@ -225,7 +227,7 @@ if (!override_objects && length(files_found) > 0) {
     ) %>%
     # filter(date %in% sampled_days) %>%
     # filter(date >= d0, date <= d0 + n.days - 1) %>%
-    filter(time >= d0, time < th) %>%
+    filter(time >= t0, time < th) %>%
     filter(coord_id %in% coord_list$coord_id[!coord_list$sampled]) %>%
     arrange(site_name) %>%
     group_by(lon, lat, time) %>%
@@ -476,9 +478,13 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
   pred_band_summary <- lapply(
     seq_along(bru_df$fname),
     function(i) {
-      cat("----------------------------------\n")
+      cat(
+        "--------------------------------------------------------------------\n"
+      )
       cat("Processing model:", bru_df$label[i], "\n")
-      cat("----------------------------------\n")
+      cat(
+        "--------------------------------------------------------------------\n"
+      )
       mod_temp <- readRDS(bru_df$fname[i])
       test <- bru_ci_plot(
         bru_model = mod_temp,
