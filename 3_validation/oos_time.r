@@ -467,6 +467,13 @@ pred_summary_fname <- sprintf(
   "summaries/pred_band_summary_%s.rds",
   d0_tag
 )
+pred_samples_fname <- file.path(
+  mod_path,
+  sprintf(
+    "pred_samples_%s.rds",
+    d0_tag
+  )
+)
 if (!file.exists(pred_summary_fname) || rerun_samples) {
   if (!file.exists(pred_summary_fname)) {
     cat("Prediction band summary file not found, creating new summary\n")
@@ -495,8 +502,22 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       test
     }
   )
+  summary_only <- lapply(
+    pred_band_summary,
+    function(x) {
+      list(
+        GB_summary = x$GB_summary,
+        wf_summary = x$wf_summary,
+        formla = x$formula
+      )
+    }
+  )
   names(pred_band_summary) <- bru_df$code
-  saveRDS(pred_band_summary, pred_summary_fname)
+  saveRDS(summary_only, pred_summary_fname)
+  saveRDS(
+    pred_band_summary,
+    pred_samples_fname
+  )
 } else {
   cat("Loading existing prediction band summary\n")
   pred_band_summary <- readRDS(pred_summary_fname)
