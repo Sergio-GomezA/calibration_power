@@ -84,7 +84,7 @@ mod_labels <- c(
   "GB LM",
   "QM",
   "Spatio-temporal coarse",
-  "Spatio-temporal fine",
+  # "Spatio-temporal fine",
   "1D SPDE model",
   "AR1 model",
   "AR2 model"
@@ -95,7 +95,7 @@ est_cols <- c(
   "agg_lm",
   "qm",
   "st0_m1",
-  "st0_m2",
+  # "st0_m2",
   "spde1d",
   "ar1",
   "ar2"

@@ -11,6 +11,7 @@ prec_init <- log(200) # for u
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
 fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
+n.days.before <- 7
 
 cluster_ext <- "rds" # "geojson" previously
 
@@ -36,7 +37,9 @@ if (length(args) > 2) {
 if (length(args) > 3) {
   re_run_st <- as.logical(args[4])
 }
-
+if (length(args) > 4) {
+  n.days.before <- as.numeric(args[5])
+}
 # 0.2 libraries and paths ####
 require(parallel)
 
@@ -191,7 +194,7 @@ if (!override_objects && length(files_found) > 0) {
   }
 
   n.days <- 0
-  n.days.before <- 7
+  # n.days.before <- 7
 
   wf_df_frag <- pwr_curv_df %>%
     rename(time = halfHourEndTime) %>%
