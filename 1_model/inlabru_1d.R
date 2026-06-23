@@ -76,7 +76,13 @@ require(arrow)
 
 source("aux_funct.R")
 
-
+cat(
+  "--------------------------------------------------------------------\n"
+)
+cat("Running model fitting\n")
+cat(
+  "--------------------------------------------------------------------\n"
+)
 # 1. data preparation ####
 
 cat("Preparing data for model fitting\n")

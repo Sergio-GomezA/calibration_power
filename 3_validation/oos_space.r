@@ -1,14 +1,20 @@
 # 0. Setup ####
-
+cat(
+  "--------------------------------------------------------------------\n"
+)
+cat("Running validation for out-of-sample spatial prediction\n")
+cat(
+  "--------------------------------------------------------------------\n"
+)
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
 day_id <- 1
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- TRUE
-rerun_samples <- FALSE
+rerun_samples <- TRUE
 prec_init <- log(200)
-
+task_prefix <- "spaceoos"
 
 if (local_run) {
   cat("Running in local mode\n")
@@ -36,12 +42,14 @@ if (local_run) {
   data_path <- "~/Documents/ERA5_at_wf/"
   gen_path <- "~/Documents/elexon/"
   model_path <- "~/Documents/elexon/model_objects"
+  sample_path <- "~/Documents/elexon/samples"
   n_samp <- 100
   pixel_dims <- c(150, 150)
 } else {
   data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
   gen_path <- "/exports/eddie/scratch/s2441782/calibration/data"
   model_path <- "/exports/eddie/scratch/s2441782/calibration/model_objects"
+  sample_path <- "/exports/eddie/scratch/s2441782/calibration/samples"
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   pixel_dims <- c(300, 300)
   n_samp <- 1000
@@ -84,7 +92,7 @@ mod_labels <- c(
   "GB LM",
   "QM",
   "Spatio-temporal coarse",
-  "Spatio-temporal fine",
+  # "Spatio-temporal fine",
   "1D SPDE model",
   "AR1 model",
   "AR2 model"
@@ -95,16 +103,17 @@ est_cols <- c(
   "agg_lm",
   "qm",
   "st0_m1",
-  "st0_m2",
+  # "st0_m2",
   "spde1d",
   "ar1",
   "ar2"
 )
+
 n_models <- length(est_cols)
 names(mod_labels) <- est_cols
 
 mod_vec <- list.files(model_path, pattern = d0_tag, full.names = TRUE)
-mod_vec <- mod_vec[!grepl("spatial", mod_vec)] %>% sort() # exclude meshes from st model
+mod_vec <- mod_vec[!grepl("spatial|fine", mod_vec)] %>% sort() # exclude meshes from st model
 
 model_df <- tibble(
   label = mod_labels,
@@ -186,7 +195,12 @@ if (!file.exists(gb_day_df_fname) || override_objects) {
 
 # extension <- ifelse(local_run, "gpkg", "geojson")
 extension <- "rds"
-df_pattern <- sprintf("^calibration_preddf_.*_%s\\.%s$", d0_tag, extension)
+df_pattern <- sprintf(
+  "^calibration_preddf_%s_.*_%s\\.%s$",
+  task_prefix,
+  d0_tag,
+  extension
+)
 files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
 
 coord_list_fname <- "data/coord_list.csv"
@@ -297,6 +311,7 @@ if (!override_objects && length(files_found) > 0) {
 n_loc <- nrow(wf_df_pred %>% distinct(x, y))
 cat("Number of unique locations:", n_loc, "\n")
 n <- nrow(wf_df_pred)
+cat("Number of records in the dataset:", n, "\n")
 ## linear models ####
 
 lm_df <- model_df %>% filter(type == "lm")
@@ -464,8 +479,17 @@ source("aux_funct.R")
 
 # pred band summary
 pred_summary_fname <- sprintf(
-  "summaries/pred_band_summary_%s.rds",
+  "summaries/pred_band_%s_summary_%s.rds",
+  task_prefix,
   d0_tag
+)
+pred_samples_fname <- file.path(
+  sample_path,
+  sprintf(
+    "pred_samples_%s_%s.rds",
+    task_prefix,
+    d0_tag
+  )
 )
 if (!file.exists(pred_summary_fname) || rerun_samples) {
   if (!file.exists(pred_summary_fname)) {
@@ -495,8 +519,20 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       test
     }
   )
+  summary_only <- lapply(
+    pred_band_summary,
+    function(x) {
+      list(
+        GB_summary = x$GB_summary,
+        wf_summary = x$wf_summary,
+        formla = x$formula
+      )
+    }
+  )
   names(pred_band_summary) <- bru_df$code
-  saveRDS(pred_band_summary, pred_summary_fname)
+  names(summary_only) <- bru_df$code
+  saveRDS(summary_only, pred_summary_fname)
+  saveRDS(pred_band_summary, pred_samples_fname)
 } else {
   cat("Loading existing prediction band summary\n")
   pred_band_summary <- readRDS(pred_summary_fname)
@@ -523,7 +559,7 @@ gb_fig_df <- bind_rows(
   )
 saveRDS(
   gb_fig_df,
-  sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)
+  sprintf("summaries/spaceoos_GB_fig_band_summary_%s.rds", d0_tag)
 )
 
 gb_fig_df %>%
