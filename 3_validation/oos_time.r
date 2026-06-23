@@ -36,12 +36,14 @@ if (local_run) {
   data_path <- "~/Documents/ERA5_at_wf/"
   gen_path <- "~/Documents/elexon/"
   model_path <- "~/Documents/elexon/model_objects"
+  sample_path <- "~/Documents/elexon/samples"
   n_samp <- 100
   pixel_dims <- c(150, 150)
 } else {
   data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
   gen_path <- "/exports/eddie/scratch/s2441782/calibration/data"
   model_path <- "/exports/eddie/scratch/s2441782/calibration/model_objects"
+  sample_path <- "/exports/eddie/scratch/s2441782/calibration/samples"
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   pixel_dims <- c(300, 300)
   n_samp <- 1000
@@ -468,7 +470,7 @@ pred_summary_fname <- sprintf(
   d0_tag
 )
 pred_samples_fname <- file.path(
-  mod_path,
+  sample_path,
   sprintf(
     "pred_samples_%s.rds",
     d0_tag
@@ -514,10 +516,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
   )
   names(pred_band_summary) <- bru_df$code
   saveRDS(summary_only, pred_summary_fname)
-  saveRDS(
-    pred_band_summary,
-    pred_samples_fname
-  )
+  saveRDS(pred_band_summary, pred_samples_fname)
 } else {
   cat("Loading existing prediction band summary\n")
   pred_band_summary <- readRDS(pred_summary_fname)
