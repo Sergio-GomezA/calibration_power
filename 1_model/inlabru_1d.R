@@ -750,8 +750,7 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   hour(
     t,
     model = spde1D,
-    replicate = tech_typ,
-    # hyper = list(prec = list(initial = log(1000), fixed = TRUE))
+    replicate = tech_typ
   )
 
 model_fname <- file.path(

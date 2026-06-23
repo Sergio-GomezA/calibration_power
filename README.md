@@ -133,7 +133,7 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
     - [ ] Zoom in and increase mesh resolution to test what happens
   - [ ] Confidence bands around estimates
     - [ ] Figures for averages and individual WF
-  - [ ] Running extra days
+  - [ ] Running extra days  *
     - [ ] low - mid - high regimes
     - [ ] low curtailment - high curtailment
     - [ ] no anomalies - many anomalies

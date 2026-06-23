@@ -69,8 +69,10 @@ sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
 
-n.days <- 1
-n.hours <- 12
+n.days <- 0
+n.days.before <- 7
+n.hours <- 24
+t0 <- d0 - n.days.before
 t1 <- d0 + n.days
 th <- t1 + hours(n.hours)
 
@@ -225,7 +227,7 @@ if (!override_objects && length(files_found) > 0) {
     ) %>%
     # filter(date %in% sampled_days) %>%
     # filter(date >= d0, date <= d0 + n.days - 1) %>%
-    filter(time >= d0, time < th) %>%
+    filter(time >= t0, time < th) %>%
     filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
     arrange(site_name) %>%
     group_by(lon, lat, time) %>%
