@@ -5,7 +5,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 # 0.1 global parameter #####
 day_id <- 1
 mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- TRUE
+override_objects <- FALSE
 re_run_st <- FALSE
 prec_init <- log(200) # for u
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
@@ -288,6 +288,8 @@ if (!override_objects && length(files_found) > 0) {
 }
 cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
 n <- nrow(wf_df_frag)
+cat("Number of records in the dataset:", n, "\n")
+
 # wf_df_frag %>%
 #   ggplot() +
 #   geom_point(aes(pow_group,error0), bins = 50)
