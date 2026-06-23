@@ -645,7 +645,7 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
     wf_fig_df %>%
       filter(model == mod) %>%
       filter(coord_id %in% c(k * 40 + 1:40)) %>%
-      filter(time >= t1) %>%
+      filter(time >= t0) %>%
       ggplot() +
       geom_ribbon(
         aes(

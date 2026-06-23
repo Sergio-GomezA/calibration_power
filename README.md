@@ -169,6 +169,8 @@ So far i have duration of LWS events.
   -[ ] Clusters of locations
 
 - [ ] clean data of anomalies (onshore /offshore)
+- [ ] overlay wind speed estimate ()*
+- [ ] add all ERA5 wind speed information even if elexon doesn't report data
 
 - [x] time series plots with estimate and CI
 - [x] scatterplots 
