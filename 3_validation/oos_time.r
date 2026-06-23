@@ -1,5 +1,11 @@
 # 0. Setup ####
-
+cat(
+  "--------------------------------------------------------------------\n"
+)
+cat("Running validation for out-of-sample temporal prediction\n")
+cat(
+  "--------------------------------------------------------------------\n"
+)
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
@@ -515,6 +521,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
     }
   )
   names(pred_band_summary) <- bru_df$code
+  names(summary_only) <- bru_df$code
   saveRDS(summary_only, pred_summary_fname)
   saveRDS(pred_band_summary, pred_samples_fname)
 } else {
