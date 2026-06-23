@@ -190,8 +190,8 @@ if (!override_objects && length(files_found) > 0) {
     coord_list <- read.csv(coord_list_fname)
   }
 
-  n.days <- 1
-  n.days.before <- 0
+  n.days <- 0
+  n.days.before <- 7
 
   wf_df_frag <- pwr_curv_df %>%
     rename(time = halfHourEndTime) %>%

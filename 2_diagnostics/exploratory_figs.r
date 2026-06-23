@@ -227,7 +227,7 @@ if (!override_objects && length(files_found) > 0) {
     # filter(date %in% sampled_days) %>%
     # filter(date >= d0, date <= d0 + n.days - 1) %>%
     filter(time >= d0, time < th) %>%
-    filter(coord_id %in% coord_list$coord_id[coord_list$sampled == TRUE]) %>%
+    filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
     arrange(site_name) %>%
     group_by(lon, lat, time) %>%
     summarise(
