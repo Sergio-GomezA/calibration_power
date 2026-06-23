@@ -143,23 +143,50 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
     - [ ] aggregator GB, Onshore, Offshore, Scotland, rest of GB
 
 
-More validation OOS
+pick days based on the regime of oos days: low wind high
 
-clean data of anomalies (onshore /offshore)
+try multiple threshold for low wind speed events.
+So far i have duration of LWS events. 
+- [ ] I can also check for frequency.
+- [ ] Plot frequency at different thresholds -- return level curve
+- [ ] use samples instead of fitted values
+- [ ] model more days to get longer LWS
+- [ ] i should check calibration with the oos prediction
 
-time series plots with estimate and CI
-scatterplots (onshore /offshore)
-insample
-OOS (onshore /offshore)
-cred
 
-space time
+- [ ] multivariate scoring locations close to each other
+- [ ] pick locations of interest - closer to each other for OOS 
+- [ ] check how well the samples represent 
+  -[ ] Mean, 
+  -[ ] uncertainty,
+  -[ ] smoothness, power ramps 
+  -[ ] LWSE
+- [ ] Use scores Brier Energy Variogram CRPS
 
-Aggregation
+- [ ] More validation OOS
+- [ ] unseen locations. 
+  -[ ] Random sample of locations
+  -[ ] Clusters of locations
+
+- [ ] clean data of anomalies (onshore /offshore)
+
+- [x] time series plots with estimate and CI
+- [x] scatterplots 
+- [ ] scatterplots(onshore /offshore)
+
+
+- [ ]Aggregation
+  - [x] GB level
+  - [ ] Onshore /offshore
+  - [ ] Scotland /England
+  - [ ] Transmission zones
+
+
 
 wind speed events 
-duration of low wind speed (onshore /offshore)
-power ramps
+- [ ] storm impact
+- [ ] duration of low wind speed (onshore /offshore)
+- [ ] power ramps
 
 
 models by day
