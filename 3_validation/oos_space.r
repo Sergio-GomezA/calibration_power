@@ -12,7 +12,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 day_id <- 1
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- TRUE
-rerun_samples <- TRUE
+rerun_samples <- FALSE
 prec_init <- log(200)
 task_prefix <- "spaceoos"
 
@@ -133,7 +133,7 @@ model_df <- tibble(
 ## prediction df ####
 gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
 
-if (!file.exists(gb_day_df_fname) || override_objects) {
+if (!file.exists(gb_day_df_fname)) {
   if (!file.exists(gb_day_df_fname)) {
     cat("GB daily summary file not found, creating new summary\n")
   } else {
@@ -298,8 +298,9 @@ if (!override_objects && length(files_found) > 0) {
     st_set_geometry(wf_df_pred, .)
 
   wf_df_fname <- sprintf(
-    "data/calibration_preddf_%s_%s.%s",
+    "data/calibration_preddf_%s_%s_%s.%s",
     "base",
+    task_prefix,
     d0_tag,
     extension
   )
@@ -559,11 +560,11 @@ gb_fig_df <- bind_rows(
   )
 saveRDS(
   gb_fig_df,
-  sprintf("summaries/spaceoos_GB_fig_band_summary_%s.rds", d0_tag)
+  sprintf("summaries/GB_fig_band_summary_%s_%s.rds", task_prefix, d0_tag)
 )
 
 gb_fig_df %>%
-  filter(time >= t1) %>%
+  # filter(time >= t0) %>%
   ggplot() +
   geom_ribbon(
     aes(
@@ -594,7 +595,7 @@ gb_fig_df %>%
   labs(fill = "", color = "")
 
 ggsave(
-  filename = sprintf("fig/GB_pred_band_%s.pdf", d0_tag),
+  filename = sprintf("fig/GB_pred_band_%s_%s.pdf", task_prefix, d0_tag),
   width = 10,
   height = 6,
   # dpi = 300
@@ -635,7 +636,7 @@ wf_fig_df <- bind_rows(
 
 saveRDS(
   wf_fig_df,
-  sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag)
+  sprintf("summaries/WF_fig_band_summary_%s_%s.rds", task_prefix, d0_tag)
 )
 
 for (mod in est_cols[!grepl("qm", est_cols)]) {
@@ -676,7 +677,13 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
       scale_fill_manual(values = c("95% CI" = blues9[5])) +
       labs(fill = "", color = "")
     ggsave(
-      filename = sprintf("fig/WF_pred_band_%s_%s_%d.pdf", mod, d0_tag, k + 1),
+      filename = sprintf(
+        "fig/WF_pred_band_%s_%s_%s_%d.pdf",
+        task_prefix,
+        mod,
+        d0_tag,
+        k + 1
+      ),
       width = 10,
       height = 6,
       # dpi = 300
@@ -739,7 +746,7 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
 ## Bands coverage by model ####
 ### wf level
 cov_bands_wf <- wf_fig_df %>%
-  filter(time >= t1) %>%
+  # filter(time >= t1) %>%
   group_by(model, coord_id) %>%
   summarise(
     coverage = mean(norm_potential >= lwr & norm_potential <= upr),
@@ -763,14 +770,18 @@ cov_bands_wf %>%
   scale_x_discrete(labels = mod_labels) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
-  filename = sprintf("fig/WF_pred_band_coverage_%s.pdf", d0_tag),
+  filename = sprintf(
+    "fig/WF_pred_band_coverage_%s_%s.pdf",
+    task_prefix,
+    d0_tag
+  ),
   width = 10,
   height = 6,
   # dpi = 300
 )
 ### aggregated #####
 cov_bands <- gb_fig_df %>%
-  filter(time >= t1) %>%
+  # filter(time >= t1) %>%
   group_by(model) %>%
   summarise(
     coverage = mean(norm_potential >= lwr & norm_potential <= upr),
@@ -790,7 +801,11 @@ cov_bands %>%
   scale_x_discrete(labels = mod_labels) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
-  filename = sprintf("fig/GB_pred_band_coverage_%s.pdf", d0_tag),
+  filename = sprintf(
+    "fig/GB_pred_band_coverage_%s_%s.pdf",
+    task_prefix,
+    d0_tag
+  ),
   width = 10,
   height = 6,
   # dpi = 300
