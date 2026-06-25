@@ -12,7 +12,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 day_id <- 1
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- TRUE
-rerun_samples <- FALSE
+rerun_samples <- TRUE
 prec_init <- log(200)
 task_prefix <- "spaceoos"
 
@@ -43,7 +43,7 @@ if (local_run) {
   gen_path <- "~/Documents/elexon/"
   model_path <- "~/Documents/elexon/model_objects"
   sample_path <- "~/Documents/elexon/samples"
-  n_samp <- 100
+  n_samp <- 10
   pixel_dims <- c(150, 150)
 } else {
   data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
@@ -433,72 +433,6 @@ lm_pred_fig_df <- lm_pred %>%
 ## bru models ####
 
 bru_df <- model_df %>% filter(type == "bru")
-# mod_temp <- bruar1
-# mod_temp <- readRDS(bru_df$fname[1])
-# test <- bru_ci_plot(
-#   bru_model = mod_temp,
-#   newdata = wf_df_pred,
-#   n.samples = 500,
-#   show.fig = TRUE
-# )
-
-# test$GB_summary %>%
-#   # filter(time >= t1) %>%
-#   ggplot() +
-#   geom_ribbon(
-#     aes(
-#       x = time,
-#       ymin = lwr,
-#       ymax = upr
-#     ),
-#     fill = blues9[5],
-#     alpha = 0.5
-#   ) +
-#   geom_line(
-#     aes(x = time, y = mean),
-#     color = blues9[9],
-#     lwd = 1
-#   ) +
-#   geom_line(
-#     aes(x = time, y = norm_potential),
-#     color = "darkred",
-#     lwd = 1
-#   ) +
-#   # coord_cartesian(ylim = c(0, 1))+
-#   scale_x_datetime()
-
-# test$wf_summary %>%
-#   filter(coord_id %in% c(0 + 1:30)) %>%
-#   ggplot() +
-#   geom_ribbon(
-#     aes(
-#       x = time,
-#       ymin = lwr,
-#       ymax = upr
-#     ),
-#     fill = blues9[5],
-#     alpha = 0.5
-#   ) +
-#   geom_line(
-#     aes(x = time, y = fit),
-#     color = blues9[9],
-#     lwd = 1
-#   ) +
-#   geom_line(
-#     aes(x = time, y = norm_potential),
-#     color = "darkred",
-#     lwd = 1
-#   ) +
-#   facet_wrap(~site_name, scales = "free_y") +
-#   coord_cartesian(ylim = c(0, 1)) +
-#   scale_x_datetime(date_labels = "%H:%M")
-
-# ?predict.bru
-
-# mod_temp %>% summary()
-# mod_temp$.args$control.family[[1]]$hyper$theta1$fixed
-
-# lin_pred <- get_bru_formula(mod_temp)
 
 source("aux_funct.R")
 # mod_temp <- bruar1
@@ -615,7 +549,7 @@ gb_fig_df %>%
   ) +
   # coord_cartesian(ylim = c(0, 1)) +
   facet_wrap(~model, nrow = 2, labeller = as_labeller(mod_labels)) +
-  scale_x_datetime(date_labels = "%H:%M") +
+  scale_x_datetime(date_labels = "%m/%d") +
   theme(legend.position = "bottom") +
   scale_color_manual(values = c("fit" = blues9[9], "observed" = "darkred")) +
   scale_fill_manual(values = c("95% CI" = blues9[5])) +
