@@ -403,6 +403,7 @@ lm_pred_fig_df <- lm_pred %>%
       mean(std_error)
     },
     norm_potential = sum(norm_potential * capacity) / sum(capacity),
+    norm_power_est0 = sum(norm_power_est0 * capacity) / sum(capacity),
     .groups = "drop"
   ) %>%
   mutate(
@@ -441,72 +442,6 @@ lm_pred_fig_df <- lm_pred %>%
 ## bru models ####
 
 bru_df <- model_df %>% filter(type == "bru")
-# mod_temp <- bruar1
-# mod_temp <- readRDS(bru_df$fname[1])
-# test <- bru_ci_plot(
-#   bru_model = mod_temp,
-#   newdata = wf_df_pred,
-#   n.samples = 500,
-#   show.fig = TRUE
-# )
-
-# test$GB_summary %>%
-#   # filter(time >= t1) %>%
-#   ggplot() +
-#   geom_ribbon(
-#     aes(
-#       x = time,
-#       ymin = lwr,
-#       ymax = upr
-#     ),
-#     fill = blues9[5],
-#     alpha = 0.5
-#   ) +
-#   geom_line(
-#     aes(x = time, y = mean),
-#     color = blues9[9],
-#     lwd = 1
-#   ) +
-#   geom_line(
-#     aes(x = time, y = norm_potential),
-#     color = "darkred",
-#     lwd = 1
-#   ) +
-#   # coord_cartesian(ylim = c(0, 1))+
-#   scale_x_datetime()
-
-# test$wf_summary %>%
-#   filter(coord_id %in% c(0 + 1:30)) %>%
-#   ggplot() +
-#   geom_ribbon(
-#     aes(
-#       x = time,
-#       ymin = lwr,
-#       ymax = upr
-#     ),
-#     fill = blues9[5],
-#     alpha = 0.5
-#   ) +
-#   geom_line(
-#     aes(x = time, y = fit),
-#     color = blues9[9],
-#     lwd = 1
-#   ) +
-#   geom_line(
-#     aes(x = time, y = norm_potential),
-#     color = "darkred",
-#     lwd = 1
-#   ) +
-#   facet_wrap(~site_name, scales = "free_y") +
-#   coord_cartesian(ylim = c(0, 1)) +
-#   scale_x_datetime(date_labels = "%H:%M")
-
-# ?predict.bru
-
-# mod_temp %>% summary()
-# mod_temp$.args$control.family[[1]]$hyper$theta1$fixed
-
-# lin_pred <- get_bru_formula(mod_temp)
 
 source("aux_funct.R")
 # mod_temp <- bruar1
@@ -587,7 +522,11 @@ gb_fig_df <- bind_rows(
         )
     }
   ) %>%
-    bind_rows()
+    bind_rows() %>%
+    left_join(
+      lm_pred_fig_df %>% dplyr::select(time, norm_power_est0) %>% unique(),
+      by = c("time")
+    )
 ) %>%
   mutate(
     oos = ifelse(time >= t1, TRUE, FALSE)
@@ -611,6 +550,11 @@ gb_fig_df %>%
     alpha = 0.5
   ) +
   geom_line(
+    aes(x = time, y = norm_power_est0, col = "PC(ERA5)"),
+    # color = blues9[9],
+    lwd = 1
+  ) +
+  geom_line(
     aes(x = time, y = mean, col = "fit"),
     # color = blues9[9],
     lwd = 1
@@ -629,7 +573,9 @@ gb_fig_df %>%
   facet_wrap(~model, nrow = 2, labeller = as_labeller(mod_labels)) +
   scale_x_datetime(date_labels = "%H:%M") +
   theme(legend.position = "bottom") +
-  scale_color_manual(values = c("fit" = blues9[9], "observed" = "darkred")) +
+  scale_color_manual(
+    values = c("fit" = blues9[9], "observed" = "darkred", "PC(ERA5)" = "gray70")
+  ) +
   scale_fill_manual(values = c("95% CI" = blues9[5])) +
   labs(fill = "", color = "")
 
@@ -649,7 +595,7 @@ wf_fig_df <- bind_rows(
       site_name,
       time,
       norm_potential,
-      # norm_power_est0,
+      norm_power_est0,
       # capacity,
       model,
       estimate,
@@ -661,9 +607,17 @@ wf_fig_df <- bind_rows(
   lapply(
     bru_df$code,
     function(code) {
-      pred_band_summary[[code]]$wf_summary %>%
-        mutate(
-          model = code
+      {
+        pred_band_summary[[code]]$wf_summary %>%
+          mutate(
+            model = code
+          )
+      } %>%
+        left_join(
+          lm_pred %>%
+            dplyr::select(time, coord_id, norm_power_est0) %>%
+            unique(),
+          by = c("time", "coord_id")
         )
     }
   ) %>%
@@ -697,6 +651,11 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
         alpha = 0.5
       ) +
       geom_line(
+        aes(x = time, y = norm_power_est0, col = "PC(ERA5)"),
+        # color = blues9[9],
+        lwd = 1
+      ) +
+      geom_line(
         aes(x = time, y = fit, col = "fit"),
         # color = blues9[9],
         lwd = 1
@@ -711,7 +670,11 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
       scale_x_datetime(date_labels = "%H:%M") +
       theme(legend.position = "bottom") +
       scale_color_manual(
-        values = c("fit" = blues9[9], "observed" = "darkred")
+        values = c(
+          "fit" = blues9[9],
+          "observed" = "darkred",
+          "PC(ERA5)" = "gray70"
+        )
       ) +
       scale_fill_manual(values = c("95% CI" = blues9[5])) +
       labs(fill = "", color = "")
