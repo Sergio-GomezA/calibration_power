@@ -395,6 +395,7 @@ lm_pred_fig_df <- lm_pred %>%
       mean(std_error)
     },
     norm_potential = sum(norm_potential * capacity) / sum(capacity),
+    norm_power_est0 = sum(norm_power_est0 * capacity) / sum(capacity),
     .groups = "drop"
   ) %>%
   mutate(
@@ -514,7 +515,11 @@ gb_fig_df <- bind_rows(
         )
     }
   ) %>%
-    bind_rows()
+    bind_rows() %>%
+    left_join(
+      lm_pred_fig_df %>% dplyr::select(time, norm_power_est0) %>% unique(),
+      by = c("time")
+    )
 ) %>%
   mutate(
     oos = ifelse(time >= t1, TRUE, FALSE)
@@ -538,6 +543,11 @@ gb_fig_df %>%
     alpha = 0.5
   ) +
   geom_line(
+    aes(x = time, y = norm_power_est0, col = "PC(ERA5)"),
+    # color = blues9[9],
+    lwd = 1
+  ) +
+  geom_line(
     aes(x = time, y = mean, col = "fit"),
     # color = blues9[9],
     lwd = 1
@@ -551,7 +561,9 @@ gb_fig_df %>%
   facet_wrap(~model, nrow = 2, labeller = as_labeller(mod_labels)) +
   scale_x_datetime(date_labels = "%m/%d") +
   theme(legend.position = "bottom") +
-  scale_color_manual(values = c("fit" = blues9[9], "observed" = "darkred")) +
+  scale_color_manual(
+    values = c("fit" = blues9[9], "observed" = "darkred", "PC(ERA5)" = "gray70")
+  ) +
   scale_fill_manual(values = c("95% CI" = blues9[5])) +
   labs(fill = "", color = "")
 
@@ -571,7 +583,7 @@ wf_fig_df <- bind_rows(
       site_name,
       time,
       norm_potential,
-      # norm_power_est0,
+      norm_power_est0,
       # capacity,
       model,
       estimate,
@@ -586,6 +598,12 @@ wf_fig_df <- bind_rows(
       pred_band_summary[[code]]$wf_summary %>%
         mutate(
           model = code
+        ) %>%
+        left_join(
+          lm_pred %>%
+            dplyr::select(time, coord_id, norm_power_est0) %>%
+            unique(),
+          by = c("time", "coord_id")
         )
     }
   ) %>%
@@ -619,6 +637,11 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
         alpha = 0.5
       ) +
       geom_line(
+        aes(x = time, y = norm_power_est0, col = "PC(ERA5)"),
+        # color = blues9[9],
+        lwd = 1
+      ) +
+      geom_line(
         aes(x = time, y = fit, col = "fit"),
         # color = blues9[9],
         lwd = 1
@@ -633,7 +656,11 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
       scale_x_datetime(date_labels = "%H:%M") +
       theme(legend.position = "bottom") +
       scale_color_manual(
-        values = c("fit" = blues9[9], "observed" = "darkred")
+        values = c(
+          "fit" = blues9[9],
+          "observed" = "darkred",
+          "PC(ERA5)" = "gray70"
+        )
       ) +
       scale_fill_manual(values = c("95% CI" = blues9[5])) +
       labs(fill = "", color = "")
