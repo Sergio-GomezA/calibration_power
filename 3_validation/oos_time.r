@@ -9,10 +9,10 @@ cat(
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
-day_id <- 1
+day_id <- 2
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
-rerun_samples <- FALSE
+rerun_samples <- TRUE
 prec_init <- log(200)
 
 
@@ -43,7 +43,7 @@ if (local_run) {
   gen_path <- "~/Documents/elexon/"
   model_path <- "~/Documents/elexon/model_objects"
   sample_path <- "~/Documents/elexon/samples"
-  n_samp <- 100
+  n_samp <- 10
   pixel_dims <- c(150, 150)
 } else {
   data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
@@ -77,6 +77,23 @@ sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
 
+cat(
+  "--------------------------------------------------------------------\n"
+)
+cat(
+  " Running validation for day:",
+  format(d0, "%Y-%m-%d"),
+  " (tag:",
+  d0_tag,
+  ")\n"
+)
+
+cat("override_objects:", override_objects, "\n")
+cat("rerun_samples:", rerun_samples, "\n")
+
+cat(
+  "--------------------------------------------------------------------\n"
+)
 n.days <- 0
 n.days.before <- 1
 n.hours <- 24
@@ -84,6 +101,19 @@ t0 <- d0 - n.days.before
 t1 <- d0 + n.days
 th <- t1 + hours(n.hours)
 
+cat("Traning sample length for assessment and figures:")
+cat(
+  "",
+  n.days.before,
+  ifelse(n.days.before == 1, "day before", "days before"),
+  format(d0, "%Y-%m-%d"),
+  "\n"
+)
+cat("Prediction next", n.hours, "hours after", format(t1, "%Y-%m-%d"), "\n")
+
+cat(
+  "--------------------------------------------------------------------\n"
+)
 
 # Read models ####
 mod_labels <- c(
@@ -92,7 +122,7 @@ mod_labels <- c(
   "GB LM",
   "QM",
   "Spatio-temporal coarse",
-  # "Spatio-temporal fine",
+  "Spatio-temporal fine",
   "1D SPDE model",
   "AR1 model",
   "AR2 model"
@@ -103,16 +133,26 @@ est_cols <- c(
   "agg_lm",
   "qm",
   "st0_m1",
-  # "st0_m2",
+  "st0_m2",
   "spde1d",
   "ar1",
   "ar2"
 )
+
+if (local_run) {
+  mod_labels <- mod_labels[!grepl("fine", mod_labels)]
+  est_cols <- est_cols[!grepl("st0_m2", est_cols)]
+}
 n_models <- length(est_cols)
 names(mod_labels) <- est_cols
-
 mod_vec <- list.files(model_path, pattern = d0_tag, full.names = TRUE)
-mod_vec <- mod_vec[!grepl("spatial", mod_vec)] %>% sort() # exclude meshes from st model
+exclusions <- if (local_run) {
+  c("spatial", "fine")
+} else {
+  c("spatial")
+}
+mod_vec <- mod_vec[!grepl(paste(exclusions, collapse = "|"), mod_vec)] %>%
+  sort() # exclude meshes from st model
 
 model_df <- tibble(
   label = mod_labels,
@@ -305,6 +345,9 @@ if (!override_objects && length(files_found) > 0) {
 n_loc <- nrow(wf_df_pred %>% distinct(x, y))
 cat("Number of unique locations:", n_loc, "\n")
 n <- nrow(wf_df_pred)
+cat("Number of records in the dataset:", n, "\n")
+cat("--------------------------------------------------------------------\n")
+
 ## linear models ####
 
 lm_df <- model_df %>% filter(type == "lm")
@@ -516,7 +559,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       list(
         GB_summary = x$GB_summary,
         wf_summary = x$wf_summary,
-        formla = x$formula
+        formula = x$formula
       )
     }
   )
@@ -528,6 +571,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
   cat("Loading existing prediction band summary\n")
   pred_band_summary <- readRDS(pred_summary_fname)
 }
+
 # pred_band_summary %>% lapply(., \(z) z$formula)
 
 ## Consolidated figures #####
@@ -552,9 +596,9 @@ saveRDS(
   gb_fig_df,
   sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)
 )
-
+# gb_fig_df$time %>% range()
 gb_fig_df %>%
-  filter(time >= t1) %>%
+  # filter(time >= t1) %>%
   ggplot() +
   geom_ribbon(
     aes(
@@ -575,6 +619,11 @@ gb_fig_df %>%
     aes(x = time, y = norm_potential, col = "observed"),
     # color = "darkred",
     lwd = 1
+  ) +
+  geom_vline(
+    xintercept = t1,
+    linetype = "dashed",
+    color = "black"
   ) +
   # coord_cartesian(ylim = c(0, 1)) +
   facet_wrap(~model, nrow = 2, labeller = as_labeller(mod_labels)) +
@@ -674,59 +723,7 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
     )
   }
 }
-# wf_fig_df %>%
-#   filter(model == "st0_m1") %>%
-#   filter(coord_id %in% c(80 + 1:40)) %>%
-#   filter(time >= t1) %>%
-#   ggplot() +
-#   geom_ribbon(
-#     aes(
-#       x = time,
-#       ymin = lwr,
-#       ymax = upr
-#     ),
-#     fill = blues9[5],
-#     alpha = 0.5
-#   ) +
-#   geom_line(
-#     aes(x = time, y = fit),
-#     color = blues9[9],
-#     lwd = 1
-#   ) +
-#   geom_line(
-#     aes(x = time, y = norm_potential),
-#     color = "darkred",
-#     lwd = 1
-#   ) +
-#   facet_wrap(~site_name, scales = "free_y") +
-#   # coord_cartesian(ylim = c(0, 1)) +
 
-#   scale_x_datetime(date_labels = "%H:%M")
-# test$wf_summary %>%
-#   filter(coord_id %in% c(0 + 1:30)) %>%
-#   ggplot() +
-#   geom_ribbon(
-#     aes(
-#       x = time,
-#       ymin = lwr,
-#       ymax = upr
-#     ),
-#     fill = blues9[5],
-#     alpha = 0.5
-#   ) +
-#   geom_line(
-#     aes(x = time, y = fit),
-#     color = blues9[9],
-#     lwd = 1
-#   ) +
-#   geom_line(
-#     aes(x = time, y = norm_potential),
-#     color = "darkred",
-#     lwd = 1
-#   ) +
-#   facet_wrap(~site_name, scales = "free_y") +
-#   coord_cartesian(ylim = c(0, 1)) +
-#   scale_x_datetime(date_labels = "%H:%M")
 ## Bands coverage by model ####
 ### wf level
 cov_bands_wf <- wf_fig_df %>%
