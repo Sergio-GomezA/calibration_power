@@ -577,7 +577,7 @@ gb_fig_df %>%
     values = c("fit" = blues9[9], "observed" = "darkred", "PC(ERA5)" = "gray70")
   ) +
   scale_fill_manual(values = c("95% CI" = blues9[5])) +
-  labs(fill = "", color = "")
+  labs(fill = "", color = "", y = "Normalised power output")
 
 ggsave(
   filename = sprintf("fig/GB_pred_band_%s.pdf", d0_tag),
@@ -677,7 +677,7 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
         )
       ) +
       scale_fill_manual(values = c("95% CI" = blues9[5])) +
-      labs(fill = "", color = "")
+      labs(fill = "", color = "", y = "Normalised power output")
     ggsave(
       filename = sprintf("fig/WF_pred_band_%s_%s_%d.pdf", mod, d0_tag, k + 1),
       width = 10,

@@ -565,7 +565,7 @@ gb_fig_df %>%
     values = c("fit" = blues9[9], "observed" = "darkred", "PC(ERA5)" = "gray70")
   ) +
   scale_fill_manual(values = c("95% CI" = blues9[5])) +
-  labs(fill = "", color = "")
+  labs(fill = "", color = "", y = "Normalised power output")
 
 ggsave(
   filename = sprintf("fig/GB_pred_band_%s_%s.pdf", task_prefix, d0_tag),
@@ -619,11 +619,11 @@ saveRDS(
 )
 
 for (mod in est_cols[!grepl("qm", est_cols)]) {
-  for (k in 0:2) {
+  for (k in 0) {
     # print(k)
     wf_fig_df %>%
       filter(model == mod) %>%
-      filter(coord_id %in% c(k * 40 + 1:40)) %>%
+      # filter(coord_id %in% c(k * 40 + 1:40)) %>%
       filter(time >= t0) %>%
       ggplot() +
       geom_ribbon(
@@ -653,7 +653,7 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
       ) +
       facet_wrap(~site_name, scales = "free_y") +
       coord_cartesian(ylim = c(0, 1)) +
-      scale_x_datetime(date_labels = "%H:%M") +
+      scale_x_datetime(date_labels = "%m/%d") +
       theme(legend.position = "bottom") +
       scale_color_manual(
         values = c(
@@ -663,7 +663,7 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
         )
       ) +
       scale_fill_manual(values = c("95% CI" = blues9[5])) +
-      labs(fill = "", color = "")
+      labs(fill = "", color = "", y = "Normalised power output")
     ggsave(
       filename = sprintf(
         "fig/WF_pred_band_%s_%s_%s_%d.pdf",
