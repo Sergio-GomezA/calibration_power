@@ -1,3 +1,4 @@
+starttime <- Sys.time()
 # low wind events distribution
 
 # 0. Setup ####
@@ -866,3 +867,18 @@ ggsave(
   width = 10,
   height = 6
 )
+
+
+endtime <- Sys.time()
+
+cat("--------------------------------------------------------------------\n")
+cat("Finished whole process\n")
+cat("--------------------------------------------------------------------\n")
+
+timediff <- difftime(endtime, starttime, units = "auto")
+
+cat(sprintf(
+  "Total time taken: %.2f %s\n",
+  timediff,
+  units(timediff)
+))

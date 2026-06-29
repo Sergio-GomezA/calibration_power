@@ -1,5 +1,5 @@
 # 0. Setup ####
-
+starttime <- Sys.time()
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
@@ -1979,3 +1979,17 @@ ggsave(
   width = 10,
   height = 6
 )
+
+endtime <- Sys.time()
+
+cat("--------------------------------------------------------------------\n")
+cat("Finished whole process\n")
+cat("--------------------------------------------------------------------\n")
+
+timediff <- difftime(endtime, starttime, units = "auto")
+
+cat(sprintf(
+  "Total time taken: %.2f %s\n",
+  timediff,
+  units(timediff)
+))
