@@ -45,7 +45,7 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - [x] Elexon capacity factors check
   - [x] ERA 5 time series for wind farm locations
   - [ ] Question to Dan: GWA to MIDAS (Onshore) then *
-  - [ ] Get land elevation 
+  - [x] Get land elevation 
   - [x] Get curtailment (DISPTAV)
   - [x] Data for previous years
   - [x] prepare wind speed for power conversion *
@@ -149,9 +149,9 @@ try multiple threshold for low wind speed events.
 So far i have duration of LWS events. 
 - [ ] I can also check for frequency.
 - [ ] Plot frequency at different thresholds -- return level curve
-- [ ] use samples instead of fitted values
+- [x] use samples instead of fitted values
 - [ ] model more days to get longer LWS
-- [ ] i should check calibration with the oos prediction
+- [x] i should check calibration with the oos prediction
 
 
 - [ ] multivariate scoring locations close to each other
@@ -161,11 +161,11 @@ So far i have duration of LWS events.
   -[ ] uncertainty,
   -[ ] smoothness, power ramps 
   -[ ] LWSE
-- [ ] Use scores Brier Energy Variogram CRPS
+- [ ] * Use scores Brier Energy Variogram CRPS
 
 - [ ] More validation OOS
 - [ ] unseen locations. 
-  -[ ] Random sample of locations
+  -[x] Random sample of locations
   -[ ] Clusters of locations
 
 - [ ] clean data of anomalies (onshore /offshore)
@@ -187,9 +187,9 @@ So far i have duration of LWS events.
 
 wind speed events 
 - [ ] storm impact
-- [ ] duration of low wind speed (onshore /offshore)
+- [ ] duration of low wind speed 
+  - [ ] (onshore /offshore)
 - [ ] power ramps
-
 
 models by day
 
