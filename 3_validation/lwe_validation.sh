@@ -1,6 +1,6 @@
-# Calibration model run for 1D
+# low wind speed events validation
 #!/bin/bash
-#$ -N calib1d
+#$ -N lwe
 #$ -wd /exports/eddie/scratch/s2441782/calibration_power/
 #$ -o /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 #$ -e /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
@@ -8,7 +8,7 @@
 #$ -pe sharedmem 8
 #$ -M s2441782@ed.ac.uk
 #$ -m bea
-#$ -t 1-15
+#$ -t 1
 
 # Initialise modules
 source /etc/profile.d/modules.sh
@@ -17,4 +17,4 @@ source /etc/profile.d/modules.sh
 module load R/4.5
 
 # Run resolution code
-Rscript 1_model/inlabru_1d.R $SGE_TASK_ID 10 TRUE TRUE 3
+Rscript 3_validation/oos_space.r $SGE_TASK_ID TRUE

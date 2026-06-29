@@ -24,10 +24,7 @@ if (length(args) > 0) {
   day_id <- as.numeric(args[1])
 }
 if (length(args) > 1) {
-  mesh_edge_par <- as.numeric(args[2])
-}
-if (length(args) > 2) {
-  override_objects <- as.logical(args[3])
+  override_objects <- as.logical(args[2])
 }
 
 # 0.2 libraries and paths ####
@@ -72,7 +69,13 @@ cat("--------------------------------------------------------------------\n")
 cat("Preparing data for low wind events analysis\n")
 cat("--------------------------------------------------------------------\n")
 
-sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
+
+sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
+  mutate(date = as.Date(date))
+
+sampled_days <- sampled_days_df %>%
+  pull(date)
+# sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
@@ -88,10 +91,8 @@ cat(
   "--------------------------------------------------------------------\n"
 )
 cat(
-  " Low wind events analysis for day:",
-  format(d0, "%Y-%m-%d"),
-  " (tag:",
-  d0_tag,
+  " Low wind events analysis for days:",
+  paste(format(sampled_days, "%Y-%m-%d"), collapse = ", "),
   ")\n"
 )
 
@@ -102,7 +103,7 @@ cat(
 )
 
 model_df0 <- lapply(
-  1:3,
+  seq_along(sampled_days),
   function(i) {
     d0 <- sampled_days[i] %>% as.Date()
     print(d0)
