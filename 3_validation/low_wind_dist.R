@@ -66,7 +66,7 @@ require(arrow)
 source("aux_funct.R")
 
 pow_threshold <- 0.1
-
+pow_threshold_label <- as.character(pow_threshold) %>% gsub("\\.", "_", .)
 # 1. data preparation ####
 cat("--------------------------------------------------------------------\n")
 cat("Preparing data for low wind events analysis\n")
@@ -224,16 +224,18 @@ cat("--------------------------------------------------------------------\n")
 lwe_obs_pred_fname <- file.path(
   sample_path,
   sprintf(
-    "lwe_obs_pred_%s.%s",
+    "lwe_obs_pred_%s_t%s.%s",
     "sampled_days",
+    pow_threshold_label,
     extension
   )
 )
 lwe_obs_newloc_fname <- file.path(
   sample_path,
   sprintf(
-    "lwe_obs_newloc_%s.%s",
+    "lwe_obs_newloc_%s_t%s.%s",
     "sampled_days",
+    pow_threshold_label,
     extension
   )
 )
@@ -480,7 +482,14 @@ low_events_model %>%
     legend.position = "none"
   )
 
-ggsave("fig/low_wind_duration_dist.pdf", width = 10, height = 6)
+ggsave(
+  sprintf(
+    "fig/low_wind_duration_dist_t%s.pdf",
+    pow_threshold_label
+  ),
+  width = 10,
+  height = 6
+)
 
 obs <- low_events_model %>%
   filter(
@@ -516,7 +525,14 @@ ggplot(qq_df, aes(x = obs_q, y = model_q)) +
     plot.title = element_text(hjust = 0.5)
   )
 
-ggsave("fig/low_wind_duration_qq.pdf", width = 10, height = 6)
+ggsave(
+  sprintf(
+    "fig/low_wind_duration_qq_t%s.pdf",
+    pow_threshold_label
+  ),
+  width = 10,
+  height = 6
+)
 
 cat("--------------------------------------------------------------------\n")
 cat("Low wind events in model samples forecast\n")
@@ -527,8 +543,9 @@ cat("--------------------------------------------------------------------\n")
 lwe_pred_fname <- file.path(
   sample_path,
   sprintf(
-    "lwe_pred_%s.%s",
+    "lwe_pred_%s_t%s.%s",
     d0_tag,
+    pow_threshold_label,
     extension
   )
 )
@@ -621,8 +638,9 @@ cat("--------------------------------------------------------------------\n")
 lwe_newloc_fname <- file.path(
   sample_path,
   sprintf(
-    "lwe_newloc_%s.%s",
+    "lwe_newloc_%s_t%s.%s",
     d0_tag,
+    pow_threshold_label,
     extension
   )
 )
@@ -732,7 +750,11 @@ plot_df %>%
   ) +
   theme_minimal()
 
-ggsave("fig/pred_samples_lwe_duration_dist.pdf", width = 10, height = 6)
+ggsave(
+  sprintf("fig/pred_samples_lwe_duration_dist_t%s.pdf", pow_threshold_label),
+  width = 10,
+  height = 6
+)
 
 
 obs <- lwe_obs_pred %>%
@@ -769,7 +791,11 @@ ggplot(qq_df, aes(x = obs_q, y = model_q)) +
     plot.title = element_text(hjust = 0.5)
   )
 
-ggsave("fig/pred_samples_lwe_duration_qq.pdf", width = 10, height = 6)
+ggsave(
+  sprintf("fig/pred_samples_lwe_duration_qq_t%s.pdf", pow_threshold_label),
+  width = 10,
+  height = 6
+)
 
 
 # distribution of LWE
@@ -793,7 +819,11 @@ plot_df %>%
   ) +
   theme_minimal()
 
-ggsave("fig/newloc_samples_lwe_duration_dist.pdf", width = 10, height = 6)
+ggsave(
+  sprintf("fig/newloc_samples_lwe_duration_dist_t%s.pdf", pow_threshold_label),
+  width = 10,
+  height = 6
+)
 
 
 obs <- lwe_obs_newloc %>%
@@ -830,4 +860,8 @@ ggplot(qq_df, aes(x = obs_q, y = model_q)) +
     plot.title = element_text(hjust = 0.5)
   )
 
-ggsave("fig/newloc_samples_lwe_duration_qq.pdf", width = 10, height = 6)
+ggsave(
+  sprintf("fig/newloc_samples_lwe_duration_qq_t%s.pdf", pow_threshold_label),
+  width = 10,
+  height = 6
+)
