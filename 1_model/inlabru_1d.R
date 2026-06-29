@@ -3,8 +3,8 @@
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
-day_id <- 1
-mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
+day_id <- 2
+mesh_edge_par <- 25 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
 re_run_st <- FALSE
 prec_init <- log(200) # for u
@@ -87,7 +87,23 @@ cat(
 
 cat("Preparing data for model fitting\n")
 
-sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
+# generating sample days for 2nd round of modelling
+# set.seed(2)
+# # sample 1 day per regime
+# sampled_days_df <- gb_day_df %>%
+#   filter(date >= "2025-01-01") %>%
+#   group_by(p_group3) %>%
+#   slice_sample(n = 5)
+
+# write.csv(sampled_days_df, file = "data/sample_days_df.csv", row.names = FALSE)
+
+sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
+  mutate(date = as.Date(date))
+
+sampled_days <- sampled_days_df %>%
+  pull(date)
+
+# sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 ## 1.0.1 GB daily summary ####
 
 d0 <- sampled_days[day_id] %>% as.Date()
