@@ -1,3 +1,4 @@
+starttime <- Sys.time()
 # 0. Setup ####
 cat(
   "--------------------------------------------------------------------\n"
@@ -786,3 +787,18 @@ var_wf %>%
     rho_est = (var_res_emp - var_res_wf / n_loc) /
       (var_res_wf * (1 - 1 / n_loc))
   )
+
+
+endtime <- Sys.time()
+
+cat("--------------------------------------------------------------------\n")
+cat("Finished whole process\n")
+cat("--------------------------------------------------------------------\n")
+
+timediff <- difftime(endtime, starttime, units = "auto")
+
+cat(sprintf(
+  "Total time taken: %.2f %s\n",
+  timediff,
+  units(timediff)
+))
