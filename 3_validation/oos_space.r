@@ -73,7 +73,12 @@ require(arrow)
 
 source("aux_funct.R")
 
-sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
+sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
+  mutate(date = as.Date(date))
+
+sampled_days <- sampled_days_df %>%
+  pull(date)
+# sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
 
