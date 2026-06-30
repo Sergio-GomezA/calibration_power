@@ -80,7 +80,7 @@ sampled_days <- sampled_days_df %>%
 
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
-extension <- ifelse(!local_run, "gpkg", "rds")
+extension <- ifelse(!local_run, "rds", "rds")
 
 
 coord_list_fname <- "data/coord_list.csv"
