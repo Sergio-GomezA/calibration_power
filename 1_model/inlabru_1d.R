@@ -324,7 +324,11 @@ cat("Number of records in the dataset:", n, "\n")
 cat("Building spatial mesh\n")
 
 edge_target <- mesh_edge_par # km
-mesh_label <- ifelse(edge_target >= 20, "coarse", "fine")
+mesh_label <- case_when(
+  edge_target >= 50 ~ "very_coarse",
+  edge_target >= 20 ~ "coarse",
+  edge_target < 20 ~ "fine"
+)
 mesh_fname <- file.path(
   model_path,
   sprintf("spatial_mesh_%s_%s.rds", mesh_label, d0_tag)
