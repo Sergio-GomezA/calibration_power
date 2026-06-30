@@ -131,10 +131,11 @@ Started as a Global Wind Atlas calibration to UK power, however to keep working 
   - [ ] Spatial field outliers
     - [ ] Plot field vs observations?
     - [ ] Zoom in and increase mesh resolution to test what happens
-  - [ ] Confidence bands around estimates
-    - [ ] Figures for averages and individual WF
+  - [x] Confidence bands around estimates
+    - [x] Figures for averages and individual WF
+    - [ ] Onshore / Offshore
   - [ ] Running extra days  *
-    - [ ] low - mid - high regimes
+    - [x] low - mid - high regimes
     - [ ] low curtailment - high curtailment
     - [ ] no anomalies - many anomalies
     - [ ] storm days
@@ -162,6 +163,7 @@ So far i have duration of LWS events.
   -[ ] smoothness, power ramps 
   -[ ] LWSE
 - [ ] * Use scores Brier Energy Variogram CRPS
+- [ ] CRPS
 
 - [ ] More validation OOS
 - [ ] unseen locations. 
