@@ -107,7 +107,7 @@ model_df0 <- lapply(
   seq_along(sampled_days),
   function(i) {
     d0 <- sampled_days[i] %>% as.Date()
-    print(d0)
+    # print(d0)
     d0_tag <- base::format(d0, "%y%m%d")
 
     readRDS(sprintf(
@@ -218,6 +218,7 @@ df_long0 <- model_df0 %>%
     model = factor(model, levels = est_cols, labels = mod_labels)
   )
 
+# 2.1 Low wind events in observed data ####
 cat("--------------------------------------------------------------------\n")
 cat("Low wind events in observed data\n")
 cat("--------------------------------------------------------------------\n")
@@ -429,6 +430,7 @@ if (!file.exists(lwe_obs_pred_fname) | override_objects) {
 #     axis.text.x = element_text(angle = 45, hjust = 1)
 #   )
 
+# 3. Low wind events in model predictions ####
 cat("--------------------------------------------------------------------\n")
 cat("Low wind events in model mean predictions\n")
 cat("--------------------------------------------------------------------\n")
@@ -536,6 +538,8 @@ ggsave(
   height = 6
 )
 
+# 4. Low wind events in model samples ####
+## 4.1 forecast samples ####
 cat("--------------------------------------------------------------------\n")
 cat("Low wind events in model samples forecast\n")
 cat("--------------------------------------------------------------------\n")
@@ -576,6 +580,9 @@ if (!file.exists(lwe_pred_fname) | override_objects) {
           extension
         )
       )
+      cat(
+        "--------------------------------------------------------------------\n"
+      )
       cat("Reading prediction samples from:", pred_samples_fname, "\n")
       full_file <- readRDS(pred_samples_fname)
 
@@ -589,6 +596,11 @@ if (!file.exists(lwe_pred_fname) | override_objects) {
         seq_along(mod_codes),
         function(j) {
           # browser()
+          cat(
+            "Processing model:",
+            mod_codes[j],
+            "\n"
+          )
           full_file[[j]]$sample_df %>%
             mutate(
               model = mod_codes[j],
@@ -630,7 +642,7 @@ if (!file.exists(lwe_pred_fname) | override_objects) {
   lwe_pred_df <- readRDS(lwe_pred_fname)
 }
 
-
+## 4.2 new locations samples ####
 cat("--------------------------------------------------------------------\n")
 cat("Low wind events in model samples for new locations \n")
 cat("--------------------------------------------------------------------\n")
@@ -725,7 +737,7 @@ if (!file.exists(lwe_newloc_fname) | override_objects) {
   lwe_newloc_df <- readRDS(lwe_newloc_fname)
 }
 
-
+# 5. Figures ####
 cat("--------------------------------------------------------------------\n")
 cat("Figures\n")
 cat("--------------------------------------------------------------------\n")
@@ -868,6 +880,8 @@ ggsave(
   height = 6
 )
 
+
+# 6. score metrics ####
 
 endtime <- Sys.time()
 
