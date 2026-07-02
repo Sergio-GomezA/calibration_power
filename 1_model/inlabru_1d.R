@@ -47,6 +47,7 @@ if (local_run) {
   data_path <- "~/Documents/ERA5_at_wf/"
   gen_path <- "~/Documents/elexon/"
   model_path <- "~/Documents/elexon/model_objects"
+  extra_path <- "~/Documents/elexon/extra"
   pixel_dims <- c(150, 150)
   local_ext <- "rds" # previously "gpkg"
   driver <- "GPKG"
@@ -54,6 +55,7 @@ if (local_run) {
   data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
   gen_path <- "/exports/eddie/scratch/s2441782/calibration/data"
   model_path <- "/exports/eddie/scratch/s2441782/calibration/model_objects"
+  extra_path <- "/exports/eddie/scratch/s2441782/calibration/extra"
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   pixel_dims <- c(300, 300)
   driver <- "GeoJSON"
@@ -330,7 +332,7 @@ mesh_label <- case_when(
   edge_target < 20 ~ "fine"
 )
 mesh_fname <- file.path(
-  model_path,
+  extra_path,
   sprintf("spatial_mesh_%s_%s.rds", mesh_label, d0_tag)
 )
 
@@ -393,7 +395,10 @@ if (!file.exists(mesh_fname) || override_objects) {
     annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
     theme_void()
   ggsave(
-    sprintf("fig/spatial_mesh_%s_%s.pdf", mesh_label, d0_tag),
+    file.path(
+      extra_path,
+      sprintf("spatial_mesh_%s_%s.pdf", mesh_label, d0_tag)
+    ),
     width = 4,
     height = 6
   )
@@ -403,10 +408,9 @@ if (!file.exists(mesh_fname) || override_objects) {
 }
 
 ### 1.2 mesh assessment #####
-mesh_assess_fname <- sprintf(
-  "fig/spatial_mesh_%s_assessment2_sddev_%s.pdf",
-  mesh_label,
-  d0_tag
+mesh_assess_fname <- file.path(
+  extra_path,
+  sprintf("spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag)
 )
 if (!file.exists(mesh_assess_fname) || override_objects) {
   cat("Assessing spatial mesh\n")
@@ -424,10 +428,9 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
     theme_void() +
     scale_color_viridis_c(option = "D")
   ggsave(
-    sprintf(
-      "fig/spatial_mesh_%s_assessment_edgelen_%s.pdf",
-      mesh_label,
-      d0_tag
+    file.path(
+      extra_path,
+      sprintf("spatial_mesh_%s_assessment_edgelen_%s.pdf", mesh_label, d0_tag)
     ),
     width = 4,
     height = 6
@@ -445,7 +448,10 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
     theme_void() #+
   # scale_color_viridis_c(option = "D")
   ggsave(
-    sprintf("fig/spatial_mesh_%s_assessment_sddev_%s.pdf", mesh_label, d0_tag),
+    file.path(
+      extra_path,
+      sprintf("spatial_mesh_%s_assessment_sddev_%s.pdf", mesh_label, d0_tag)
+    ),
     width = 4,
     height = 6
   )
@@ -462,10 +468,9 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
     theme_void() +
     scale_color_viridis_c(option = "D")
   ggsave(
-    sprintf(
-      "fig/spatial_mesh_%s_assessment2_edgelen_%s.pdf",
-      mesh_label,
-      d0_tag
+    file.path(
+      extra_path,
+      sprintf("spatial_mesh_%s_assessment2_edgelen_%s.pdf", mesh_label, d0_tag)
     ),
     width = 4,
     height = 6
@@ -483,7 +488,10 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
     theme_void() #+
   # scale_color_viridis_c(option = "D")
   ggsave(
-    sprintf("fig/spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag),
+    file.path(
+      extra_path,
+      sprintf("spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag)
+    ),
     width = 4,
     height = 6
   )
