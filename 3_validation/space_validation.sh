@@ -1,4 +1,4 @@
-# OOS time figures for 1D
+# OOS new locations figures for 1D
 #!/bin/bash
 #$ -N oos_sp
 #$ -wd /exports/eddie/scratch/s2441782/calibration_power/
