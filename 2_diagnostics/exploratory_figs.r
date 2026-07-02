@@ -82,8 +82,8 @@ mod_labels <- c(
   "Linear model",
   "GB LM",
   "QM",
-  "Spatio-temporal coarse",
   "Spatio-temporal fine",
+  "Spatio-temporal coarse",
   "1D SPDE model",
   "AR1 model",
   "AR2 model"
@@ -445,8 +445,8 @@ mod_labels <- c(
   "Linear model",
   "GB LM",
   "QM",
-  "Spatio-temporal coarse",
   "Spatio-temporal fine",
+  "Spatio-temporal coarse",
   "1D SPDE model",
   "AR1 model",
   "AR2 model"
