@@ -333,6 +333,7 @@ mesh_label <- case_when(
 )
 mesh_fname <- file.path(
   extra_path,
+  "meshes",
   sprintf("spatial_mesh_%s_%s.rds", mesh_label, d0_tag)
 )
 
@@ -397,6 +398,7 @@ if (!file.exists(mesh_fname) || override_objects) {
   ggsave(
     file.path(
       extra_path,
+      "mesh_figs",
       sprintf("spatial_mesh_%s_%s.pdf", mesh_label, d0_tag)
     ),
     width = 4,
@@ -410,6 +412,7 @@ if (!file.exists(mesh_fname) || override_objects) {
 ### 1.2 mesh assessment #####
 mesh_assess_fname <- file.path(
   extra_path,
+  "mesh_figs",
   sprintf("spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag)
 )
 if (!file.exists(mesh_assess_fname) || override_objects) {
@@ -430,6 +433,7 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
   ggsave(
     file.path(
       extra_path,
+      "mesh_figs",
       sprintf("spatial_mesh_%s_assessment_edgelen_%s.pdf", mesh_label, d0_tag)
     ),
     width = 4,
@@ -450,6 +454,7 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
   ggsave(
     file.path(
       extra_path,
+      "mesh_figs",
       sprintf("spatial_mesh_%s_assessment_sddev_%s.pdf", mesh_label, d0_tag)
     ),
     width = 4,
@@ -470,6 +475,7 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
   ggsave(
     file.path(
       extra_path,
+      "mesh_figs",
       sprintf("spatial_mesh_%s_assessment2_edgelen_%s.pdf", mesh_label, d0_tag)
     ),
     width = 4,
@@ -490,6 +496,7 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
   ggsave(
     file.path(
       extra_path,
+      "mesh_figs",
       sprintf("spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag)
     ),
     width = 4,
