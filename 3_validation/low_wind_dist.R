@@ -486,7 +486,7 @@ low_events_model %>%
     x = "Duration (hours)",
     y = "Frequency"
   ) +
-  facet_wrap(~model, scales = "free") +
+  facet_wrap(~model, scales = "free", labeller = as_labeller(mod_labels)) +
   theme_minimal() +
   theme(
     plot.title = element_text(hjust = 0.5),
@@ -526,7 +526,7 @@ qq_df <- low_events_model %>%
 ggplot(qq_df, aes(x = obs_q, y = model_q)) +
   geom_point(size = 1) +
   geom_abline(slope = 1, intercept = 0, colour = "red") +
-  facet_wrap(~model, scales = "free") +
+  facet_wrap(~model, scales = "free", labeller = as_labeller(mod_labels)) +
   labs(
     title = "Q-Q Plot of Low Wind Event Durations",
     x = "Observed quantiles",
@@ -901,7 +901,7 @@ plot_df <-
 plot_df %>%
   ggplot(aes(bin, percent)) +
   geom_col(fill = "steelblue", alpha = 0.6, width = 1) +
-  facet_wrap(~model, scales = "free_y") +
+  facet_wrap(~model, scales = "free_y", labeller = as_labeller(mod_labels)) +
   labs(
     x = "Duration (hours)",
     y = "Percentage (%)"
@@ -941,7 +941,7 @@ qq_df <- lwe_pred_df %>%
 ggplot(qq_df, aes(x = obs_q, y = model_q)) +
   geom_point(size = 1) +
   geom_abline(slope = 1, intercept = 0, colour = "red") +
-  facet_wrap(~model, scales = "free") +
+  facet_wrap(~model, scales = "free", labeller = as_labeller(mod_labels)) +
   labs(
     title = "Q-Q Plot of Low Wind Event Durations",
     x = "Observed quantiles",
@@ -978,7 +978,7 @@ plot_df <-
 plot_df %>%
   ggplot(aes(bin, percent)) +
   geom_col(fill = "steelblue", alpha = 0.6, width = 1) +
-  facet_wrap(~model, scales = "free_y") +
+  facet_wrap(~model, scales = "free_y", labeller = as_labeller(mod_labels)) +
   labs(
     x = "Duration (hours)",
     y = "Percentage (%)"
@@ -1018,7 +1018,7 @@ qq_df <- lwe_newloc_df %>%
 ggplot(qq_df, aes(x = obs_q, y = model_q)) +
   geom_point(size = 1) +
   geom_abline(slope = 1, intercept = 0, colour = "red") +
-  facet_wrap(~model, scales = "free") +
+  facet_wrap(~model, scales = "free", labeller = as_labeller(mod_labels)) +
   labs(
     title = "Q-Q Plot of Low Wind Event Durations",
     x = "Observed quantiles",
