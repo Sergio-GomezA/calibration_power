@@ -750,6 +750,10 @@ if (!file.exists(lwe_pred_fname) | override_objects) {
   cat(
     "Time taken to process prediction samples:",
     difftime(samp_end_time, samp_start_time, units = "secs"),
+    "seconds\n",
+    "Average time taken per day:",
+    difftime(samp_end_time, samp_start_time, units = "secs") /
+      length(sampled_days),
     "seconds\n"
   )
   # ~ 3mins per day per model
@@ -786,6 +790,7 @@ if (!file.exists(lwe_newloc_fname) | override_objects) {
     )
   }
   cat("This may take a while...\n")
+  samp_start_time <- Sys.time()
   lwe_newloc_df <- lapply(
     seq_along(sampled_days),
     function(i) {
@@ -810,48 +815,63 @@ if (!file.exists(lwe_newloc_fname) | override_objects) {
         "\n"
       )
       mod_codes <- names(full_file)
-      lapply(
-        seq_along(mod_codes),
-        function(j) {
+      mclapply(
+        X = seq_along(mod_codes),
+        FUN = function(j) {
           # browser()
-          full_file[[j]]$sample_df %>%
-            mutate(
-              model = mod_codes[j],
-              date = d0
-            ) %>%
-            arrange(sim, coord_id, time) %>%
-            group_by(model, sim, coord_id) %>%
-            # apply threshold to get low wind events
-            mutate(
-              below = fit < pow_threshold,
-              run_id = cumsum(below != lag(below, default = first(below)))
-            ) %>%
-            filter(below) %>% # only lwe from oos
-            group_by(sim, coord_id, run_id) %>%
-            summarise(
+
+          dt <- as.data.table(full_file[[j]]$sample_df)
+
+          dt[, `:=`(
+            model = mod_codes[j],
+            date = d0
+          )]
+
+          setorder(dt, sim, coord_id, time)
+
+          dt[, below := fit < pow_threshold]
+
+          dt[, run_id := rleid(below), by = .(sim, coord_id)]
+
+          res <- dt[
+            below == TRUE, # only lwe from oos
+            .(
               model = first(model),
               start_time = first(time),
               end_time = last(time),
               duration_h = as.numeric(difftime(
-                end_time,
-                start_time,
+                last(time),
+                first(time),
                 units = "hours"
               )) +
-                1,
-              .groups = "drop"
-            ) %>%
-            dplyr::select(sim, model, coord_id, start_time, duration_h)
-        }
+                1
+            ),
+            by = .(sim, coord_id, run_id)
+          ][, .(sim, model, coord_id, start_time, duration_h)]
+
+          res
+        },
+        mc.cores = mc
       ) %>%
         bind_rows()
     }
   ) %>%
     bind_rows()
 
-  cat("Saving low wind events prediction samples to:", lwe_newloc_fname, "\n")
+  samp_end_time <- Sys.time()
+  cat(
+    "Time taken to process new location samples:",
+    difftime(samp_end_time, samp_start_time, units = "secs"),
+    "seconds\n",
+    "Average time taken per day:",
+    difftime(samp_end_time, samp_start_time, units = "secs") /
+      length(sampled_days),
+    "seconds\n"
+  )
+  cat("Saving low wind events new location samples to:", lwe_newloc_fname, "\n")
   saveRDS(lwe_newloc_df, lwe_newloc_fname)
 } else {
-  cat("Loading existing low wind events prediction samples\n")
+  cat("Loading existing low wind events new location samples\n")
   lwe_newloc_df <- readRDS(lwe_newloc_fname)
 }
 
