@@ -9,6 +9,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 day_id <- 2
 mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
+batch_name <- "batch2025"
 # prec_init <- log(200)
 
 if (local_run) {
@@ -26,6 +27,9 @@ if (length(args) > 0) {
 }
 if (length(args) > 1) {
   override_objects <- as.logical(args[2])
+}
+if (length(args) > 2) {
+  batch_name <- args[3]
 }
 
 # 0.2 libraries and paths ####
@@ -492,7 +496,8 @@ low_events_model %>%
 
 ggsave(
   sprintf(
-    "fig/low_wind_duration_dist_t%s.pdf",
+    "fig/%s/low_wind_duration_dist_t%s.pdf",
+    batch_name,
     pow_threshold_label
   ),
   width = 10,
@@ -535,7 +540,8 @@ ggplot(qq_df, aes(x = obs_q, y = model_q)) +
 
 ggsave(
   sprintf(
-    "fig/low_wind_duration_qq_t%s.pdf",
+    "fig/%s/low_wind_duration_qq_t%s.pdf",
+    batch_name,
     pow_threshold_label
   ),
   width = 10,
@@ -903,7 +909,11 @@ plot_df %>%
   theme_minimal()
 
 ggsave(
-  sprintf("fig/pred_samples_lwe_duration_dist_t%s.pdf", pow_threshold_label),
+  sprintf(
+    "fig/%s/pred_samples_lwe_duration_dist_t%s.pdf",
+    batch_name,
+    pow_threshold_label
+  ),
   width = 10,
   height = 6
 )
@@ -944,7 +954,11 @@ ggplot(qq_df, aes(x = obs_q, y = model_q)) +
   )
 
 ggsave(
-  sprintf("fig/pred_samples_lwe_duration_qq_t%s.pdf", pow_threshold_label),
+  sprintf(
+    "fig/%s/pred_samples_lwe_duration_qq_t%s.pdf",
+    batch_name,
+    pow_threshold_label
+  ),
   width = 10,
   height = 6
 )
@@ -972,7 +986,11 @@ plot_df %>%
   theme_minimal()
 
 ggsave(
-  sprintf("fig/newloc_samples_lwe_duration_dist_t%s.pdf", pow_threshold_label),
+  sprintf(
+    "fig/%s/newloc_samples_lwe_duration_dist_t%s.pdf",
+    batch_name,
+    pow_threshold_label
+  ),
   width = 10,
   height = 6
 )
@@ -1013,7 +1031,11 @@ ggplot(qq_df, aes(x = obs_q, y = model_q)) +
   )
 
 ggsave(
-  sprintf("fig/newloc_samples_lwe_duration_qq_t%s.pdf", pow_threshold_label),
+  sprintf(
+    "fig/%s/newloc_samples_lwe_duration_qq_t%s.pdf",
+    batch_name,
+    pow_threshold_label
+  ),
   width = 10,
   height = 6
 )
