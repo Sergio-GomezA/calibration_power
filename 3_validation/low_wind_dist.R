@@ -825,7 +825,11 @@ if (!file.exists(lwe_newloc_fname) | override_objects) {
         X = seq_along(mod_codes),
         FUN = function(j) {
           # browser()
-
+          cat(
+            "Processing model:",
+            mod_codes[j],
+            "\n"
+          )
           dt <- as.data.table(full_file[[j]]$sample_df)
 
           dt[, `:=`(
