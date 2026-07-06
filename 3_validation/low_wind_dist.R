@@ -668,13 +668,13 @@ if (!file.exists(lwe_pred_fname) | override_objects) {
   }
   # install.packages("profvis")
   # library(profvis)
-  sampled_days2 <- sampled_days[1]
+  # sampled_days2 <- sampled_days[1]
   cat("This may take a while...\n")
   samp_start_time <- Sys.time()
   lwe_pred_df <- lapply(
-    seq_along(sampled_days2),
+    seq_along(sampled_days),
     function(i) {
-      d0 <- sampled_days2[i] %>% as.Date()
+      d0 <- sampled_days[i] %>% as.Date()
       d0_tag <- base::format(d0, "%y%m%d")
 
       # browser()
