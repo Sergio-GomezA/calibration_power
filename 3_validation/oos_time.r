@@ -15,7 +15,7 @@ day_id <- 2
 override_objects <- FALSE
 rerun_samples <- TRUE
 prec_init <- log(200)
-
+batch_name <- "batch2025"
 
 if (local_run) {
   cat("Running in local mode\n")
@@ -35,6 +35,9 @@ if (length(args) > 1) {
 }
 if (length(args) > 2) {
   rerun_samples <- as.logical(args[3])
+}
+if (length(args) > 3) {
+  batch_name <- args[4]
 }
 # 0.2 libraries and paths ####
 require(parallel)
@@ -587,7 +590,7 @@ gb_fig_df %>%
   labs(fill = "", color = "", y = "Normalised power output")
 
 ggsave(
-  filename = sprintf("fig/GB_pred_band_%s.pdf", d0_tag),
+  filename = sprintf("fig/%s/GB_pred_band_%s.pdf", batch_name, d0_tag),
   width = 10,
   height = 6,
   # dpi = 300
@@ -686,7 +689,13 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
       scale_fill_manual(values = c("95% CI" = blues9[5])) +
       labs(fill = "", color = "", y = "Normalised power output")
     ggsave(
-      filename = sprintf("fig/WF_pred_band_%s_%s_%d.pdf", mod, d0_tag, k + 1),
+      filename = sprintf(
+        "fig/%s/WF_pred_band_%s_%s_%d.pdf",
+        batch_name,
+        mod,
+        d0_tag,
+        k + 1
+      ),
       width = 10,
       height = 6,
       # dpi = 300
@@ -721,7 +730,7 @@ cov_bands_wf %>%
   scale_x_discrete(labels = mod_labels) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
-  filename = sprintf("fig/WF_pred_band_coverage_%s.pdf", d0_tag),
+  filename = sprintf("fig/%s/WF_pred_band_coverage_%s.pdf", batch_name, d0_tag),
   width = 10,
   height = 6,
   # dpi = 300
@@ -748,7 +757,7 @@ cov_bands %>%
   scale_x_discrete(labels = mod_labels) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
-  filename = sprintf("fig/GB_pred_band_coverage_%s.pdf", d0_tag),
+  filename = sprintf("fig/%s/GB_pred_band_coverage_%s.pdf", batch_name, d0_tag),
   width = 10,
   height = 6,
   # dpi = 300
