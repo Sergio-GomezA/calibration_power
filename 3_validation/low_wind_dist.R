@@ -59,9 +59,13 @@ require(ggridges)
 require(ggthemes)
 require(ggsci)
 require(arrow)
+require(data.table)
 # require(ggspatial)
 
 source("aux_funct.R")
+
+mc <- ifelse(local_run, 1, available_cores())
+# inla.setOption(num.threads = sprintf("%d:1", mc))
 
 pow_threshold <- 0.1
 pow_threshold_label <- as.character(pow_threshold) %>% gsub("\\.", "_", .)
@@ -556,6 +560,104 @@ lwe_pred_fname <- file.path(
   )
 )
 
+# if (!file.exists(lwe_pred_fname) | override_objects) {
+#   if (!file.exists(lwe_pred_fname)) {
+#     cat("LWE processed file not found, creating new summary\n")
+#   } else {
+#     cat(
+#       "LWE processed file found, but override_objects is TRUE. Recreating summary\n"
+#     )
+#   }
+#   # install.packages("profvis")
+#   # library(profvis)
+#   sampled_days2 <- sampled_days[1]
+#   cat("This may take a while...\n")
+#   samp_start_time <- Sys.time()
+#   # profvis(
+#   lwe_pred_df <- lapply(
+#     seq_along(sampled_days2),
+#     function(i) {
+#       d0 <- sampled_days2[i] %>% as.Date()
+#       d0_tag <- base::format(d0, "%y%m%d")
+
+#       # browser()
+#       pred_samples_fname <- file.path(
+#         sample_path,
+#         sprintf(
+#           "pred_samples_%s.%s",
+#           d0_tag,
+#           extension
+#         )
+#       )
+#       cat(
+#         "--------------------------------------------------------------------\n"
+#       )
+#       cat("Reading prediction samples from:", pred_samples_fname, "\n")
+#       full_file <- readRDS(pred_samples_fname)
+
+#       cat(
+#         "Processing prediction samples for day:",
+#         format(d0, "%Y-%m-%d"),
+#         "\n"
+#       )
+#       mod_codes <- names(full_file)
+#       lapply(
+#         seq_along(mod_codes),
+#         function(j) {
+#           # browser()
+#           cat(
+#             "Processing model:",
+#             mod_codes[j],
+#             "\n"
+#           )
+#           full_file[[j]]$sample_df %>%
+#             mutate(
+#               model = mod_codes[j],
+#               date = d0
+#             ) %>%
+#             arrange(sim, coord_id, time) %>%
+#             group_by(model, sim, coord_id) %>%
+#             # apply threshold to get low wind events
+#             mutate(
+#               below = fit < pow_threshold,
+#               run_id = cumsum(below != lag(below, default = first(below)))
+#             ) %>%
+#             filter(below, time >= d0) %>% # only lwe from oos
+#             group_by(sim, coord_id, run_id) %>%
+#             summarise(
+#               model = first(model),
+#               start_time = first(time),
+#               end_time = last(time),
+#               duration_h = as.numeric(difftime(
+#                 end_time,
+#                 start_time,
+#                 units = "hours"
+#               )) +
+#                 1,
+#               .groups = "drop"
+#             ) %>%
+#             dplyr::select(sim, model, coord_id, start_time, duration_h)
+#         }
+#       ) %>%
+#         bind_rows()
+#     }
+#   ) %>%
+#     bind_rows()
+#   # )
+
+#   samp_end_time <- Sys.time()
+#   cat(
+#     "Time taken to process prediction samples:",
+#     difftime(samp_end_time, samp_start_time, units = "secs"),
+#     "seconds\n"
+#   )
+#   cat("Saving low wind events prediction samples to:", lwe_pred_fname, "\n")
+#   # saveRDS(lwe_pred_df, lwe_pred_fname)
+# } else {
+#   cat("Loading existing low wind events prediction samples\n")
+#   lwe_pred_df <- readRDS(lwe_pred_fname)
+# }
+## alternative version using data.tables #####
 if (!file.exists(lwe_pred_fname) | override_objects) {
   if (!file.exists(lwe_pred_fname)) {
     cat("LWE processed file not found, creating new summary\n")
@@ -564,11 +666,15 @@ if (!file.exists(lwe_pred_fname) | override_objects) {
       "LWE processed file found, but override_objects is TRUE. Recreating summary\n"
     )
   }
+  # install.packages("profvis")
+  # library(profvis)
+  sampled_days2 <- sampled_days[1]
   cat("This may take a while...\n")
+  samp_start_time <- Sys.time()
   lwe_pred_df <- lapply(
-    seq_along(sampled_days),
+    seq_along(sampled_days2),
     function(i) {
-      d0 <- sampled_days[i] %>% as.Date()
+      d0 <- sampled_days2[i] %>% as.Date()
       d0_tag <- base::format(d0, "%y%m%d")
 
       # browser()
@@ -592,56 +698,68 @@ if (!file.exists(lwe_pred_fname) | override_objects) {
         "\n"
       )
       mod_codes <- names(full_file)
-      lapply(
-        seq_along(mod_codes),
-        function(j) {
+      mclapply(
+        X = seq_along(mod_codes),
+        FUN = function(j) {
           # browser()
           cat(
             "Processing model:",
             mod_codes[j],
             "\n"
           )
-          full_file[[j]]$sample_df %>%
-            mutate(
-              model = mod_codes[j],
-              date = d0
-            ) %>%
-            arrange(sim, coord_id, time) %>%
-            group_by(model, sim, coord_id) %>%
-            # apply threshold to get low wind events
-            mutate(
-              below = fit < pow_threshold,
-              run_id = cumsum(below != lag(below, default = first(below)))
-            ) %>%
-            filter(below, time >= d0) %>% # only lwe from oos
-            group_by(sim, coord_id, run_id) %>%
-            summarise(
+          dt <- as.data.table(full_file[[j]]$sample_df)
+
+          dt[, `:=`(
+            model = mod_codes[j],
+            date = d0
+          )]
+
+          setorder(dt, sim, coord_id, time)
+
+          dt[, below := fit < pow_threshold]
+
+          dt[, run_id := rleid(below), by = .(sim, coord_id)]
+
+          res <- dt[
+            below == TRUE & time >= d0, # only lwe from oos
+            .(
               model = first(model),
               start_time = first(time),
               end_time = last(time),
               duration_h = as.numeric(difftime(
-                end_time,
-                start_time,
+                last(time),
+                first(time),
                 units = "hours"
               )) +
-                1,
-              .groups = "drop"
-            ) %>%
-            dplyr::select(sim, model, coord_id, start_time, duration_h)
-        }
+                1
+            ),
+            by = .(sim, coord_id, run_id)
+          ][, .(sim, model, coord_id, start_time, duration_h)]
+
+          return(res)
+        },
+        mc.cores = mc
       ) %>%
         bind_rows()
     }
   ) %>%
     bind_rows()
+  # )
 
+  samp_end_time <- Sys.time()
+  cat(
+    "Time taken to process prediction samples:",
+    difftime(samp_end_time, samp_start_time, units = "secs"),
+    "seconds\n"
+  )
+  # ~ 3mins per day per model
+  # 5 models, 15 days is ~ 3.75 hours
   cat("Saving low wind events prediction samples to:", lwe_pred_fname, "\n")
   saveRDS(lwe_pred_df, lwe_pred_fname)
 } else {
   cat("Loading existing low wind events prediction samples\n")
   lwe_pred_df <- readRDS(lwe_pred_fname)
 }
-
 ## 4.2 new locations samples ####
 cat("--------------------------------------------------------------------\n")
 cat("Low wind events in model samples for new locations \n")

@@ -77,6 +77,11 @@ require(arrow)
 # require(ggspatial)
 
 source("aux_funct.R")
+mc <- available_cores() - ifelse(local_run, 2, 0)
+inla_core_option <- "%d:1"
+cat("Setting INLA to use", mc, "cores\n")
+inla.setOption(num.threads = sprintf(inla_core_option, mc))
+
 
 cat(
   "--------------------------------------------------------------------\n"
