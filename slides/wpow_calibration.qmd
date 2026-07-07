@@ -99,7 +99,7 @@ theme_set(theme_bw())
 \centering
 \small Sampled days for performance assessment
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/daily_generation_time_series_sampled_days.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch3days/daily_generation_time_series_sampled_days.pdf}
 :::
 
 :::
@@ -158,21 +158,21 @@ summary_tbl%>%
 ## Low wind speed events
 \centering
 Low wind speed events distribution
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/low_wind_duration_dist.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch3days/low_wind_duration_dist.pdf}
 
 
 # Low wind speed {-}
 ## Hyperparameters
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_fine_200814.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/hyperparameters_fine_200814.pdf}
 
 ## Estimated spatial field - median
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_median_200814.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/fine_spatial_field_median_200814.pdf}
 
 ## Estimated spatial field - standard deviation
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_sd_200814.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/fine_spatial_field_sd_200814.pdf}
 
 ## Effect of wind speed and power regime
 
@@ -182,14 +182,14 @@ Low wind speed events distribution
 
 \centering
 Wind speed effect
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_fine_200814.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch3days/wind_effect_fine_200814.pdf}
 
 :::
 
 ::: {.column width="50%"}
 \centering
 Power regime effect
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_fine_200814.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch3days/power_correction_effect_fine_200814.pdf}
 :::
 
 :::
@@ -197,25 +197,25 @@ Power regime effect
 ## Power estimates 
 
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_200814.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/power_estimates_time_series_fine_200814.pdf}
 
 ## Power estimates sampled wind farms
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_sampWF_200814.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/power_estimates_time_series_fine_sampWF_200814.pdf}
 
 
 # Medium wind speed {-}
 ## Hyperparameters
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_fine_240417.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/hyperparameters_fine_240417.pdf}
 
 ## Estimated spatial field - median
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_median_240417.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/fine_spatial_field_median_240417.pdf}
 
 ## Estimated spatial field - standard deviation
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_sd_240417.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/fine_spatial_field_sd_240417.pdf}
 
 ## Effect of wind speed and power regime
 
@@ -225,14 +225,14 @@ Power regime effect
 
 \centering
 Wind speed effect
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_fine_240417.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch3days/wind_effect_fine_240417.pdf}
 
 :::
 
 ::: {.column width="50%"}
 \centering
 Power regime effect
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_fine_240417.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch3days/power_correction_effect_fine_240417.pdf}
 :::
 
 :::
@@ -240,25 +240,25 @@ Power regime effect
 ## Power estimates 
 
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_240417.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/power_estimates_time_series_fine_240417.pdf}
 
 ## Power estimates sampled wind farms
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_sampWF_240417.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/power_estimates_time_series_fine_sampWF_240417.pdf}
 
 
 # High wind speed {-} 
 ## Hyperparameters
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_fine_240412.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/hyperparameters_fine_240412.pdf}
 
 ## Estimated spatial field - median
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_median_240412.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/fine_spatial_field_median_240412.pdf}
 
 ## Estimated spatial field - standard deviation
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/fine_spatial_field_sd_240412.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/fine_spatial_field_sd_240412.pdf}
 
 ## Effect of wind speed and power regime
 
@@ -268,14 +268,14 @@ Power regime effect
 
 \centering
 Wind speed effect
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_fine_240412.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch3days/wind_effect_fine_240412.pdf}
 
 :::
 
 ::: {.column width="50%"}
 \centering
 Power regime effect
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_fine_240412.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch3days/power_correction_effect_fine_240412.pdf}
 :::
 
 :::
@@ -283,11 +283,11 @@ Power regime effect
 ## Power estimates 
 
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_240412.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/power_estimates_time_series_fine_240412.pdf}
 
 ## Power estimates sampled wind farms
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_fine_sampWF_240412.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/batch3days/power_estimates_time_series_fine_sampWF_240412.pdf}
 
 # August 10th, 2024 {-}
 ## Error metrics
@@ -317,7 +317,7 @@ metrics_table %>%
 \centering
 \small Error distribution by model
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/error_distribution_by_model_samp_days.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/error_distribution_by_model_samp_days.pdf}
 :::
 
 :::
@@ -350,7 +350,7 @@ metrics_table %>%
 \centering
 \small Error distribution by model
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/error_distribution_by_model_samp_days_gb.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/error_distribution_by_model_samp_days_gb.pdf}
 :::
 
 :::
@@ -377,7 +377,7 @@ metrics_table %>%
 \centering
 \small Error distribution by technology type
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/error_distribution_by_tech_type_samp_days.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/error_distribution_by_tech_type_samp_days.pdf}
 
 ## Regime
 
@@ -401,11 +401,11 @@ metrics_table %>%
 
 ## Regime
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_distribution_by_regime_samp_days.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/error_distribution_by_regime_samp_days.pdf}
 
 ## Hour of the day
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_distribution_by_hourA_samp_days.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/error_distribution_by_hourA_samp_days.pdf}
 
 ## Elevation
 \centering
@@ -426,7 +426,7 @@ metrics_table %>%
 
 ## Elevation
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_distribution_by_elevation_samp_days.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/error_distribution_by_elevation_samp_days.pdf}
 
 ## Distance to coast
 
@@ -448,7 +448,7 @@ metrics_table %>%
 
 ## Distance to coast
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_distribution_by_dist_coast_samp_days.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/error_distribution_by_dist_coast_samp_days.pdf}
 
 
 # Spatiotemporal calibration model {-}
@@ -474,13 +474,13 @@ metrics_table %>%
 
 \centering
 
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_median_250810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/coarse_spatial_field_median_250810.pdf}
 
 ## Standard deviation of the spatial field
 
 \centering
 
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_sd_250810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/coarse_spatial_field_sd_250810.pdf}
 
 ## Random Effects 
 ::: {.columns}
@@ -489,14 +489,14 @@ metrics_table %>%
 \centering
 \small Correction by wind speed
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_coarse_250810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/wind_effect_coarse_250810.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Correction by power regime
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_coarse_250810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/power_correction_effect_coarse_250810.pdf}
 :::
 
 :::
@@ -505,7 +505,7 @@ metrics_table %>%
 
 \centering
 
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_coarse_250810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/hyperparameters_coarse_250810.pdf}
 
 ## Comparison scores
 
@@ -572,11 +572,11 @@ tbl_tech_typ %>%
 
 ## Estimates by hour
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_250810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/power_estimates_time_series_250810.pdf}
 
 ## Errors by hour
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_error_time_series_250810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/power_estimates_error_time_series_250810.pdf}
 
 
 ## Model Mesh 
@@ -587,14 +587,14 @@ tbl_tech_typ %>%
 \centering
 \small Mesh used for spatial calibration model
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/spatial_mesh_coarse_250810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{~/Documents/elexon/extra/mesh_figs/spatial_mesh_coarse_250810.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Mesh assessment
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/spatial_mesh_coarse_assessment_sddev_250810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{~/Documents/elexon/extra/mesh_figs/spatial_mesh_coarse_assessment_sddev_250810.pdf}
 :::
 
 :::
@@ -602,17 +602,17 @@ tbl_tech_typ %>%
 # Time series of data and generic PC estimate
 ## ERA5 data and generic PC estimate
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/era5_generic_pc_time_series_tech_typ_250810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/era5_generic_pc_time_series_tech_typ_250810.pdf}
 
 ## Observed data
 
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/observed_power_time_series_tech_typ_250810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/observed_power_time_series_tech_typ_250810.pdf}
 
 ## Error of generic PC estimate
 
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_time_series_tech_typ_250810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/error_time_series_tech_typ_250810.pdf}
 
 ## ERA5 wind speed
 ::: {.columns}
@@ -621,14 +621,14 @@ tbl_tech_typ %>%
 \centering
 \small Wind speed at wind farm locations
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_speed_time_series_250810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/wind_speed_time_series_250810.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Observed generation
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/observed_power_time_series_250810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/observed_power_time_series_250810.pdf}
 :::
 
 :::
@@ -639,13 +639,13 @@ tbl_tech_typ %>%
 
 \centering
 
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_median_240810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/coarse_spatial_field_median_240810.pdf}
 
 ## Standard deviation of the spatial field
 
 \centering
 
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/coarse_spatial_field_sd_240810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/coarse_spatial_field_sd_240810.pdf}
 
 ## Random Effects 
 ::: {.columns}
@@ -654,14 +654,14 @@ tbl_tech_typ %>%
 \centering
 \small Correction by wind speed
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_effect_coarse_240810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/wind_effect_coarse_240810.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Correction by power regime
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/power_correction_effect_coarse_240810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/power_correction_effect_coarse_240810.pdf}
 :::
 
 :::
@@ -670,7 +670,7 @@ tbl_tech_typ %>%
 
 \centering
 
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/hyperparameters_coarse_240810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/hyperparameters_coarse_240810.pdf}
 
 ## Comparison scores
 
@@ -737,11 +737,11 @@ tbl_tech_typ %>%
 
 ## Estimates by hour
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_time_series_240810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/power_estimates_time_series_240810.pdf}
 
 ## Errors by hour
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/power_estimates_error_time_series_240810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/power_estimates_error_time_series_240810.pdf}
 
 
 ## Model Mesh 
@@ -752,14 +752,14 @@ tbl_tech_typ %>%
 \centering
 \small Mesh used for spatial calibration model
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/spatial_mesh_coarse_240810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{~/Documents/elexon/extra/mesh_figs/spatial_mesh_coarse_240810.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Mesh assessment
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/spatial_mesh_coarse_assessment_sddev_240810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{~/Documents/elexon/extra/mesh_figs/spatial_mesh_coarse_assessment_sddev_240810.pdf}
 :::
 
 :::
@@ -767,17 +767,17 @@ tbl_tech_typ %>%
 # Time series of data and generic PC estimate {-}
 ## ERA5 data and generic PC estimate
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/era5_generic_pc_time_series_tech_typ_240810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/era5_generic_pc_time_series_tech_typ_240810.pdf}
 
 ## Observed data
 
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/observed_power_time_series_tech_typ_240810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/observed_power_time_series_tech_typ_240810.pdf}
 
 ## Error of generic PC estimate
 
 \centering
-\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/error_time_series_tech_typ_240810.pdf}
+\includegraphics[width=\linewidth,height=7cm,keepaspectratio]{../fig/oldbatch/error_time_series_tech_typ_240810.pdf}
 
 ## ERA5 wind speed
 ::: {.columns}
@@ -786,14 +786,14 @@ tbl_tech_typ %>%
 \centering
 \small Wind speed at wind farm locations
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/wind_speed_time_series_240810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/wind_speed_time_series_240810.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Observed generation
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/observed_power_time_series_240810.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/oldbatch/observed_power_time_series_240810.pdf}
 :::
 
 :::
