@@ -226,3 +226,15 @@ high wind speed / altitude/ distance coast onshore /
 
 
 
+
+space oos 
+time oos
+
+offshore/onshore summaries 
+pred bands
+rmse metrics
+
+CRPS
+
+
+

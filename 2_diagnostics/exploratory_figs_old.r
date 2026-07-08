@@ -6,8 +6,9 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 day_id <- 1
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
-# rerun_samples <- FALSE
-# prec_init <- log(200)
+rerun_samples <- FALSE
+prec_init <- log(200)
+
 
 if (local_run) {
   cat("Running in local mode\n")
@@ -65,16 +66,15 @@ require(kableExtra)
 
 source("aux_funct.R")
 
-# sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
-
-sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
-  mutate(date = as.Date(date))
-
-sampled_days <- sampled_days_df %>%
-  pull(date) %>%
-  sort()
+sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
+
+n.days <- 1
+n.hours <- 12
+t1 <- d0 + n.days
+th <- t1 + hours(n.hours)
+
 
 # Read models ####
 mod_labels <- c(
@@ -105,18 +105,18 @@ names(mod_labels) <- est_cols
 mod_vec <- list.files(model_path, pattern = d0_tag, full.names = TRUE)
 mod_vec <- mod_vec[!grepl("spatial", mod_vec)] %>% sort() # exclude meshes from st model
 
-# model_df <- tibble(
-#   label = mod_labels,
-#   code = est_cols,
-#   fname = mod_vec
-# ) %>%
-#   mutate(
-#     type = case_when(
-#       grepl("lm", code) ~ "lm",
-#       grepl("qm", code) ~ "qm",
-#       TRUE ~ "bru"
-#     )
-#   )
+model_df <- tibble(
+  label = mod_labels,
+  code = est_cols,
+  fname = mod_vec
+) %>%
+  mutate(
+    type = case_when(
+      grepl("lm", code) ~ "lm",
+      grepl("qm", code) ~ "qm",
+      TRUE ~ "bru"
+    )
+  )
 
 # Predictions for next hours ####
 
@@ -188,132 +188,12 @@ extension <- "rds"
 df_pattern <- sprintf("^calibration_preddf_.*_%s\\.%s$", d0_tag, extension)
 files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
 
-
-# sampled locations ####
 coord_list_fname <- "data/coord_list.csv"
 
 cat("Loading existing coordinate list\n")
 coord_list <- read.csv(coord_list_fname)
 
-pwr_curv_df <- read_parquet(file.path(
-  gen_path,
-  "power_curve_all_enriched.parquet"
-))
-names(pwr_curv_df)
 
-sample_loc_fname <- "data/coord_list_wloc.csv"
-
-if (file.exists(sample_loc_fname)) {
-  cat("Loading existing coordinate list with location names\n")
-  loc_cat <- read.csv(sample_loc_fname)
-} else {
-  cat("Creating coordinate list with location names\n")
-  loc_cat <- pwr_curv_df %>%
-    distinct(coord_id, bmUnitName, lon, lat, tech_typ) %>%
-    mutate(
-      bmUnitName = trimws(bmUnitName),
-      short_name = gsub(
-        "WF|Wind|farm|Windfarm|Offshore|BMU",
-        "",
-        bmUnitName
-      ) %>%
-        gsub("\\s*\\d+$", "", .) %>% # Remove trailing numbers (and preceding spaces)
-        trimws(),
-      tech_typ2 = gsub("Wind", "", tech_typ) %>% trimws() %>% tolower()
-    ) %>%
-    group_by(coord_id) %>%
-    summarise(
-      short_name = first(short_name),
-      tech_typ = first(tech_typ2),
-      lon = first(lon),
-      lat = first(lat)
-    ) %>%
-    mutate(
-      tooltip_text = paste0(
-        "Site: ",
-        short_name,
-        "<br>Type: ",
-        tech_typ,
-        "<br>coord id: ",
-        coord_id
-      )
-    ) %>%
-    arrange(coord_id) %>%
-    left_join(
-      coord_list %>% dplyr::select(coord_id, sampled),
-      by = "coord_id"
-    ) %>%
-    mutate(
-      sampled_label = factor(
-        sampled,
-        levels = c(FALSE, TRUE),
-        labels = c("validation", "training")
-      ),
-      tech_label = factor(
-        tech_typ,
-        levels = c("offshore", "onshore"),
-        labels = c("Offshore", "Onshore")
-      )
-    )
-
-  write.csv(loc_cat, sample_loc_fname, row.names = FALSE)
-}
-
-uk_map <- rnaturalearth::ne_countries(
-  scale = "medium",
-  country = c("United Kingdom", "Ireland"),
-  returnclass = "sf"
-)
-
-tsplit_p <- ggplot() +
-  geom_sf(data = uk_map, fill = "lightgrey", color = "black") +
-  geom_point(
-    data = loc_cat,
-    aes(
-      x = lon,
-      y = lat,
-      color = sampled_label,
-      shape = tech_label,
-      text = tooltip_text
-    ),
-    size = 3,
-    alpha = 0.7
-  ) +
-  scale_color_manual(
-    name = "Sampled",
-    values = c(
-      "training" = blues9[7],
-      "validation" = "darkred"
-    )
-  ) +
-  scale_shape_manual(
-    name = "Type",
-    values = c(17, 16),
-    labels = c("Offshore", "Onshore")
-  ) +
-  coord_sf(xlim = c(-10, 3), ylim = c(49.5, 61)) +
-  theme_map() +
-  annotation_scale(location = "br", width_hint = 0.25) +
-  theme(
-    legend.background = element_rect(fill = NA, color = NA),
-    legend.key = element_rect(fill = NA, color = NA),
-    legend.position = "inside",
-    legend.position.inside = c(0.0, 0.6)
-  )
-tsplit_p
-
-
-ggsave(
-  filename = sprintf("fig/trainsplit_wind_farm_locations_v0.pdf"),
-  width = 4,
-  height = 6
-)
-
-tsplit_p %>%
-  plotly::ggplotly(tooltip = "text")
-
-
-# prediction data for 1 day ####
 if (!override_objects && length(files_found) > 0) {
   cat(
     "Calibration data file already exists for this day. Loading existing data.\n"
@@ -420,7 +300,7 @@ n <- nrow(wf_df_pred)
 # read summary tables of predictions ######
 
 gb_fig_df <- lapply(
-  seq_along(sampled_days),
+  1:3,
   function(i) {
     d0 <- sampled_days[i] %>% as.Date()
     # print(i)
@@ -440,7 +320,7 @@ gb_fig_df <- lapply(
 
 
 wf_fig_df <- lapply(
-  seq_along(sampled_days),
+  1:3,
   function(i) {
     d0 <- sampled_days[i] %>% as.Date()
     d0_tag <- base::format(d0, "%y%m%d")
