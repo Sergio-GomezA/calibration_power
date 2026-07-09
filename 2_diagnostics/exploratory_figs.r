@@ -613,7 +613,7 @@ write.csv(
 gb_fig_df <- lapply(
   seq_along(sampled_days[-15]),
   function(i) {
-    d0 <- sampled_days[i] %>% as.Date()
+    d0 <- sampled_days_df$date[i] %>% as.Date()
     # print(i)
     d0_tag <- base::format(d0, "%y%m%d")
     readRDS(sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)) %>%
@@ -629,7 +629,7 @@ gb_fig_df <- lapply(
 wf_fig_df <- lapply(
   seq_along(sampled_days[-15]),
   function(i) {
-    d0 <- sampled_days[i] %>% as.Date()
+    d0 <- sampled_days_df$date[i] %>% as.Date()
     d0_tag <- base::format(d0, "%y%m%d")
     readRDS(sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag)) %>%
       mutate(
@@ -640,7 +640,7 @@ wf_fig_df <- lapply(
 ) %>%
   bind_rows()
 
-# calibration fit scatter####
+## calibration fit scatter####
 # #
 gb_fig_df %>%
   filter(oos) %>%
@@ -905,7 +905,42 @@ metrics_table %>%
   )) %>%
   kable_styling(latex_options = "hold_position")
 
-#
+# read summary tables of prediction bands spaceoos ######
+gb_fig_df <- lapply(
+  seq_along(sampled_days),
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    # print(i)
+    d0_tag <- base::format(d0, "%y%m%d")
+    readRDS(sprintf(
+      "summaries/GB_fig_band_summary_spaceoos_%s.rds",
+      d0_tag
+    )) %>%
+      mutate(
+        pgroup3 = sampled_days_df$p_group3[i] %>%
+          factor(levels = c("low", "mid", "high"))
+      )
+  }
+) %>%
+  bind_rows()
+
+
+wf_fig_df <- lapply(
+  seq_along(sampled_days[-15]),
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    d0_tag <- base::format(d0, "%y%m%d")
+    readRDS(sprintf(
+      "summaries/WF_fig_band_summary_spaceoos_%s.rds",
+      d0_tag
+    )) %>%
+      mutate(
+        pgroup3 = sampled_days_df$p_group3[i] %>%
+          factor(levels = c("low", "mid", "high"))
+      )
+  }
+) %>%
+  bind_rows()
 
 # update currently used figures in overleaf ####
 
