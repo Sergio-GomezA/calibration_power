@@ -11,6 +11,7 @@ mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 2
 override_objects <- FALSE
 batch_name <- "batch2025"
 # prec_init <- log(200)
+pow_threshold <- 0.1
 
 if (local_run) {
   cat("Running in local mode\n")
@@ -30,6 +31,9 @@ if (length(args) > 1) {
 }
 if (length(args) > 2) {
   batch_name <- args[3]
+}
+if (length(args) > 3) {
+  pow_threshold <- as.numeric(args[4])
 }
 
 # 0.2 libraries and paths ####
@@ -71,7 +75,6 @@ source("aux_funct.R")
 mc <- ifelse(local_run, 1, available_cores())
 # inla.setOption(num.threads = sprintf("%d:1", mc))
 
-pow_threshold <- 0.1
 pow_threshold_label <- as.character(pow_threshold) %>% gsub("\\.", "_", .)
 # 1. data preparation ####
 cat("--------------------------------------------------------------------\n")
