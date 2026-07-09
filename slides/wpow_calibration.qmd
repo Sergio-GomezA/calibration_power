@@ -56,14 +56,15 @@ knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = FALSE, cache = FA
 theme_set(theme_bw())
 ```
 
-# Overview {#sec-intro}
-
-
 ## Updates {#sec-updates .unnumbered .nolink}
 
 ### New
 \begin{itemize}
   \item OOS assessment
+  \begin{itemize}
+    \item OOS time
+    \item OOS locations
+  \end{itemize}
   \item Low wind events distribution
 \end{itemize}
 
@@ -136,14 +137,14 @@ theme_set(theme_bw())
 
 ::: {.column width="50%"}
 \centering
-\small Linear model
+\small Linear model (27-01-2025)
 
 \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_lm_250127_2.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
-\small Spatiotemporal model coarse
+\small Spatiotemporal model coarse (27-01-2025)
 
 \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_st0_m1_250127_2.pdf}
 :::
@@ -156,14 +157,14 @@ theme_set(theme_bw())
 
 ::: {.column width="50%"}
 \centering
-\small 1D SPDE model
+\small 1D SPDE model (27-01-2025)
 
 \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spde1d_250127_2.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
-\small AR1 model
+\small AR1 model (27-01-2025)
 
 \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_ar1_250127_2.pdf}
 :::
@@ -182,10 +183,10 @@ theme_set(theme_bw())
 :::
 
 ::: {.column width="50%"}
-<!-- \centering
-\small Onshore / offshore
+\centering
+\small Scatter plot oos
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_pred_band_coverage_tech.pdf} -->
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_fit_scatter_oos.pdf}
 :::
 
 :::
@@ -199,7 +200,7 @@ theme_set(theme_bw())
 - Models at WF can achieve target coverage
 - Aggregation reduces coverage
 - High regime more succeptible to coverage loss
-- Spatiotemporal model reduces coverage
+- Spatiotemporal model is not improving coverage
 :::
 
 ::: {.column width="50%"}
@@ -248,16 +249,16 @@ theme_set(theme_bw())
 
 ::: {.column width="50%"}
 \centering
-\small Linear model
+\small Linear model (27-01-2025)
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_lm_250127_2.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_lm_250127_1.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
-\small Spatiotemporal model coarse
+\small Spatiotemporal model coarse (27-01-2025)
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_st0_m1_250127_2.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_st0_m1_250127_1.pdf}
 :::
 
 :::
@@ -268,16 +269,16 @@ theme_set(theme_bw())
 
 ::: {.column width="50%"}
 \centering
-\small 1D SPDE model
+\small 1D SPDE model (27-01-2025)
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_spde1d_250127_2.pdf}
+\includegraphics[width=\linewidth,height=6cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_spde1d_250127_1.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
-\small AR1 model
+\small AR1 model (27-01-2025)
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_ar1_250127_2.pdf}
+\includegraphics[width=\linewidth,height=6cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_ar1_250127_1.pdf}
 :::
 
 :::
@@ -288,37 +289,37 @@ theme_set(theme_bw())
 
 ::: {.column width="50%"}
 \centering
-\small GB level
+\small GB level (27-01-2025)
 
 \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_pred_band_spaceoos_250127.pdf}
 :::
 
 ::: {.column width="50%"}
-<!-- \centering
-\small Onshore / offshore
+\centering
+\small Scatter plot oos
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_pred_band_coverage_tech.pdf} -->
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_fit_scatter_oos_space.pdf}
 :::
 
 :::
 
 
-## Day-ahead forecast coverage
+## Unseen locations prediction intervals coverage
 
 ::: {.columns}
 
 ::: {.column width="50%"}
-- Models at WF can achieve target coverage
-- Aggregation reduces coverage
-- High regime more succeptible to coverage loss
-- Spatiotemporal model reduces coverage
+- Attaining coverage in unseen locations is more challenging
+- Isolated locations can lead to high uncertainty
+- Location specific events may affect coverage
+- Spatiotemporal model is not improving coverage
 :::
 
 ::: {.column width="50%"}
 \centering
-\small Coverage for day-ahead predictions
+\small Coverage for new locations
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_coverage.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_coverage_spaceoos.pdf}
 :::
 
 :::
@@ -332,14 +333,14 @@ theme_set(theme_bw())
 \centering
 \small GB level
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_pred_band_spaceoos_coverage.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_pred_band_coverage_spaceoos.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
 \small Onshore / offshore
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_pred_band_spaceoos_coverage_tech.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_pred_band_coverage_tech_spaceoos.pdf}
 :::
 
 :::
@@ -348,25 +349,12 @@ theme_set(theme_bw())
 \centering
 \small Regime aggregation
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_pred_band_spaceoos_coverage_regime.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_pred_band_coverage_regime_spaceoos.pdf}
 
-::: {.columns}
 
-::: {.column width="50%"}
-- Attaining coverage in unseen locations is more challenging
-- Isolated locations result in high uncertainty
-- Location specific events may affect coverage
-- Spatiotemporal model reduces coverage
-:::
 
-::: {.column width="50%"}
-\centering
-\small Coverage for day-ahead predictions
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_coverage.pdf}
-:::
-
-:::
+# Appendix
 
 ## Meshes for spatiotemporal models
 

@@ -5,7 +5,7 @@
 #$ -o /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 #$ -e /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 ##$ -l h_rt=4:00:0,h_vmem=16G
-#$ -pe sharedmem 8
+#$ -pe sharedmem 2
 #$ -M s2441782@ed.ac.uk
 #$ -m bea
 #$ -t 1-15
@@ -17,4 +17,4 @@ source /etc/profile.d/modules.sh
 module load R/4.5
 
 # Run resolution code
-Rscript 3_validation/oos_space.r $SGE_TASK_ID TRUE TRUE batch2025
+Rscript 3_validation/oos_space.r $SGE_TASK_ID TRUE FALSE batch2025

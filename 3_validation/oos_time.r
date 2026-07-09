@@ -675,6 +675,11 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
         # color = "darkred",
         lwd = 1
       ) +
+      geom_vline(
+        xintercept = t1,
+        linetype = "dashed",
+        color = "black"
+      ) +
       facet_wrap(~site_name, scales = "free_y") +
       coord_cartesian(ylim = c(0, 1)) +
       scale_x_datetime(date_labels = "%H:%M") +
