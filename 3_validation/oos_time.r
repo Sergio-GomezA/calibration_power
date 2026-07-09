@@ -164,7 +164,15 @@ exclusions <- if (local_run) {
 mod_vec <- mod_vec[!grepl(paste(exclusions, collapse = "|"), mod_vec)] %>%
   sort() # exclude meshes from st model
 
-
+heavy_models_fnames <- paste0(
+  "../calibration/model_objects/",
+  est_cols,
+  d0_tag,
+  ".rds"
+)[4:5] # placeholder
+if (local_run) {
+  heavy_models_fnames <- heavy_models_fnames[1]
+}
 model_df <- tibble(
   label = mod_labels,
   code = est_cols,
@@ -173,7 +181,7 @@ model_df <- tibble(
   } else {
     c(
       mod_vec[1:3],
-      paste0("../calibration/model_objects/", est_cols, d0_tag, ".rds")[4:5],
+      heavy_models_fnames,
       mod_vec[4:6]
     )
   }
