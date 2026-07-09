@@ -919,11 +919,11 @@ gb_fig_df <- lapply(
       mutate(
         pgroup3 = sampled_days_df$p_group3[i] %>%
           factor(levels = c("low", "mid", "high"))
-      )
+      ) %>%
+      mutate(oos = time < as.POSIXct(d0))
   }
 ) %>%
   bind_rows()
-
 
 wf_fig_df <- lapply(
   seq_along(sampled_days[-15]),
@@ -937,10 +937,288 @@ wf_fig_df <- lapply(
       mutate(
         pgroup3 = sampled_days_df$p_group3[i] %>%
           factor(levels = c("low", "mid", "high"))
-      )
+      ) %>%
+      mutate(oos = time < as.POSIXct(d0))
   }
 ) %>%
   bind_rows()
+
+
+## calibration fit scatter####
+# #
+gb_fig_df %>%
+  filter(oos) %>%
+  ggplot(aes(x = norm_potential, y = mean, col = pgroup3)) +
+  geom_point() +
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    color = "darkred"
+  ) +
+  facet_wrap(~model, labeller = as_labeller(mod_labels)) +
+  theme_bw() +
+  # scale_color_lancet() +
+  scale_color_manual(values = regime_palette) +
+  labs(
+    x = "Observed power",
+    y = "Predicted power",
+    col = "regime"
+  )
+
+ggsave(
+  sprintf("fig/%s/GB_fit_scatter_oos_space.pdf", batch_name),
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+
+wf_fig_df %>%
+  filter(oos) %>%
+  ggplot(aes(x = norm_potential, y = fit)) +
+  geom_hex() +
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    color = "darkred"
+  ) +
+  facet_wrap(~model, labeller = as_labeller(mod_labels)) +
+  # scale_fill_viridis_c(
+  #   trans = "log10",
+  #   name = "frequency",
+  #   limits = c(1, NA)
+  # ) +
+  scale_fill_gradient(
+    trans = "log10",
+    low = "grey90",
+    high = blues9[8]
+  ) +
+  theme_bw() +
+  labs(
+    x = "Normalised potential power",
+    y = "Normalised predicted power",
+    fill = "Count"
+  )
+
+ggsave(
+  sprintf("fig/%s/WF_fit_scatter_oos_space.pdf", batch_name),
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+## Coverage bands #####
+
+### wf level ####
+cov_bands_wf <- wf_fig_df %>%
+  filter(oos) %>%
+  group_by(model, coord_id) %>%
+  summarise(
+    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    .groups = "drop"
+  ) %>%
+  group_by(model) %>%
+  summarise(
+    mean_coverage = mean(coverage),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(mean_coverage)) %>%
+  mutate(
+    model = factor(model, levels = model)
+  )
+cov_bands_wf %>%
+  ggplot(aes(x = model, y = mean_coverage)) +
+  geom_col(fill = blues9[7]) +
+  geom_text(aes(label = round(mean_coverage, 3)), vjust = -0.5) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Model", y = "Mean coverage") +
+  scale_x_discrete(labels = mod_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(
+  filename = sprintf("fig/%s/WF_pred_band_coverage_spaceoos.pdf", batch_name),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
+### aggregated #####
+cov_bands <- gb_fig_df %>%
+  filter(oos) %>%
+  group_by(model) %>%
+  summarise(
+    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(coverage)) %>%
+  mutate(
+    model = factor(model, levels = model)
+  )
+
+cov_bands %>%
+  ggplot(aes(x = model, y = coverage)) +
+  geom_col(fill = blues9[7]) +
+  geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Model", y = "Coverage") +
+  scale_x_discrete(labels = mod_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(
+  filename = sprintf("fig/%s/GB_pred_band_coverage_spaceoos.pdf", batch_name),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
+
+cov_bands <- wf_fig_df %>%
+  left_join(loc_cat %>% dplyr::select(coord_id, tech_typ), by = "coord_id") %>%
+  filter(oos) %>%
+  group_by(model, tech_typ) %>%
+  summarise(
+    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(coverage)) %>%
+  mutate(
+    model = factor(model, levels = model %>% unique())
+  )
+
+cov_bands %>%
+  ggplot(aes(x = model, y = coverage)) +
+  geom_col(fill = blues9[7]) +
+  geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
+  facet_wrap(~tech_typ) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Model", y = "Coverage") +
+  scale_x_discrete(labels = mod_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(
+  filename = sprintf(
+    "fig/%s/GB_pred_band_coverage_tech_spaceoos.pdf",
+    batch_name
+  ),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
+
+cov_bands <- wf_fig_df %>%
+  # left_join(loc_cat %>% dplyr::select(coord_id, tech_typ), by = "coord_id") %>%
+  filter(oos) %>%
+  group_by(model, pgroup3) %>%
+  summarise(
+    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(coverage)) %>%
+  mutate(
+    model = factor(model, levels = model %>% unique())
+  )
+
+cov_bands %>%
+  ggplot(aes(x = model, y = coverage)) +
+  geom_col(fill = blues9[7]) +
+  geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
+  facet_wrap(~pgroup3) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Model", y = "Coverage") +
+  scale_x_discrete(labels = mod_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(
+  filename = sprintf(
+    "fig/%s/GB_pred_band_coverage_regime_spaceoos.pdf",
+    batch_name
+  ),
+  width = 14,
+  height = 6,
+  # dpi = 300
+)
+
+## error metrics ####
+mod_labels <- c(
+  # "Generic PC",
+  "Linear model",
+  "GB LM",
+  "QM",
+  "Spatio-temporal fine",
+  "Spatio-temporal coarse",
+  "1D SPDE model",
+  "AR1 model",
+  "AR2 model"
+)
+est_cols <- c(
+  # "norm_power_est0",
+  "lm",
+  "agg_lm",
+  "qm",
+  "st0_m1",
+  "st0_m2",
+  "spde1d",
+  "ar1",
+  "ar2"
+)
+n_models <- length(est_cols)
+names(mod_labels) <- est_cols
+metrics_table <- wf_fig_df %>%
+  group_by(oos, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = fit),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = fit),
+    # MDAPE = mdape(
+    #   actual = norm_potential,
+    #   predicted = fit,
+    #   pos_only = TRUE
+    # ),
+    Bias = mean(fit - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    model = mod_labels[model],
+    oos = ifelse(oos, "OOS", "IS")
+  ) %>%
+  pivot_wider(
+    names_from = oos,
+    values_from = c(
+      RMSE,
+      MAE,
+      # MDAPE,
+      Bias
+    )
+  )
+metrics_table
+metrics_table %>%
+  mutate(
+    across(
+      c(RMSE_IS, RMSE_OOS, MAE_IS, MAE_OOS, Bias_IS, Bias_OOS),
+      ~ round(., 3)
+    ),
+    # across(c(MDAPE_IS, MDAPE_OOS), ~ round(., 1))
+  ) %>%
+  kbl(
+    # format = "latex",
+    booktabs = TRUE,
+    align = "lcccccccc",
+    col.names = c(
+      "Model",
+      "IS",
+      "OOS",
+      "IS",
+      "OOS",
+      # "IS",
+      # "OOS",
+      "IS",
+      "OOS"
+    ),
+    caption = "Performance metrics for in-sample (IS) and out-of-sample (OOS) predictions."
+  ) %>%
+  add_header_above(c(
+    " " = 1,
+    "RMSE" = 2,
+    "MAE" = 2,
+    # "MDAPE (%)" = 2,
+    "Bias" = 2
+  )) %>%
+  kable_styling(latex_options = "hold_position")
 
 # update currently used figures in overleaf ####
 
