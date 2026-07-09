@@ -698,7 +698,12 @@ wf_fig_df %>%
     fill = "Count"
   )
 
-ggsave("fig/WF_fit_scatter_oos.pdf", width = 10, height = 6, dpi = 300)
+ggsave(
+  sprintf("fig/%s/WF_fit_scatter_oos.pdf", batch_name),
+  width = 10,
+  height = 6,
+  dpi = 300
+)
 
 ## Coverage bands #####
 
