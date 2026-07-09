@@ -8,6 +8,7 @@ day_id <- 1
 override_objects <- FALSE
 # rerun_samples <- FALSE
 # prec_init <- log(200)
+batch_name <- "batch2025"
 
 if (local_run) {
   cat("Running in local mode\n")
@@ -195,11 +196,6 @@ coord_list_fname <- "data/coord_list.csv"
 cat("Loading existing coordinate list\n")
 coord_list <- read.csv(coord_list_fname)
 
-pwr_curv_df <- read_parquet(file.path(
-  gen_path,
-  "power_curve_all_enriched.parquet"
-))
-names(pwr_curv_df)
 
 sample_loc_fname <- "data/coord_list_wloc.csv"
 
@@ -208,6 +204,11 @@ if (file.exists(sample_loc_fname)) {
   loc_cat <- read.csv(sample_loc_fname)
 } else {
   cat("Creating coordinate list with location names\n")
+  pwr_curv_df <- read_parquet(file.path(
+    gen_path,
+    "power_curve_all_enriched.parquet"
+  ))
+  # names(pwr_curv_df)
   loc_cat <- pwr_curv_df %>%
     distinct(coord_id, bmUnitName, lon, lat, tech_typ) %>%
     mutate(
@@ -304,7 +305,10 @@ tsplit_p
 
 
 ggsave(
-  filename = sprintf("fig/trainsplit_wind_farm_locations_v0.pdf"),
+  filename = sprintf(
+    "fig/%s/trainsplit_wind_farm_locations_v0.pdf",
+    batch_name
+  ),
   width = 4,
   height = 6
 )
@@ -313,125 +317,308 @@ tsplit_p %>%
   plotly::ggplotly(tooltip = "text")
 
 
-# prediction data for 1 day ####
-if (!override_objects && length(files_found) > 0) {
-  cat(
-    "Calibration data file already exists for this day. Loading existing data.\n"
-  )
-  wf_df_pred <- readRDS(files_found[1])
-} else {
-  if (override_objects) {
-    cat(
-      "Override_objects is TRUE. Preparing new calibration data for this day.\n"
-    )
-  } else {
-    cat(
-      "No existing calibration data file found for this day. Preparing new data.\n"
-    )
-  }
+# figures for sampled days ####
 
-  pwr_curv_df <- read_parquet(file.path(
-    gen_path,
-    "power_curve_all_enriched.parquet"
+## ts #####
+GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
+  rename(time = halfHourEndTime) %>%
+  mutate(
+    err = norm_power_est0 - norm_potential,
+    error0 = norm_potential - norm_power_est0,
+    date = as.Date(time)
+  )
+sample_df <- GB_df %>%
+  filter(date %in% sampled_days) %>%
+  group_by(time) %>%
+  summarise(
+    across(
+      c(norm_power_est0, norm_potential),
+      ~ sum(. * capacity) / sum(capacity)
+    ),
+    across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+    across(c(capacity), sum),
+    date = first(date),
+    .groups = "drop"
+  ) %>%
+  left_join(gb_day_df %>% dplyr::select(date, p_group3), by = "date") %>%
+  mutate(
+    hour = format(time, "%H:%M"),
+    legend_label = factor(
+      paste(p_group3, format(date, "%y-%m-%d")),
+      levels = paste(
+        rep(c("low", "mid", "high"), each = 5),
+        format(
+          sampled_days_df %>%
+            pull(date),
+          "%y-%m-%d"
+        )
+      )
+    )
+  )
+
+ggplot() +
+  geom_line(
+    data = sample_df,
+    aes(
+      hour,
+      norm_potential,
+      col = legend_label,
+      group = legend_label
+    )
+  ) +
+  labs(
+    title = "Daily generation time series for sampled days",
+    x = "Hour",
+    y = "Wind generation (% of capacity)",
+    col = ""
+  ) +
+  scale_x_discrete(breaks = c("00:00", "06:00", "12:00", "18:00", "23:30")) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    # axis.text.x = element_text(angle = 90, vjust = 1)
+  ) +
+  scale_color_manual(values = rep(regime_palette, each = 5))
+
+#
+ggsave(
+  sprintf("fig/%s/daily_generation_time_series_sampled_days.pdf", batch_name),
+  width = 6,
+  height = 4
+)
+
+
+# Error metrics summary ####
+
+sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
+  mutate(
+    date = as.Date(date),
+    day_code = format(date, "%y%m%d"),
+    summ_fname = paste0("summaries/calib_metrics_coarse_", day_code, ".csv"),
+    calib_fname = paste0("data/calibration_df_coarse_", day_code, ".rds"),
+    calib_fname2 = paste0("data/calibration_df_very_coarse_", day_code, ".rds")
+  )
+
+calib_tbl <- lapply(
+  seq_along(sampled_days_df$calib_fname),
+  function(x) {
+    # browser()
+    cutoff <- as.POSIXct(sampled_days_df$date[x])
+    df1 <- readRDS(sampled_days_df$calib_fname[x]) %>%
+      st_drop_geometry() %>%
+      mutate(
+        oos = as.POSIXct(time) >= cutoff
+      ) %>%
+      rename(st0_m1 = st)
+    df2 <- readRDS(sampled_days_df$calib_fname2[x]) %>%
+      st_drop_geometry() %>%
+      mutate(
+        oos = as.POSIXct(time) >= cutoff
+      ) %>%
+      rename(st0_m2 = st)
+    df1 %>%
+      left_join(
+        df2 %>% dplyr::select(coord_id, time, st0_m2),
+        by = c("coord_id", "time")
+      )
+  }
+) %>%
+  bind_rows()
+
+df_long0 <- calib_tbl %>%
+  dplyr::select(
+    date,
+    time,
+    site_name,
+    coord_id,
+    elevation,
+    dist_coast,
+    capacity,
+    tech_typ,
+    p_group3,
+    oos,
+    norm_potential,
+    any_of(est_cols)
+  ) %>%
+  mutate(
+    hour = hour(time),
+    elevation = pmax(0, elevation),
+    p_group3 = factor(p_group3, levels = c("low", "mid", "high")),
+    dist_coast_g4 = cut(
+      dist_coast,
+      breaks = quantile(dist_coast, probs = seq(0, 1, 0.25)),
+      include.lowest = TRUE
+    )
+  ) %>%
+  pivot_longer(
+    cols = any_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  ) %>%
+  mutate(
+    estimate = pmin(1, pmax(0, estimate)), # clipping estimates to [0, 1]
+    err = estimate - norm_potential,
+    p_group3 = forcats::fct_rev(p_group3),
+    model = factor(model, levels = est_cols, labels = mod_labels)
+  )
+
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    model = mod_labels[model]
+  ) %>%
+  arrange(desc(RMSE))
+
+metrics_table
+write.csv(
+  metrics_table,
+  sprintf("summaries/calib_metrics_%s.csv", batch_name),
+  row.names = FALSE
+)
+## regime ####
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(p_group3, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(norm_potential, estimate),
+    MAE = ModelMetrics::mae(norm_potential, estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    p_group3 = factor(p_group3, levels = c("low", "mid", "high"))
+  ) %>%
+  pivot_longer(
+    cols = c(RMSE, MAE, Bias),
+    names_to = "Metric",
+    values_to = "Value"
+  ) %>%
+  pivot_wider(
+    names_from = c(p_group3, Metric),
+    values_from = Value,
+    names_vary = "fastest"
+  ) %>%
+  dplyr::select(
+    model,
+    low_RMSE,
+    low_MAE,
+    low_Bias,
+    mid_RMSE,
+    mid_MAE,
+    mid_Bias,
+    high_RMSE,
+    high_MAE,
+    high_Bias
+  ) %>%
+  arrange(desc(low_RMSE))
+colnames(metrics_table) <- c(
+  "Model",
+  "RMSE",
+  "MAE",
+  "Bias",
+  "RMSE",
+  "MAE",
+  "Bias",
+  "RMSE",
+  "MAE",
+  "Bias"
+)
+metrics_table
+kbl(
+  metrics_table,
+  # format = "latex",
+  digits = 3,
+  booktabs = TRUE,
+  align = c("l", rep("c", 9))
+) %>%
+  add_header_above(c(
+    " " = 1,
+    "Low" = 3,
+    "Mid" = 3,
+    "High" = 3
   ))
+write.csv(
+  metrics_table,
+  sprintf("summaries/calib_metrics_%s_regime.csv", batch_name),
+  row.names = FALSE
+)
+## by tech type ####
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  mutate(tech_typ = gsub("Wind", "", tech_typ) %>% trimws()) %>%
+  group_by(tech_typ, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(norm_potential, estimate),
+    MAE = ModelMetrics::mae(norm_potential, estimate),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(
+    cols = c(RMSE, MAE, Bias),
+    names_to = "Metric",
+    values_to = "Value"
+  ) %>%
+  pivot_wider(
+    names_from = c(tech_typ, Metric),
+    values_from = Value,
+    names_vary = "fastest"
+  ) %>%
+  dplyr::select(
+    model,
+    Offshore_RMSE,
+    Offshore_MAE,
+    Offshore_Bias,
+    Onshore_RMSE,
+    Onshore_MAE,
+    Onshore_Bias
+  ) %>%
+  arrange(desc(Offshore_RMSE))
+colnames(metrics_table) <- c(
+  "Model",
+  "RMSE",
+  "MAE",
+  "Bias",
+  "RMSE",
+  "MAE",
+  "Bias"
+)
+metrics_table
+kbl(
+  metrics_table,
+  # format = "latex",
+  digits = 3,
+  booktabs = TRUE,
+  align = c("l", rep("c", 9))
+) %>%
+  add_header_above(c(
+    " " = 1,
+    "Offshore" = 3,
+    "Onshore" = 3
+  ))
+write.csv(
+  metrics_table,
+  sprintf("summaries/calib_metrics_%s_tech.csv", batch_name),
+  row.names = FALSE
+)
 
-  wf_df_pred <- pwr_curv_df %>%
-    rename(time = halfHourEndTime) %>%
-    mutate(
-      date = as.Date(time),
-      elevation = pmax(0, elevation),
-      site_name = site_name %>%
-        gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
-        trimws()
-    ) %>%
-    # filter(date %in% sampled_days) %>%
-    # filter(date >= d0, date <= d0 + n.days - 1) %>%
-    filter(time >= d0, time < th) %>%
-    filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
-    arrange(site_name) %>%
-    group_by(lon, lat, time) %>%
-    summarise(
-      site_name = first(site_name),
-      coord_id = first(coord_id),
-      elevation = first(elevation),
-      dist_coast = first(dist_coast),
-      tech_typ = first(tech_typ),
-      across(c(ws_h, wd10, wd100), mean),
-      ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
-      across(c(potential, power_est0, capacity, curtailment), sum),
-      .groups = "drop"
-    ) %>%
-    mutate(t = difftime(time, min(time), units = "hours") %>% as.numeric()) %>%
-    mutate(
-      norm_potential = pmin(1, potential / capacity),
-      norm_power_est0 = power_est0 / capacity,
-      error0 = norm_potential - norm_power_est0
-    ) %>%
-    st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-    mutate(lon = st_coordinates(.)[, 1], lat = st_coordinates(.)[, 2]) %>%
-    st_transform(crs = 27700) %>%
-    mutate(
-      x = st_coordinates(.)[, 1] / 1000,
-      y = st_coordinates(.)[, 2] / 1000,
-    ) %>%
-    # st_drop_geometry() %>%
-    mutate(
-      # site_id = as.integer(factor(site_name)),
-      ws_group = inla.group(ws_h, n = 20, method = "quantile"),
-      pow_group = inla.group(norm_power_est0, n = 20, method = "quantile"),
-      d_coast_group = inla.group(dist_coast, n = 10, method = "quantile"),
-      elev_group = inla.group(elevation, n = 10, method = "quantile"),
-      time_id = as.integer(factor(time)),
-      date = as.Date(time)
-    ) %>%
-    left_join(
-      gb_day_df %>% dplyr::select(date, p_group3),
-      by = c("date" = "date")
-    )
 
-  x <- wf_df_pred$pow_group %>% unique() %>% sort()
-  min_jump <- min(diff(sort(x))) / diff(range(x))
-  if (min_jump <= 1e-4) {
-    wf_df_pred <- wf_df_pred %>%
-      mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
-  }
-
-  cat("Converting coordinates to km\n")
-  wf_df_pred <- wf_df_pred %>%
-    st_geometry() %>%
-    (\(g) g / 1000)() %>%
-    st_set_geometry(wf_df_pred, .)
-
-  wf_df_fname <- sprintf(
-    "data/calibration_preddf_%s_%s.%s",
-    "base",
-    d0_tag,
-    extension
-  )
-  saveRDS(
-    wf_df_pred,
-    wf_df_fname
-  )
-}
-n_loc <- nrow(wf_df_pred %>% distinct(x, y))
-cat("Number of unique locations:", n_loc, "\n")
-n <- nrow(wf_df_pred)
-
-# read summary tables of predictions ######
-
+# read summary tables of prediction bands ######
 gb_fig_df <- lapply(
-  seq_along(sampled_days),
+  seq_along(sampled_days[-15]),
   function(i) {
     d0 <- sampled_days[i] %>% as.Date()
     # print(i)
     d0_tag <- base::format(d0, "%y%m%d")
     readRDS(sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)) %>%
       mutate(
-        pgroup3 = case_when(
-          i == 1 ~ "low",
-          i == 2 ~ "mid",
-          i == 3 ~ "high"
-        ) %>%
+        pgroup3 = sampled_days_df$p_group3[i] %>%
           factor(levels = c("low", "mid", "high"))
       )
   }
@@ -440,19 +627,23 @@ gb_fig_df <- lapply(
 
 
 wf_fig_df <- lapply(
-  seq_along(sampled_days),
+  seq_along(sampled_days[-15]),
   function(i) {
     d0 <- sampled_days[i] %>% as.Date()
     d0_tag <- base::format(d0, "%y%m%d")
-    readRDS(sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag))
+    readRDS(sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag)) %>%
+      mutate(
+        pgroup3 = sampled_days_df$p_group3[i] %>%
+          factor(levels = c("low", "mid", "high"))
+      )
   }
 ) %>%
   bind_rows()
 
 # calibration fit scatter####
-
+# #
 gb_fig_df %>%
-  filter(!oos) %>%
+  filter(oos) %>%
   ggplot(aes(x = norm_potential, y = mean, col = pgroup3)) +
   geom_point() +
   geom_abline(
@@ -466,15 +657,21 @@ gb_fig_df %>%
   # scale_color_lancet() +
   scale_color_manual(values = regime_palette) +
   labs(
-    x = "Normalised potential power",
-    y = "Normalised predicted power",
+    x = "Observed power",
+    y = "Predicted power",
     col = "regime"
   )
 
-ggsave("fig/GB_fit_scatter.pdf", width = 10, height = 6, dpi = 300)
+ggsave(
+  sprintf("fig/%s/GB_fit_scatter_oos.pdf", batch_name),
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
 
 wf_fig_df %>%
-  filter(!oos) %>%
+  filter(oos) %>%
   ggplot(aes(x = norm_potential, y = fit)) +
   geom_hex() +
   geom_abline(
@@ -484,10 +681,15 @@ wf_fig_df %>%
     color = "darkred"
   ) +
   facet_wrap(~model, labeller = as_labeller(mod_labels)) +
-  scale_fill_viridis_c(
+  # scale_fill_viridis_c(
+  #   trans = "log10",
+  #   name = "frequency",
+  #   limits = c(1, NA)
+  # ) +
+  scale_fill_gradient(
     trans = "log10",
-    name = "frequency",
-    limits = c(1, NA)
+    low = "grey90",
+    high = blues9[8]
   ) +
   theme_bw() +
   labs(
@@ -496,11 +698,11 @@ wf_fig_df %>%
     fill = "Count"
   )
 
-ggsave("fig/WF_fit_scatter.pdf", width = 10, height = 6, dpi = 300)
+ggsave("fig/WF_fit_scatter_oos.pdf", width = 10, height = 6, dpi = 300)
 
 ## Coverage bands #####
 
-### wf level
+### wf level ####
 cov_bands_wf <- wf_fig_df %>%
   filter(oos) %>%
   group_by(model, coord_id) %>%
@@ -526,7 +728,7 @@ cov_bands_wf %>%
   scale_x_discrete(labels = mod_labels) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
-  filename = sprintf("fig/WF_pred_band_coverage.pdf"),
+  filename = sprintf("fig/%s/WF_pred_band_coverage.pdf", batch_name),
   width = 10,
   height = 6,
   # dpi = 300
@@ -553,13 +755,71 @@ cov_bands %>%
   scale_x_discrete(labels = mod_labels) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
-  filename = sprintf("fig/GB_pred_band_coverage.pdf"),
+  filename = sprintf("fig/%s/GB_pred_band_coverage.pdf", batch_name),
   width = 10,
   height = 6,
   # dpi = 300
 )
 
-# error metrics ####
+cov_bands <- wf_fig_df %>%
+  left_join(loc_cat %>% dplyr::select(coord_id, tech_typ), by = "coord_id") %>%
+  filter(oos) %>%
+  group_by(model, tech_typ) %>%
+  summarise(
+    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(coverage)) %>%
+  mutate(
+    model = factor(model, levels = model %>% unique())
+  )
+
+cov_bands %>%
+  ggplot(aes(x = model, y = coverage)) +
+  geom_col(fill = blues9[7]) +
+  geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
+  facet_wrap(~tech_typ) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Model", y = "Coverage") +
+  scale_x_discrete(labels = mod_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(
+  filename = sprintf("fig/%s/GB_pred_band_coverage_tech.pdf", batch_name),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
+
+cov_bands <- wf_fig_df %>%
+  # left_join(loc_cat %>% dplyr::select(coord_id, tech_typ), by = "coord_id") %>%
+  filter(oos) %>%
+  group_by(model, pgroup3) %>%
+  summarise(
+    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(coverage)) %>%
+  mutate(
+    model = factor(model, levels = model %>% unique())
+  )
+
+cov_bands %>%
+  ggplot(aes(x = model, y = coverage)) +
+  geom_col(fill = blues9[7]) +
+  geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
+  facet_wrap(~pgroup3) +
+  coord_cartesian(ylim = c(0, 1)) +
+  labs(x = "Model", y = "Coverage") +
+  scale_x_discrete(labels = mod_labels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave(
+  filename = sprintf("fig/%s/GB_pred_band_coverage_regime.pdf", batch_name),
+  width = 14,
+  height = 6,
+  # dpi = 300
+)
+
+## error metrics ####
 mod_labels <- c(
   # "Generic PC",
   "Linear model",
@@ -589,11 +849,11 @@ metrics_table <- wf_fig_df %>%
   summarise(
     RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = fit),
     MAE = ModelMetrics::mae(actual = norm_potential, predicted = fit),
-    MDAPE = mdape(
-      actual = norm_potential,
-      predicted = fit,
-      pos_only = TRUE
-    ),
+    # MDAPE = mdape(
+    #   actual = norm_potential,
+    #   predicted = fit,
+    #   pos_only = TRUE
+    # ),
     Bias = mean(fit - norm_potential, na.rm = TRUE),
     .groups = "drop"
   ) %>%
@@ -603,7 +863,12 @@ metrics_table <- wf_fig_df %>%
   ) %>%
   pivot_wider(
     names_from = oos,
-    values_from = c(RMSE, MAE, MDAPE, Bias)
+    values_from = c(
+      RMSE,
+      MAE,
+      # MDAPE,
+      Bias
+    )
   )
 metrics_table
 metrics_table %>%
@@ -612,10 +877,10 @@ metrics_table %>%
       c(RMSE_IS, RMSE_OOS, MAE_IS, MAE_OOS, Bias_IS, Bias_OOS),
       ~ round(., 3)
     ),
-    across(c(MDAPE_IS, MDAPE_OOS), ~ round(., 1))
+    # across(c(MDAPE_IS, MDAPE_OOS), ~ round(., 1))
   ) %>%
   kbl(
-    format = "latex",
+    # format = "latex",
     booktabs = TRUE,
     align = "lcccccccc",
     col.names = c(
@@ -624,8 +889,8 @@ metrics_table %>%
       "OOS",
       "IS",
       "OOS",
-      "IS",
-      "OOS",
+      # "IS",
+      # "OOS",
       "IS",
       "OOS"
     ),
@@ -635,11 +900,12 @@ metrics_table %>%
     " " = 1,
     "RMSE" = 2,
     "MAE" = 2,
-    "MDAPE (%)" = 2,
+    # "MDAPE (%)" = 2,
     "Bias" = 2
   )) %>%
   kable_styling(latex_options = "hold_position")
 
+#
 
 # update currently used figures in overleaf ####
 
