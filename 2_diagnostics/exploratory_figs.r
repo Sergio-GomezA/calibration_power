@@ -210,7 +210,7 @@ if (file.exists(sample_loc_fname)) {
   ))
   # names(pwr_curv_df)
   loc_cat <- pwr_curv_df %>%
-    distinct(coord_id, bmUnitName, lon, lat, tech_typ) %>%
+    distinct(coord_id, bmUnitName, site_name, lon, lat, tech_typ) %>%
     mutate(
       bmUnitName = trimws(bmUnitName),
       short_name = gsub(
@@ -225,6 +225,7 @@ if (file.exists(sample_loc_fname)) {
     group_by(coord_id) %>%
     summarise(
       short_name = first(short_name),
+      site_name = first(site_name),
       tech_typ = first(tech_typ2),
       lon = first(lon),
       lat = first(lat)
@@ -232,7 +233,7 @@ if (file.exists(sample_loc_fname)) {
     mutate(
       tooltip_text = paste0(
         "Site: ",
-        short_name,
+        site_name,
         "<br>Type: ",
         tech_typ,
         "<br>coord id: ",
