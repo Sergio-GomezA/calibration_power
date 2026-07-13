@@ -353,6 +353,14 @@ theme_set(theme_bw())
 
 # Low wind speed events distribution
 
+## Low wind events (LWE) analisys
+
+- Calibration should also consider LWE
+- Using 0.1 as threshold for LWE
+- Testing that model matches:
+  - observed frequency of events
+  - distribution of duration
+
 ## Low wind speed events (insample)
 
 ::: {.columns}
