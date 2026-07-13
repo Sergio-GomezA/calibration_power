@@ -6,7 +6,7 @@ starttime <- Sys.time()
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
-day_id <- 2
+day_id <- 1
 mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
 batch_name <- "batch2025"
@@ -147,9 +147,11 @@ mod_labels <- c(
   "AR1 model",
   "AR2 model",
   "1D SPDE model",
-  "Spatio-temporal model",
+  "Spatio-temporal model fine",
+  "Spatio-temporal model coarse",
   "QM",
-  "GB LM"
+  "GB LM",
+  "Observed"
 )
 est_cols <- c(
   "norm_power_est0",
@@ -157,14 +159,16 @@ est_cols <- c(
   "ar1",
   "ar2",
   "spde1d",
-  "st",
+  "st0_m1",
+  "st0_m2",
   "qm",
-  "agg_lm"
+  "agg_lm",
+  "observed"
 )
 
 if (local_run) {
   mod_labels <- mod_labels[!grepl("fine", mod_labels)]
-  est_cols <- est_cols[!grepl("st0_m2", est_cols)]
+  est_cols <- est_cols[!grepl("st0_m1", est_cols)]
 }
 n_models <- length(est_cols)
 names(mod_labels) <- est_cols
@@ -489,7 +493,11 @@ low_events_model %>%
     x = "Duration (hours)",
     y = "Frequency"
   ) +
-  facet_wrap(~model, scales = "free", labeller = as_labeller(mod_labels)) +
+  facet_wrap(
+    ~model,
+    scales = "free",
+    # labeller = as_labeller(mod_labels)
+  ) +
   theme_minimal() +
   theme(
     plot.title = element_text(hjust = 0.5),
@@ -529,7 +537,11 @@ qq_df <- low_events_model %>%
 ggplot(qq_df, aes(x = obs_q, y = model_q)) +
   geom_point(size = 1) +
   geom_abline(slope = 1, intercept = 0, colour = "red") +
-  facet_wrap(~model, scales = "free", labeller = as_labeller(mod_labels)) +
+  facet_wrap(
+    ~model,
+    scales = "free",
+    #  labeller = as_labeller(mod_labels)
+  ) +
   labs(
     title = "Q-Q Plot of Low Wind Event Durations",
     x = "Observed quantiles",
@@ -898,6 +910,7 @@ cat("--------------------------------------------------------------------\n")
 dur_lim <- 25
 plot_df <-
   lwe_pred_df %>%
+  filter(model %in% est_cols) %>%
   bind_rows(lwe_obs_pred) %>%
   filter(duration_h < dur_lim) %>%
   mutate(bin = floor(duration_h)) %>% # matches binwidth = 1
@@ -908,7 +921,11 @@ plot_df <-
 plot_df %>%
   ggplot(aes(bin, percent)) +
   geom_col(fill = "steelblue", alpha = 0.6, width = 1) +
-  facet_wrap(~model, scales = "free_y", labeller = as_labeller(mod_labels)) +
+  facet_wrap(
+    ~model,
+    scales = "free_y",
+    labeller = as_labeller(mod_labels)
+  ) +
   labs(
     x = "Duration (hours)",
     y = "Percentage (%)"
@@ -936,7 +953,7 @@ obs <- lwe_obs_pred %>%
 probs <- seq(0, 1, length.out = 100)
 
 qq_df <- lwe_pred_df %>%
-  filter(duration_h < dur_lim) %>%
+  filter(duration_h < dur_lim, model %in% est_cols) %>%
   group_by(model) %>%
   summarise(
     obs_q = list(quantile(obs, probs = probs, na.rm = TRUE)),
@@ -972,9 +989,10 @@ ggsave(
 
 
 # distribution of LWE
-dur_lim <- 100
+dur_lim <- 25
 plot_df <-
   lwe_newloc_df %>%
+  filter(model %in% est_cols) %>%
   bind_rows(lwe_obs_newloc) %>%
   filter(duration_h < dur_lim) %>%
   mutate(bin = floor(duration_h)) %>% # matches binwidth = 1
