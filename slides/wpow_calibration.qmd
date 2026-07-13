@@ -355,7 +355,7 @@ theme_set(theme_bw())
 
 ## Low wind speed events (insample)
 
-:: {.columns}
+::: {.columns}
 
 ::: {.column width="50%"}
 \centering
@@ -373,7 +373,7 @@ Low wind speed events distribution
 
 ## Low wind speed events (oos time)
 
-:: {.columns}
+::: {.columns}
 
 ::: {.column width="50%"}
 \centering
@@ -391,7 +391,7 @@ Low wind speed events distribution
 
 ## Low wind speed events (oos space)
 
-:: {.columns}
+::: {.columns}
 
 ::: {.column width="50%"}
 \centering
