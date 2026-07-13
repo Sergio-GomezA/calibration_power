@@ -351,8 +351,70 @@ theme_set(theme_bw())
 
 \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/GB_pred_band_coverage_regime_spaceoos.pdf}
 
+# Low wind speed events distribution
+
+## Low wind speed events (insample)
+
+:: {.columns}
+
+::: {.column width="50%"}
+\centering
+Low wind speed events distribution
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/low_wind_duration_dist_t0_1.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+Low wind speed events distribution
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/low_wind_duration_qq_t0_1.pdf}
+:::
+
+:::
+
+## Low wind speed events (oos time)
+
+:: {.columns}
+
+::: {.column width="50%"}
+\centering
+Low wind speed events distribution
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/pred_samples_lwe_duration_dist_t0_1.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+Low wind speed events distribution
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/pred_samples_lwe_duration_qq_t0_1.pdf}
+:::
+
+:::
+
+## Low wind speed events (oos space)
+
+:: {.columns}
+
+::: {.column width="50%"}
+\centering
+Low wind speed events distribution
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/newloc_samples_lwe_duration_dist_t0_1.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+Low wind speed events distribution
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/newloc_samples_lwe_duration_qq_t0_1.pdf}
+:::
+
+:::
 
 
+# Next steps
+
+## Addressing challenges
+
+- Collapsing uncertainty under aggregation
+- Spatiotemporal model is not improving calibration
+- Low wind speed events are not well represented in the model samples
 
 # Appendix
 
@@ -447,11 +509,6 @@ aggr_summary_tbl%>%
   )
 ```
 
-
-## Low wind speed events
-\centering
-Low wind speed events distribution
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch3days/low_wind_duration_dist.pdf}
 
 
 
