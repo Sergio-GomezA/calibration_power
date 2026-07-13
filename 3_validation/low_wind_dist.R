@@ -11,7 +11,7 @@ mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 2
 override_objects <- FALSE
 batch_name <- "batch2025"
 # prec_init <- log(200)
-pow_threshold <- 0.1
+pow_threshold <- 0.05
 
 if (local_run) {
   cat("Running in local mode\n")
