@@ -230,6 +230,8 @@ high wind speed / altitude/ distance coast onshore /
 space oos 
 time oos
 
+update code pipeline to avoid saving models / samples
+
 offshore/onshore summaries 
 pred bands
 rmse metrics
