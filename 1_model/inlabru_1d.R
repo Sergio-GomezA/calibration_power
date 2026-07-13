@@ -323,13 +323,6 @@ cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
 n <- nrow(wf_df_frag)
 cat("Number of records in the dataset:", n, "\n")
 
-# wf_df_frag %>%
-#   ggplot() +
-#   geom_point(aes(pow_group,error0), bins = 50)
-# wf_df_frag %>%
-#   ggplot() +
-#   geom_point(aes(pow_group,error0), bins = 50)+
-#   facet_wrap(~tech_typ, scales = "free_x")
 
 ## 1.1 mesh building #####
 cat("Building spatial mesh\n")
@@ -597,9 +590,6 @@ if (!file.exists(model_fname) || override_objects) {
 }
 
 summary(bruar1)
-# bruar1$summary.fixed[, 1:6]
-# bruar1$summary.random$tech_typ[, 1:6]
-# bruar1$summary.random$tech_power[, 1:6]
 
 source("aux_funct.R")
 effect_names <- names(bruar1$summary.random)
@@ -626,21 +616,6 @@ for (effect in effect_names) {
     height = 4
   )
 }
-# u_comp <- plot.effects(
-#   bruar1,
-#   "u",
-#   n.replicate = length(unique(wf_df_frag$coord_id)),
-#   replicate_names = unique(wf_df_frag$coord_id),
-#   show.plot = TRUE
-# )
-# u_comp$fig +
-#   geom_line(
-#     data = wf_df_frag %>%
-#       dplyr::select(coord_id, t, norm_potential) %>%
-#       st_drop_geometry() %>%
-#       rename(type = coord_id, group = t),
-#     aes(x = group, y = norm_potential)
-#   )
 
 plot.hyper.dens(bruar1)
 ggsave(
@@ -649,8 +624,6 @@ ggsave(
   height = 4
 )
 
-# plot(bruar1$summary.fitted.values$mean[1:n], wf_df_frag$norm_potential)
-# plot(bruar1$summary.random$u$mean, wf_df_frag$norm_potential)
 ## 2.2 AR2 temporal model ####
 ar_tag <- "ar2"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
@@ -727,9 +700,7 @@ if (!file.exists(model_fname) || override_objects) {
 }
 
 summary(bruar2)
-# bruar2$summary.fixed[, 1:6]
-# bruar2$summary.random$tech_typ[, 1:6]
-# bruar2$summary.random$tech_power[, 1:6]
+
 
 # source("aux_funct.R")
 effect_names <- names(bruar2$summary.random)
@@ -785,12 +756,6 @@ spde1D <- inla.spde2.pcmatern(
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
   norm_power_est0 +
-  # power_correction(
-  #   pow_group,
-  #   model = "rw2",
-  #   # replicate = tech_typ,
-  #   constr = TRUE
-  # ) + # smooth correction power
   d_coast(
     d_coast_group,
     model = "rw2",
@@ -853,10 +818,7 @@ if (!file.exists(model_fname) || override_objects) {
 }
 
 summary(bru1d)
-# bru1d$summary.fixed[, 1:6]
-# bru1d$summary.random$tech_typ[, 1:6]
-# test <- bru1d$summary.random$hour
-# plot(bru1d$summary.fitted.values$mean[1:n], wf_df_frag$norm_potential)
+
 # source("aux_funct.R")
 effect_names <- names(bru1d$summary.random)
 excluded_effects <- c("u", "hour")
@@ -1003,12 +965,7 @@ ggsave(
   width = 6,
   height = 4
 )
-# wf_df_frag %>%
-#   pull(pow_group) %>%
-#   range()
 
-# wf_df_frag %>%
-#   ggplot()+ geom_density(aes(pow_group, fill = tech_typ), alpha = 0.5)+theme_minimal()
 
 ### plot intensity of spatial field ####
 
@@ -1104,35 +1061,7 @@ ggsave(
   width = 10,
   height = 6
 )
-# plot ts
-# mesh triangle size
-# different days
-# covariate for terrain if necessary
-#
 
-# ppxl_all <- fm_cprod(
-#   ppxl,
-#   data.frame(
-#     time_id = seq(9, 12, 18),
-#     tech_typ = unique(wf_df_frag$tech_typ),
-#     norm_power_est0 = seq(0, 1, length.out = 10),
-#     ws_group = unique(wf_df_frag$ws_group) %>% sort()
-#   )
-# )
-
-# pow_est_st <- predict(
-#   bru0,
-#   ppxl_all,
-#   ~ data.frame(
-#     time_id = time_id,
-#     norm_potential_est = (Intercept +
-#       power_correction +
-#       tech_typ +
-#       tech_power +
-#       wind +
-#       st_field)
-#   )
-# )
 
 ## 2.3 lm wf version ####
 
