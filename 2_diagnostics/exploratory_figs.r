@@ -85,7 +85,7 @@ mod_labels <- c(
   "QM",
   "Spatio-temporal fine",
   "Spatio-temporal coarse",
-  "1D SPDE model",
+  "LM+hour model",
   "AR1 model",
   "AR2 model"
 )
@@ -672,7 +672,10 @@ ggsave(
 
 
 wf_fig_df %>%
-  filter(oos) %>%
+  mutate(hour = hour(time)) %>%
+  filter(oos, hour <= 1) %>%
+  # filter(oos, between(hour, 10, 14)) %>%
+  # filter(oos) %>%
   ggplot(aes(x = norm_potential, y = fit)) +
   geom_hex() +
   geom_abline(
@@ -690,7 +693,8 @@ wf_fig_df %>%
   scale_fill_gradient(
     trans = "log10",
     low = "grey90",
-    high = blues9[8]
+    high = blues9[5],
+    # limits = c(10, NA),
   ) +
   theme_bw() +
   labs(
@@ -698,7 +702,7 @@ wf_fig_df %>%
     y = "Normalised predicted power",
     fill = "Count"
   )
-
+# scales::show_col(blues9)
 ggsave(
   sprintf("fig/%s/WF_fit_scatter_oos.pdf", batch_name),
   width = 10,
@@ -833,7 +837,7 @@ mod_labels <- c(
   "QM",
   "Spatio-temporal fine",
   "Spatio-temporal coarse",
-  "1D SPDE model",
+  "LM+hour model",
   "AR1 model",
   "AR2 model"
 )
@@ -1148,7 +1152,7 @@ mod_labels <- c(
   "QM",
   "Spatio-temporal fine",
   "Spatio-temporal coarse",
-  "1D SPDE model",
+  "LM+hour model",
   "AR1 model",
   "AR2 model"
 )
@@ -1229,7 +1233,7 @@ metrics_table %>%
 # update currently used figures in overleaf ####
 
 path1 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power_main_doc/spfig"
-path2 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power/fig"
+path2 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power/fig/batch2025"
 
 # Files to update in overleaf
 files1 <- list.files(path1)
