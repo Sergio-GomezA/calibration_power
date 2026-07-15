@@ -780,7 +780,7 @@ model_fname <- file.path(
 
 if (!file.exists(model_fname) || override_objects) {
   cat("--------------------------------------------------------------------\n")
-  cat("Fitting 1D SPDE model\n")
+  cat("Fitting LM+hour model\n")
   cat("--------------------------------------------------------------------\n")
   bru1d <- bru(
     components = components0,
@@ -813,7 +813,7 @@ if (!file.exists(model_fname) || override_objects) {
     file = model_fname
   )
 } else {
-  cat("Loading existing 1D SPDE model\n")
+  cat("Loading existing LM+hour model\n")
   bru1d <- readRDS(model_fname)
 }
 
@@ -1078,8 +1078,9 @@ if (!file.exists(file.path(model_path, lm_wf_modfname)) || override_objects) {
 
   full_model0 <- lm(
     norm_potential ~
+      tech_typ +
       tech_typ *
-      norm_power_est0 +
+        norm_power_est0 +
       # norm_power_est0 * month +
       # hour +
       # dist_coast * tech_typ +
@@ -1127,8 +1128,9 @@ if (!file.exists(file.path(model_path, lm_agg_modfname)) || override_objects) {
 
   full_model0_agg <- lm(
     norm_potential ~
+      tech_typ +
       tech_typ *
-      norm_power_est0 +
+        norm_power_est0 +
       # norm_power_est0 * month +
       # hour +
       # dist_coast * tech_typ +
@@ -1194,7 +1196,7 @@ mod_labels <- c(
   "Linear model",
   "AR1 model",
   "AR2 model",
-  # "1D SPDE model",
+  # "LM+hour model",
   "Spatio-temporal model",
   "QM",
   "GB LM"
