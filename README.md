@@ -232,6 +232,10 @@ time oos
 
 update code pipeline to avoid saving models / samples
 
+reliability diagrams
+accuracy vs lead time
+manufacturer's power curve
+
 offshore/onshore summaries 
 pred bands
 rmse metrics
