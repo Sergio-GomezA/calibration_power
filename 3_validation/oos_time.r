@@ -133,7 +133,7 @@ mod_labels <- c(
   "QM",
   "Spatio-temporal fine",
   "Spatio-temporal coarse",
-  "1D SPDE model",
+  "LM+hour model",
   "AR1 model",
   "AR2 model"
 )

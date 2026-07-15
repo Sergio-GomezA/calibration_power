@@ -146,7 +146,7 @@ mod_labels <- c(
   "Linear model",
   "AR1 model",
   "AR2 model",
-  "1D SPDE model",
+  "LM+hour model",
   "Spatio-temporal model fine",
   "Spatio-temporal model coarse",
   "QM",
