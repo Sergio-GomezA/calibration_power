@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2026-07-09"
+date: "2026-07-14"
 format: 
   beamer:
     theme: Rochester
@@ -15,12 +15,14 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "wpow_calibration_slides_26-07-09.pdf"
+    output-file: "wpow_calibration_slides_26-07-14.pdf"
 header-includes:
   - \usepackage{graphicx}
   - \setbeamerfont{itemize/enumerate body}{size=\footnotesize}
   - \setbeamerfont{itemize/enumerate subbody}{size=\footnotesize}
   - \setbeamerfont{itemize/enumerate subsubbody}{size=\footnotesize}
+  - \usepackage{tikz}
+  - \usetikzlibrary{positioning, fit, arrows.meta, decorations.pathreplacing, backgrounds}
 fontsize: 12pt
 aspectratio: 169
 editor: source
@@ -60,6 +62,7 @@ theme_set(theme_bw())
 
 ### New
 \begin{itemize}
+  \item Updated validation framework
   \item OOS assessment
   \begin{itemize}
     \item OOS time
@@ -68,7 +71,51 @@ theme_set(theme_bw())
   \item Low wind events distribution
 \end{itemize}
 
+
+
+
 # Model validation framework
+
+## Updated models
+\begin{itemize}
+    \item Wind farm level models
+    \begin{enumerate}    
+        \item Linear model (LM)
+        \item Linear model with hour effect
+        \item Linear model with AR1 (or AR2) errors
+        \item Spatio-temporal model
+        \item Quantile mapping (QM)
+   \end{enumerate}
+   \item Models on Great Britain aggregated power
+        \begin{enumerate}[6]
+            \item Linear model (GB LM)
+        \end{enumerate}
+\end{itemize}
+
+## Model equation
+### Linear model (LM)
+
+```{=latex}
+        \begin{align}
+        \mathbb{E}(p^{\mathrm{calib}}_{it})
+        &= \alpha_{k} + \beta_{k} \hat{p}_{it} + \gamma e_i + \delta d_i + s_{w,k}(w_{it})
+        + \epsilon_{it},\label{eq:base_model}\\
+        \epsilon_{it} & \sim \mathcal{N}(0, \sigma_\epsilon) \nonumber
+        \end{align}
+        where the intercept and slope vary by type $k:\{\text{onshore, offshore}\}$, $e_i$ and $d_i$ represent the land elevation and the distance to the coast at location $i$, respectively, and $s_{w,k}(\cdot)$ is a smooth function that serves as a power regime correction.
+```
+## Alternative models
+### Spatiotemporal model (ST)
+
+```{=latex}
+\begin{align}
+\mathbb{E}(p^{\mathrm{calib}}_{it})
+&= \alpha_{k} + \beta_{k} \hat{p}_{it} + \gamma e_i + \delta d_i + s_{w,k}(w_{it}) + u_t,\tag{4}\label{eq:spt_model}\\
+u_{it} &= \xi_i \cdot \tau_t.\nonumber
+\end{align}
+The additional term $u_{it}$ is a separable spatiotemporal random effect. It consists of $\xi_i$, a zero-mean Gaussian spatial field over farm locations, and $\tau_t$, a temporal component modelled as an AR(1) process.
+```
+
 
 ## Framework for OOS assessment
 
@@ -80,10 +127,39 @@ theme_set(theme_bw())
   - 80/20 WF split for training and testing
   - Training with 3 days to predict the 4th
   - Randomly chosen 15 days from 2025, 5 per regime
-- Evaluate performance at WF level
-- Error under aggregation
-  - GB level
-  - Onshore / offshore
+
+\vspace{0.5cm}
+\centering
+\begin{tikzpicture}[
+  scale=0.7, transform shape,
+    box/.style={draw, minimum width=2cm, minimum height=1.2cm, align=center, font=\small},
+    train/.style={box, fill=blue!15},
+    pred/.style={box, fill=orange!25},
+    lbl/.style={font=\scriptsize, align=center}
+]
+
+    % Training days
+    \node[train] (d1) at (0,0) {Day $t-2$};
+    \node[train] (d2) at (2.2,0) {Day $t-1$};
+    \node[train] (d3) at (4.4,0) {Day $t$};
+    
+    % Prediction day
+    \node[pred] (d4) at (7.2,0) {Day $t+1$};
+    
+    % Arrow from training block to prediction
+    \draw[-{Latex[length=3mm]}] (3.4,-1) -- (6.2,-1);
+    
+    % Labels underneath
+    \node[lbl, below=0.3cm of d1] {};
+    \node[lbl] at (2.2,-0.9) {Training data};
+    \node[lbl] at (7.2,-0.9) {Prediction};
+    
+    % Bracket over training days
+    \draw[decorate, decoration={brace, amplitude=6pt}] (-1,0.8) -- (5.4,0.8)
+        node[midway, above=6pt, font=\small] {3 days of training};
+
+\end{tikzpicture}
+
 
 :::
 
@@ -103,7 +179,8 @@ theme_set(theme_bw())
 
 ::: {.column width="50%"}
 - Objective is to assess performance by regime
-- OOS days are different regimes of wind speed
+- t+1 day are from specific regimes of wind speed
+- Randomly chosen 5 days per regime
 - Previous 3 days can be anything
 :::
 
@@ -116,22 +193,49 @@ theme_set(theme_bw())
 
 :::
 
-## Model portfolio
+## Key results
+
+::: {.columns}
+
+::: {.column width="50%"}
+- Increasing model complexity improves mean power estimates
+- However, uncertainty quantification for complex models misreprestents observed variability
+
+\tiny
+
+\begin{table}[!h]
+\centering
+\begin{tabular}{lcc}
+\toprule
+Model & RMSE (IS) & RMSE (OOS) \\
+\midrule
+GB LM                  & 0.212 & 0.203 \\
+AR1 model              & 0.184 & 0.193 \\
+AR2 model              & 0.184 & 0.194 \\
+Linear model           & 0.189 & 0.188 \\
+LM+hour model          & 0.061 & 0.193 \\
+\addlinespace
+Spatio-temporal coarse & 0.104 & 0.182 \\
+Spatio-temporal fine   & 0.071 & 0.171 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+:::
+
+::: {.column width="50%"}
+\centering
+\small Coverage for day-ahead prediction bands
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_coverage.pdf}
+:::
+
+:::
+
+# Out-of-sample analysis
 
 
-- Wind farm level models:
-  - Generic Power Curve (ERA5 + generic PC estimate)
-  - Quantile Mapping
-  - Linear model 
-  - AR1, AR2
-  - Spatiotemporal model fine mesh and coarser mesh
-
-- Linear model at Great Britain (GB) level
-
-# Out-of-sample time
-
-
-## Wind farm prediction bands
+## Wind farm prediction bands (oos time)
 
 ::: {.columns}
 
@@ -151,13 +255,13 @@ theme_set(theme_bw())
 
 :::
 
-## Wind farm prediction bands
+## Wind farm prediction bands (oos time)
 
 ::: {.columns}
 
 ::: {.column width="50%"}
 \centering
-\small 1D SPDE model (27-01-2025)
+\small LM+hour model (27-01-2025)
 
 \includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spde1d_250127_2.pdf}
 :::
@@ -171,7 +275,7 @@ theme_set(theme_bw())
 
 :::
 
-## Aggregated prediction bands
+## Aggregated prediction bands (oos time)
 
 ::: {.columns}
 
@@ -192,7 +296,7 @@ theme_set(theme_bw())
 :::
 
 
-## Day-ahead forecast coverage
+## Day-ahead forecast coverage (oos time)
 
 ::: {.columns}
 
@@ -213,7 +317,7 @@ theme_set(theme_bw())
 :::
 
 
-## Coverage under aggregation
+## Coverage under aggregation (oos time)
 
 ::: {.columns}
 
@@ -233,7 +337,7 @@ theme_set(theme_bw())
 
 :::
 
-## Coverage under aggregation by regime
+## Coverage under aggregation by regime (oos time)
 \centering
 \small Regime aggregation
 
@@ -241,9 +345,9 @@ theme_set(theme_bw())
 
 
 
-# Out-of-sample locations
+# Out-of-sample locations {-}
 
-## Wind farm prediction bands
+## Wind farm prediction bands (oos space)
 
 ::: {.columns}
 
@@ -263,13 +367,13 @@ theme_set(theme_bw())
 
 :::
 
-## Wind farm prediction bands
+## Wind farm prediction bands (oos space)
 
 ::: {.columns}
 
 ::: {.column width="50%"}
 \centering
-\small 1D SPDE model (27-01-2025)
+\small LM+hour model (27-01-2025)
 
 \includegraphics[width=\linewidth,height=6cm,keepaspectratio]{../fig/batch2025/WF_pred_band_spaceoos_spde1d_250127_1.pdf}
 :::
@@ -283,7 +387,7 @@ theme_set(theme_bw())
 
 :::
 
-## Aggregated prediction bands
+## Aggregated prediction bands (oos space)
 
 ::: {.columns}
 
@@ -304,7 +408,7 @@ theme_set(theme_bw())
 :::
 
 
-## Unseen locations prediction intervals coverage
+## Unseen locations prediction intervals coverage (oos space)
 
 ::: {.columns}
 
@@ -325,7 +429,7 @@ theme_set(theme_bw())
 :::
 
 
-## Coverage under aggregation
+## Coverage under aggregation (oos space)
 
 ::: {.columns}
 
@@ -345,7 +449,7 @@ theme_set(theme_bw())
 
 :::
 
-## Coverage under aggregation by regime
+## Coverage under aggregation by regime (oos space)
 \centering
 \small Regime aggregation
 
@@ -424,7 +528,62 @@ Low wind speed events distribution
 - Spatiotemporal model is not improving calibration
 - Low wind speed events are not well represented in the model samples
 
-# Appendix
+# Appendix {-}
+
+## Alternative models
+### Linear model with hour effect
+
+```{=latex}
+
+        This model results from adding a periodic hour effect $h_t$ to control temporal effects
+        \begin{equation}
+        \mathbb{E}(p^{\mathrm{calib}}_{it})
+        = \alpha_{k} + \beta_{k} \hat{p}_{it} + \gamma e_i + \delta d_i + s_{w,k}(w_{it}) + h_t
+        + \epsilon_{it},\label{eq:1dspde_model}
+        \end{equation}
+```
+## Alternative models
+### Linear model with AR1 (or AR2) errors
+
+```{=latex}
+        A more robust temporal correlation term can be added to the model:
+        \begin{align}
+        \mathbb{E}(p^{\mathrm{calib}}_{it})
+        &= \alpha_{k} + \beta_{k} \hat{p}_{it} + \gamma e_i + \delta d_i + s_{w,k}(w_{it}) + u_t,\label{eq:ar_model}\\
+        u_t &\sim \mathrm{AR}(1) ,\nonumber
+        \end{align}
+        where $u_t$ captures residual temporal autocorrelation, satisfying $u_t = \rho\, u_{t-1} + \varepsilon_{it}$ with $|\rho| < 1$
+```
+
+## Alternative models
+### Quantile mapping (QM)
+
+```{=latex}
+This approach doesn't include covariates but instead of correcting only the mean bias, makes the model match the distribution of observed power.
+        \begin{equation}
+        p^{\mathrm{calib}}_{t_k}
+        = F_{\mathrm{obs}}\!\left(F_{\mathrm{mod}}^{-1}(\hat{p}_{t_k})\right),
+        \tag{5}
+        % \tag{\ref{eq:qm_model}}
+        \end{equation}
+        where $F_{\mathrm{mod}}$ is the empirical CDF of the ERA5-derived power estimate and $F_{\mathrm{obs}}$ is the empirical CDF of the observed generation. The transfer function $F_{\mathrm{obs}} \circ F_{\mathrm{mod}}^{-1}$ is a non-decreasing smooth function that corrects distributional bias by power regime.
+```
+## Alternative models
+### Linear model (GB LM)
+
+```{=latex}
+
+            If the goal is only to produce estimates at the aggregate level, the optimal correction is achieved by modelling aggregate time series instead of aggregating estimates.
+            \begin{align}
+            p_t &= \sum_i p_{it} \nonumber\\
+            \mathbb{E}(p^{\mathrm{calib}}_{t})
+            &= \alpha_{k} + \beta_{k} \hat{p}_{t} + s_{w,k}(\tilde w_{t})
+            + \epsilon_{t},\label{eq:agg_model}\\
+            \epsilon_{t} & \sim \mathcal{N}(0,\tilde \sigma_{\epsilon}), \nonumber \tag{6}\label{eq:agg_error}
+            \end{align}
+            where now wind power $p_t$ is the average capacity factor of all the wind farms, $\tilde w_t$ is the average wind speed of the observed locations, and $\epsilon$ now represents the error in aggregated terms.
+```
+        
 
 ## Meshes for spatiotemporal models
 
@@ -447,6 +606,28 @@ Fine mesh
 :::
 
 # Error metrics and performance assessment {-}
+## Error metrics
+
+\footnotesize
+\begin{table}[!h]
+\centering
+\begin{tabular}[t]{lcccccccc}
+\toprule
+\multicolumn{1}{c}{ } & \multicolumn{2}{c}{RMSE} & \multicolumn{2}{c}{MAE} & \multicolumn{2}{c}{MDAPE (\%)} & \multicolumn{2}{c}{Bias} \\
+\cmidrule(l{3pt}r{3pt}){2-3} \cmidrule(l{3pt}r{3pt}){4-5} \cmidrule(l{3pt}r{3pt}){6-7} \cmidrule(l{3pt}r{3pt}){8-9}
+Model & IS & OOS & IS & OOS & IS & OOS & IS & OOS\\
+\midrule
+GB LM & 0.212 & 0.203 & 0.147 & 0.138 & 31.8 & 36.7 & 0.024 & 0.047\\
+AR1 model & 0.184 & 0.193 & 0.135 & 0.137 & 30.4 & 37.2 & 0.010 & 0.055\\
+AR2 model & 0.184 & 0.194 & 0.135 & 0.137 & 30.4 & 37.3 & 0.010 & 0.056\\
+Linear model & 0.189 & 0.188 & 0.132 & 0.130 & 31.9 & 36.5 & 0.001 & 0.033\\
+LM+hour model & 0.061 & 0.193 & 0.041 & 0.134 & 9.8 & 41.7 & 0.004 & 0.041\\
+\addlinespace
+Spatio-temporal coarse & 0.104 & 0.182 & 0.070 & 0.124 & 16.5 & 40.2 & 0.005 & 0.032\\
+Spatio-temporal fine & 0.071 & 0.171 & 0.046 & 0.113 & 10.0 & 37.2 & 0.003 & 0.042\\
+\bottomrule
+\end{tabular}
+\end{table}
 
 ## Error metrics
 
@@ -516,28 +697,6 @@ aggr_summary_tbl%>%
     latex_options = c("scale_down")
   )
 ```
-
-
-
-
-# Spatiotemporal calibration model {-}
-
-## Model overview
-
-\begin{equation}
-    \mathbb{E}(p^{\mathrm{calib}}_{it})
-    = \alpha + \beta_{k} + \beta_m + \beta_h
-    + s_p(\hat{p}_{it}) + s_w(w_{it})
-    + u_{it},
-    \label{eq:bayes_spat}
-  \end{equation}
-
-- Calibrated power: corrected output at site *i*, time *t*.  
-- $\alpha$: intercept.  
-- Fixed effects $\beta_k, \beta_m, \beta_h$: location/season/time structure. 
-- ERA5 correction $s_p$: bias adjustment of ERA5 + generic PC estimate.  
-- Wind effect $s_w$: nonlinear wind–power correction.  
-- Spatiotemporal effect $u_{it}$: Spatial component + AR1 error.
 
 
 ## References
