@@ -86,7 +86,28 @@ inla_core_option <- "%d:1"
 cat("Setting INLA to use", mc, "cores\n")
 inla.setOption(num.threads = sprintf(inla_core_option, mc))
 
-
+base_bru_options <- bru_options(
+  bru_verbose = 3,
+  verbose = TRUE,
+  control.compute = list(
+    dic = TRUE,
+    cpo = TRUE,
+    waic = TRUE,
+    control.gcpo = list(enable = TRUE, num.level.sets = 3)
+  )
+)
+spde1d_bru_opt <- as.bru_options(
+  list(
+    control.family = list(
+      hyper = list(
+        prec = list(
+          initial = prec_init_gau,
+          fixed = fixed_gaus_1DSPE
+        )
+      )
+    )
+  )
+)
 cat(
   "--------------------------------------------------------------------\n"
 )
@@ -574,10 +595,7 @@ if (!file.exists(model_fname) || override_objects) {
       )
     ),
     data = wf_df_frag,
-    options = bru_options(
-      bru_verbose = 3,
-      control.inla = list(verbose = TRUE)
-    )
+    options = base_bru_options
   )
 
   saveRDS(
@@ -588,6 +606,11 @@ if (!file.exists(model_fname) || override_objects) {
   cat("Loading existing ar1 model\n")
   bruar1 <- readRDS(model_fname)
 }
+
+# bruar1$cpo %>% str()
+# bruar1$dic %>% str()
+# bruar1$waic %>% str()
+# bruar1$gcpo %>% str()
 
 summary(bruar1)
 
@@ -684,10 +707,7 @@ if (!file.exists(model_fname) || override_objects) {
       u,
     family = "gaussian",
     data = wf_df_frag,
-    options = bru_options(
-      bru_verbose = 3,
-      control.inla = list(verbose = TRUE)
-    )
+    options = base_bru_options
   )
 
   saveRDS(
@@ -795,19 +815,10 @@ if (!file.exists(model_fname) || override_objects) {
     family = "gaussian",
     data = wf_df_frag,
     options = bru_options(
-      bru_verbose = 3,
-      control.family = list(
-        hyper = list(
-          prec = list(
-            initial = prec_init_gau,
-            fixed = fixed_gaus_1DSPE
-          )
-        )
-      ),
-      control.inla = list(verbose = TRUE)
+      base_bru_options,
+      spde1d_bru_opt
     )
   )
-
   saveRDS(
     bru1d,
     file = model_fname
@@ -907,10 +918,7 @@ if (!file.exists(model_fname) || re_run_st) {
       st_field,
     family = "gaussian",
     data = wf_df_frag,
-    options = bru_options(
-      bru_verbose = 3,
-      control.inla = list(verbose = TRUE)
-    )
+    options = base_bru_options
   )
 
   saveRDS(
