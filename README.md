@@ -227,10 +227,13 @@ high wind speed / altitude/ distance coast onshore /
 
 
 
+check space oos regimes
+
 space oos 
 time oos
 
-update code pipeline to avoid saving models / samples
+
+
 
 reliability diagrams
 accuracy vs lead time
@@ -243,4 +246,14 @@ rmse metrics
 CRPS
 
 
+
+finish writing methodology
+run with 5000 samples
+update code pipeline to avoid saving models / samples
+split document into annual rev report and main piece
+fix colors in space oos regimes
+reliability diagrams with 95\% reference line
+remove zeroes when mid regime is detected
+add fitted values to prediction bands in grouped figures
+run onshore/offshore models separately
 
