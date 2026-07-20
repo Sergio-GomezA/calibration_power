@@ -17,4 +17,4 @@ source /etc/profile.d/modules.sh
 module load R/4.5
 
 # Run resolution code
-Rscript 3_validation/low_wind_dist.R $SGE_TASK_ID TRUE batch2025 0.05
+Rscript 3_validation/low_wind_dist.R $SGE_TASK_ID TRUE batch2025 0.1
