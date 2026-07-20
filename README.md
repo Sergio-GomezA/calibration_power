@@ -248,9 +248,10 @@ CRPS
 
 
 - [ ] finish writing methodology
-- [ ] run with 5000 samples
+- [x] run with 5000 samples
 - [ ] update code pipeline to avoid saving models / samples
   - [ ] get lgcpo and dic
+  - [ ] save gcpo, dic, etc
   - [ ] get CRPS
 
 
@@ -263,6 +264,7 @@ CRPS
 - [ ] predict for new wind fleet
   - [ ] prepare data for new wind farms (location, type, and capacity)
 - [ ] tweak models to improve coverage or lwe calibration
+ - [ ] lm model in inlabru
  - [ ] beta model
  - [ ] t student distribution
 
