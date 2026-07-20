@@ -260,6 +260,8 @@ CRPS
 - [ ] remove zeroes when mid regime is detected
 - [ ] add fitted values to prediction bands in grouped figures
 - [ ] run onshore/offshore models separately
+- [ ] predict for new wind fleet
+  - [ ] prepare data for new wind farms (location, type, and capacity)
 - [ ] tweak models to improve coverage or lwe calibration
  - [ ] beta model
  - [ ] t student distribution
