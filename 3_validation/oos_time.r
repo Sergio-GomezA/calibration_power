@@ -56,7 +56,7 @@ if (local_run) {
   sample_path <- "/exports/eddie/scratch/s2441782/calibration/samples"
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   pixel_dims <- c(300, 300)
-  n_samp <- 1000
+  n_samp <- 5000
   .libPaths(temp_lib)
 }
 
