@@ -926,14 +926,19 @@ gb_fig_df <- lapply(
       "summaries/GB_fig_band_summary_spaceoos_%s.rds",
       d0_tag
     )) %>%
-      mutate(
-        pgroup3 = sampled_days_df$p_group3[i] %>%
-          factor(levels = c("low", "mid", "high"))
-      ) %>%
+      # mutate(
+      #   pgroup3 = sampled_days_df$p_group3[i] %>%
+      #     factor(levels = c("low", "mid", "high"))
+      # ) %>%
       mutate(oos = time < as.POSIXct(d0))
   }
 ) %>%
-  bind_rows()
+  bind_rows() %>%
+  mutate(date = as.Date(time)) %>%
+  left_join(
+    gb_day_df %>% dplyr::select(date, p_group3) %>% rename(pgroup3 = p_group3),
+    by = "date"
+  )
 
 wf_fig_df <- lapply(
   seq_along(sampled_days[-15]),
@@ -944,15 +949,19 @@ wf_fig_df <- lapply(
       "summaries/WF_fig_band_summary_spaceoos_%s.rds",
       d0_tag
     )) %>%
-      mutate(
-        pgroup3 = sampled_days_df$p_group3[i] %>%
-          factor(levels = c("low", "mid", "high"))
-      ) %>%
+      # mutate(
+      #   pgroup3 = sampled_days_df$p_group3[i] %>%
+      #     factor(levels = c("low", "mid", "high"))
+      # ) %>%
       mutate(oos = time < as.POSIXct(d0))
   }
 ) %>%
-  bind_rows()
-
+  bind_rows() %>%
+  mutate(date = as.Date(time)) %>%
+  left_join(
+    gb_day_df %>% dplyr::select(date, p_group3) %>% rename(pgroup3 = p_group3),
+    by = "date"
+  )
 
 ## calibration fit scatter####
 # #
