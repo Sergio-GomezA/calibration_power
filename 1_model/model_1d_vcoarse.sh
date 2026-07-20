@@ -1,6 +1,6 @@
 # Calibration model run for 1D
 #!/bin/bash
-#$ -N calib1d
+#$ -N calveryc
 #$ -wd /exports/eddie/scratch/s2441782/calibration_power/
 #$ -o /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 #$ -e /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
