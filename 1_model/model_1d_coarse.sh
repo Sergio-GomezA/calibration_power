@@ -17,4 +17,4 @@ source /etc/profile.d/modules.sh
 module load R/4.5
 
 # Run resolution code
-Rscript 1_model/inlabru_1d.R $SGE_TASK_ID 50 TRUE TRUE 3 batch2025
+Rscript 1_model/inlabru_1d.R $SGE_TASK_ID 25 TRUE TRUE 3 batch2025
