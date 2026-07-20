@@ -247,18 +247,25 @@ CRPS
 
 
 
-finish writing methodology
-run with 5000 samples
-update code pipeline to avoid saving models / samples
-split document into annual rev report and main piece
-fix colors in space oos regimes
-reliability diagrams with 95\% reference line
-remove zeroes when mid regime is detected
-add fitted values to prediction bands in grouped figures
-run onshore/offshore models separately
-tweak models to improve coverage or lwe calibration
+- [ ] finish writing methodology
+- [ ] run with 5000 samples
+- [ ] update code pipeline to avoid saving models / samples
+  - [ ] get lgcpo and dic
+  - [ ] get CRPS
 
-next stage
-run more days to obtain full calibrated estimates
-wind speed consitent estimate
-loss factor estimates per region
+
+- [ ] split document into annual rev report and main piece
+- [x] fix colors in space oos regimes
+- [ ] reliability diagrams with 95\% reference line
+- [ ] remove zeroes when mid regime is detected
+- [ ] add fitted values to prediction bands in grouped figures
+- [ ] run onshore/offshore models separately
+- [ ] tweak models to improve coverage or lwe calibration
+ - [ ] beta model
+ - [ ] t student distribution
+
+
+- [ ] next stage
+  - [ ] run more days to obtain full calibrated estimates
+  - [ ] wind speed consitent estimate
+  - [ ] loss factor estimates per region
