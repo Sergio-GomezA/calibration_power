@@ -256,4 +256,9 @@ reliability diagrams with 95\% reference line
 remove zeroes when mid regime is detected
 add fitted values to prediction bands in grouped figures
 run onshore/offshore models separately
+tweak models to improve coverage or lwe calibration
 
+next stage
+run more days to obtain full calibrated estimates
+wind speed consitent estimate
+loss factor estimates per region
