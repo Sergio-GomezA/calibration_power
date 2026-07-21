@@ -257,6 +257,7 @@ CRPS
 
 - [ ] split document into annual rev report and main piece
 - [x] fix colors in space oos regimes
+- [ ] recover st models in lwe
 - [ ] reliability diagrams with 95\% reference line
 - [ ] remove zeroes when mid regime is detected
 - [ ] add fitted values to prediction bands in grouped figures
