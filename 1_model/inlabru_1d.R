@@ -108,6 +108,7 @@ spde1d_bru_opt <- as.bru_options(
     )
   )
 )
+scores_df <- list()
 cat(
   "--------------------------------------------------------------------\n"
 )
@@ -567,9 +568,11 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     )
   )
 
+
+model_code <- sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
 model_fname <- file.path(
   model_path,
-  sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
+  model_code
 )
 
 if (!file.exists(model_fname) || override_objects) {
@@ -598,6 +601,8 @@ if (!file.exists(model_fname) || override_objects) {
     options = base_bru_options
   )
 
+  scores_df[[model_code]] <- extract_score_model(bruar1)
+
   saveRDS(
     bruar1,
     file = model_fname
@@ -614,7 +619,6 @@ if (!file.exists(model_fname) || override_objects) {
 
 summary(bruar1)
 
-source("aux_funct.R")
 effect_names <- names(bruar1$summary.random)
 excluded_effects <- c("u")
 effect_names <- setdiff(effect_names, excluded_effects)
@@ -687,9 +691,10 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     )
   )
 
+model_code <- sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
 model_fname <- file.path(
   model_path,
-  sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
+  model_code
 )
 
 if (!file.exists(model_fname) || override_objects) {
@@ -710,6 +715,7 @@ if (!file.exists(model_fname) || override_objects) {
     options = base_bru_options
   )
 
+  scores_df[[model_code]] <- extract_score_model(bruar2)
   saveRDS(
     bruar2,
     file = model_fname
@@ -721,8 +727,6 @@ if (!file.exists(model_fname) || override_objects) {
 
 summary(bruar2)
 
-
-# source("aux_funct.R")
 effect_names <- names(bruar2$summary.random)
 excluded_effects <- c("u")
 effect_names <- setdiff(effect_names, excluded_effects)
@@ -793,9 +797,10 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     replicate = tech_typ
   )
 
+model_code <- sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
 model_fname <- file.path(
   model_path,
-  sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
+  model_code
 )
 
 if (!file.exists(model_fname) || override_objects) {
@@ -819,6 +824,7 @@ if (!file.exists(model_fname) || override_objects) {
       spde1d_bru_opt
     )
   )
+  scores_df[[model_code]] <- extract_score_model(bru1d)
   saveRDS(
     bru1d,
     file = model_fname
@@ -898,9 +904,10 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     control.group = list(model = "ar1")
   )
 
+model_code <- sprintf("st_bru0_%s_mesh_%s.rds", mesh_label, d0_tag)
 model_fname <- file.path(
   model_path,
-  sprintf("st_bru0_%s_mesh_%s.rds", mesh_label, d0_tag)
+  model_code
 )
 
 if (!file.exists(model_fname) || re_run_st) {
@@ -921,6 +928,7 @@ if (!file.exists(model_fname) || re_run_st) {
     options = base_bru_options
   )
 
+  scores_df[[model_code]] <- extract_score_model(bru0)
   saveRDS(
     bru0,
     file = model_fname
@@ -1073,9 +1081,9 @@ ggsave(
 
 ## 2.3 lm wf version ####
 
-lm_wf_modfname <- sprintf("lm_model_aic0_%s.rds", d0_tag)
+model_code <- sprintf("lm_model_aic0_%s.rds", d0_tag)
 
-if (!file.exists(file.path(model_path, lm_wf_modfname)) || override_objects) {
+if (!file.exists(file.path(model_path, model_code)) || override_objects) {
   cat("--------------------------------------------------------------------\n")
   cat("Fitting LM model\n")
   cat("--------------------------------------------------------------------\n")
@@ -1107,21 +1115,27 @@ if (!file.exists(file.path(model_path, lm_wf_modfname)) || override_objects) {
     # steps = 5,
     k = 2
   )
-
+  scores_df[[model_code]] <- data.frame(
+    AIC = AIC(model_AIC0),
+    BIC = BIC(model_AIC0),
+    logLik = as.numeric(logLik(model_AIC0)),
+    deviance = deviance(model_AIC0),
+    R2 = summary(model_AIC0)$r.squared
+  )
   saveRDS(
     model_AIC0,
-    file.path(model_path, lm_wf_modfname)
+    file.path(model_path, model_code)
   )
 } else {
   cat("Loading existing LM model\n")
-  model_AIC0 <- readRDS(file.path(model_path, lm_wf_modfname))
+  model_AIC0 <- readRDS(file.path(model_path, model_code))
 }
 
 ## 2.4 GB lm version #####
 
-lm_agg_modfname <- sprintf("lm_model_aic0_agg_%s.rds", d0_tag)
+model_code <- sprintf("lm_model_aic0_agg_%s.rds", d0_tag)
 
-if (!file.exists(file.path(model_path, lm_agg_modfname)) || override_objects) {
+if (!file.exists(file.path(model_path, model_code)) || override_objects) {
   cat("--------------------------------------------------------------------\n")
   cat("Fitting GB aggregated LM\n")
   cat("--------------------------------------------------------------------\n")
@@ -1158,15 +1172,23 @@ if (!file.exists(file.path(model_path, lm_agg_modfname)) || override_objects) {
     # steps = 5,
     k = 2
   )
+
+  scores_df[[model_code]] <- data.frame(
+    AIC = AIC(model_AIC0_agg),
+    BIC = BIC(model_AIC0_agg),
+    logLik = as.numeric(logLik(model_AIC0_agg)),
+    deviance = deviance(model_AIC0_agg),
+    R2 = summary(model_AIC0_agg)$r.squared
+  )
   saveRDS(
     model_AIC0_agg,
-    file.path(model_path, lm_agg_modfname)
+    file.path(model_path, model_code)
   )
 } else {
   cat("Loading existing GB aggregated LM\n")
   model_AIC0_agg <- readRDS(file.path(
     model_path,
-    lm_agg_modfname
+    model_code
   ))
 }
 
@@ -1183,6 +1205,7 @@ if (!file.exists(file.path(model_path, qm_fname)) || override_objects) {
     mod = wf_df_frag %>% pull(norm_power_est0),
     method = "QUANT"
   )
+
   saveRDS(
     qqmod,
     file.path(model_path, qm_fname)
@@ -1192,13 +1215,25 @@ if (!file.exists(file.path(model_path, qm_fname)) || override_objects) {
   qqmod <- readRDS(file.path(model_path, qm_fname))
 }
 
-# 3. model comparison ####
-
 wgen_qm <- with(
   wf_df_frag,
   doQmapQUANT(norm_power_est0, qqmod, type = "linear")
 )
+scores_df[[qm_fname]] <- data.frame(
+  R2 = cor(wgen_qm, wf_df_frag$norm_potential)^2
+)
+# 3. model comparison ####
 
+## 3.1 Model scores object saved ####
+
+scores_df <- list_rbind(scores_df, names_to = "model")
+write.csv(
+  scores_df,
+  file.path(sprintf("summaries/model_scores_%s.csv", d0_tag)),
+  row.names = FALSE
+)
+
+## 3.2 model labels and fitted values ####
 mod_labels <- c(
   "Generic PC",
   "Linear model",
