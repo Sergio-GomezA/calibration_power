@@ -1985,3 +1985,51 @@ available_cores <- function() {
 
   total
 }
+
+extract_score_model <- function(mod.obj) {
+  # browser()
+  # check if model has two likelihoods
+  # n <- if (length(mod.obj$.args$family) > 1) length(mod.obj$.args$data$intercept) / 2 else NULL
+
+  if (length(mod.obj$.args$family) > 1) {
+    n <- length(mod.obj$.args$data$intercept) / 2
+    result <- data.frame(
+      dic = if (!is.null(mod.obj$dic)) {
+        sum(mod.obj$dic$dic[-c(1:n)], na.rm = TRUE)
+      } else {
+        NA
+      },
+      waic = if (!is.null(mod.obj$waic)) {
+        sum(mod.obj$waic$local.waic[-c(1:n)], na.rm = TRUE)
+      } else {
+        NA
+      },
+      mean_log_cpo = if (!is.null(mod.obj$cpo$cpo)) {
+        mean(log(mod.obj$cpo$cpo[-c(1:n)]), na.rm = TRUE)
+      } else {
+        NA
+      },
+      mean_log_gcpo = if (!is.null(mod.obj$gcpo$gcpo)) {
+        mean(log(mod.obj$gcpo$gcpo[-c(1:n)]), na.rm = TRUE)
+      } else {
+        NA
+      }
+    )
+  } else {
+    result <- data.frame(
+      dic = if (!is.null(mod.obj$dic)) mod.obj$dic$dic else NA,
+      waic = if (!is.null(mod.obj$waic)) mod.obj$waic$waic else NA,
+      mean_log_cpo = if (!is.null(mod.obj$cpo)) {
+        mean(log(mod.obj$cpo$cpo), na.rm = TRUE)
+      } else {
+        NA
+      },
+      mean_log_gcpo = if (!is.null(mod.obj$gcpo$gcpo)) {
+        mean(log(mod.obj$gcpo$gcpo), na.rm = TRUE)
+      } else {
+        NA
+      }
+    )
+  }
+  return(result)
+}
