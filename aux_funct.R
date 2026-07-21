@@ -1824,7 +1824,8 @@ bru_ci_plot <- function(
   newdata,
   n.samples = 100,
   show.fig = TRUE,
-  alphas = NULL
+  alphas = NULL,
+  oos_type = "time"
 ) {
   n <- nrow(newdata)
   lin_pred <- get_bru_formula(bru_model)
@@ -1937,24 +1938,12 @@ bru_ci_plot <- function(
 
   # coverage check for all q_ columns
   if (length(q_cols) > 0) {
-    n_intervals <- length(extra_quantiles) / 2
-    lower_probs <- extra_quantiles[1:n_intervals]
-    upper_probs <- rev(extra_quantiles)[1:n_intervals]
+    n_intervals <- length(q_cols) / 2
 
-    lower_cols <- paste0("q_", gsub("\\.", "_", lower_probs))
-    upper_cols <- paste0("q_", gsub("\\.", "_", upper_probs))
-
-    coverage_df <- pred_df %>%
-      group_by(coord_id, site_name, time) %>%
-      summarise(
-        across(
-          seq_along(lower_cols),
-          ~ mean(
-            norm_potential >= .data[[lower_cols[cur_column()]]] &
-              norm_potential <= .data[[upper_cols[cur_column()]]]
-          )
-        )
-      )
+    lower_probs <- rev(prob_points[1:n_intervals])
+    upper_probs <- rev(prob_points)[1:n_intervals]
+    lower_cols <- rev(q_cols[1:n_intervals])
+    upper_cols <- rev(q_cols)[1:n_intervals]
 
     coverage_exprs <- setNames(
       lapply(seq_len(n_intervals), function(i) {
@@ -1965,16 +1954,37 @@ bru_ci_plot <- function(
           )
         )
       }),
-      paste0("coverage_", 100 * (upper_probs - lower_probs))
+      paste0("coverage_", round(100 * (upper_probs - lower_probs), 1))
     )
     coverage_df <- pred_df %>%
       group_by(coord_id, site_name, time) %>%
       summarise(
         !!!coverage_exprs,
         .groups = "drop"
-      )
+      ) %>%
+      {
+        if (oos_type == "time") {
+          ## oos for time
+          . %>% mutate(oos = time >= t1)
+        } else {
+          . %>% mutate(oos = time <= t1)
+        } ## oos for space)
+      }
+    cov_time <- coverage_df %>%
+      filter(oos) %>%
+      group_by(time) %>%
+      summarise(across(matches("coverage"), mean))
+    cov_loc <- coverage_df %>%
+      filter(oos) %>%
+      group_by(coord_id, site_name) %>%
+      summarise(across(matches("coverage"), mean))
+    cov_gbl <- coverage_df %>%
+      filter(oos) %>%
+      summarise(across(matches("coverage"), mean))
   } else {
-    coverage_df <- NULL
+    cov_time <- NULL
+    cov_loc <- NULL
+    cov_gbl <- NULL
   }
 
   # aggregated GB summary
@@ -2026,7 +2036,10 @@ bru_ci_plot <- function(
     wf_summary = wf_summary_df,
     GB_summary = pred_fig_df,
     # fig = p,
-    formula = lin_pred
+    formula = lin_pred,
+    cov_gbl = cov_gbl,
+    cov_time = cov_time,
+    cov_loc = cov_loc
     # df_formula = formula_temp
   ))
 }
