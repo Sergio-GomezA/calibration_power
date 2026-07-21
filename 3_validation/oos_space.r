@@ -87,6 +87,9 @@ sampled_days <- sampled_days_df %>%
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
 
+alphas <- c(0.01, seq(0.05, 0.95, by = 0.05), 0.99)
+
+
 cat(
   "--------------------------------------------------------------------\n"
 )
@@ -472,6 +475,11 @@ pred_samples_fname <- file.path(
     d0_tag
   )
 )
+cov_summary_fname <- sprintf(
+  "summaries/pred_band_coverage_summary_%s_%s.rds",
+  task_prefix,
+  d0_tag
+)
 if (!file.exists(pred_summary_fname) || rerun_samples) {
   if (!file.exists(pred_summary_fname)) {
     cat("Prediction band summary file not found, creating new summary\n")
@@ -495,7 +503,9 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
         bru_model = mod_temp,
         newdata = wf_df_pred,
         n.samples = n_samp,
-        show.fig = FALSE
+        show.fig = FALSE,
+        alphas = alphas,
+        oos_type = "space"
       )
       test
     }
@@ -510,10 +520,22 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       )
     }
   )
+  coverage_summary <- lapply(
+    pred_band_summary,
+    function(x) {
+      list(
+        cov_gbl = x$cov_gbl,
+        cov_time = x$cov_time,
+        cov_loc = x$cov_loc
+      )
+    }
+  )
   names(pred_band_summary) <- bru_df$code
   names(summary_only) <- bru_df$code
+  names(coverage_summary) <- bru_df$code
   saveRDS(summary_only, pred_summary_fname)
   saveRDS(pred_band_summary, pred_samples_fname)
+  saveRDS(coverage_summary, cov_summary_fname)
 } else {
   cat("Loading existing prediction band summary\n")
   pred_band_summary <- readRDS(pred_summary_fname)
