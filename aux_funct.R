@@ -1823,7 +1823,8 @@ bru_ci_plot <- function(
   bru_model,
   newdata,
   n.samples = 100,
-  show.fig = TRUE
+  show.fig = TRUE,
+  alphas = NULL
 ) {
   n <- nrow(newdata)
   lin_pred <- get_bru_formula(bru_model)
@@ -1840,6 +1841,25 @@ bru_ci_plot <- function(
     # print(bru_model$summary.hyperpar)
   }
 
+  browser()
+
+  if (!is.null(alphas)) {
+    prob_len <- length(alphas)
+    prob_points <- c(alphas / 2, 1 - alphas / 2)
+    extra_quantiles <- paste(
+      sprintf(
+        "q_%s = qnorm(%s, mean = (%s), sd = 1 / sqrt((%s)))",
+        gsub("\\.", "_", prob_points),
+        prob_points,
+        lin_pred,
+        prec_val
+      ),
+      collapse = ",\n       "
+    )
+  } else {
+    extra_quantiles <- "q = NULL"
+  }
+
   formula_temp <- as.formula(
     sprintf(
       "~ data.frame(
@@ -1849,7 +1869,8 @@ bru_ci_plot <- function(
        date = date,
        pow_st = rnorm(n = %d, mean = (%s), sd = 1 / sqrt((%s))),
        lwr = qnorm(0.025, mean = (%s), sd = 1 / sqrt((%s))),
-       upr = qnorm(0.975, mean = (%s), sd = 1 / sqrt((%s)))
+       upr = qnorm(0.975, mean = (%s), sd = 1 / sqrt((%s))),
+       %s
        )",
       n,
       lin_pred,
@@ -1857,7 +1878,8 @@ bru_ci_plot <- function(
       lin_pred,
       prec_val,
       lin_pred,
-      prec_val
+      prec_val,
+      extra_quantiles
     )
   )
   # browser()
@@ -1868,6 +1890,8 @@ bru_ci_plot <- function(
     n.samples = n.samples
   )
 
+  q_cols <- grepv("^q_", names(samples[[1]]))
+
   # samples data frame
   pred_df <- lapply(
     seq_along(samples),
@@ -1875,10 +1899,11 @@ bru_ci_plot <- function(
       data.frame(
         fit = samples[[s]]$pow_st,
         lwr = samples[[s]]$lwr,
-        upr = samples[[s]]$upr
+        upr = samples[[s]]$upr,
+        samples[[s]][q_cols]
       ) %>%
         mutate(
-          across(c(fit, lwr, upr), ~ pmin(1, pmax(0, .))),
+          across(c(fit, lwr, upr, all_of(q_cols)), ~ pmin(1, pmax(0, .))),
           sim = s
         ) %>%
         bind_cols(
@@ -1909,6 +1934,49 @@ bru_ci_plot <- function(
       norm_potential = mean(norm_potential),
       .groups = "drop"
     )
+
+  # coverage check for all q_ columns
+  if (length(q_cols) > 0) {
+    n_intervals <- length(extra_quantiles) / 2
+    lower_probs <- extra_quantiles[1:n_intervals]
+    upper_probs <- rev(extra_quantiles)[1:n_intervals]
+
+    lower_cols <- paste0("q_", gsub("\\.", "_", lower_probs))
+    upper_cols <- paste0("q_", gsub("\\.", "_", upper_probs))
+
+    coverage_df <- pred_df %>%
+      group_by(coord_id, site_name, time) %>%
+      summarise(
+        across(
+          seq_along(lower_cols),
+          ~ mean(
+            norm_potential >= .data[[lower_cols[cur_column()]]] &
+              norm_potential <= .data[[upper_cols[cur_column()]]]
+          )
+        )
+      )
+
+    coverage_exprs <- setNames(
+      lapply(seq_len(n_intervals), function(i) {
+        expr(
+          mean(
+            norm_potential >= !!rlang::sym(lower_cols[i]) &
+              norm_potential <= !!rlang::sym(upper_cols[i])
+          )
+        )
+      }),
+      paste0("coverage_", 100 * (upper_probs - lower_probs))
+    )
+    coverage_df <- pred_df %>%
+      group_by(coord_id, site_name, time) %>%
+      summarise(
+        !!!coverage_exprs,
+        .groups = "drop"
+      )
+  } else {
+    coverage_df <- NULL
+  }
+
   # aggregated GB summary
   pred_fig_df <- pred_df %>%
     group_by(time, sim) %>%
