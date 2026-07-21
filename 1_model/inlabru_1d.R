@@ -200,6 +200,13 @@ if (!file.exists(gb_day_df_fname) || override_objects) {
   write_parquet(gb_day_df, gb_day_df_fname)
 } else {
   cat("Loading existing GB daily summary\n")
+  GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
+    rename(time = halfHourEndTime) %>%
+    mutate(
+      err = norm_power_est0 - norm_potential,
+      error0 = norm_potential - norm_power_est0,
+      date = as.Date(time)
+    )
   gb_day_df <- read_parquet(gb_day_df_fname)
 }
 
