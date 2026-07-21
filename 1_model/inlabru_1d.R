@@ -4,7 +4,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
 day_id <- 2
-mesh_edge_par <- 25 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
+mesh_edge_par <- 50 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
 re_run_st <- FALSE
 prec_init <- log(200) # for u
@@ -13,6 +13,7 @@ fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
 n.days.before <- 7
 batch_name <- "batch2025"
+save_models <- FALSE
 
 cluster_ext <- "rds" # "geojson" previously
 
@@ -44,6 +45,10 @@ if (length(args) > 4) {
 if (length(args) > 5) {
   batch_name <- as.character(args[6])
 }
+if (length(args) > 6) {
+  save_models <- as.logical(args[7])
+}
+
 # 0.2 libraries and paths ####
 require(parallel)
 
@@ -603,10 +608,12 @@ if (!file.exists(model_fname) || override_objects) {
 
   scores_df[[model_code]] <- extract_score_model(bruar1)
 
-  saveRDS(
-    bruar1,
-    file = model_fname
-  )
+  if (save_models) {
+    saveRDS(
+      bruar1,
+      file = model_fname
+    )
+  }
 } else {
   cat("Loading existing ar1 model\n")
   bruar1 <- readRDS(model_fname)
@@ -716,10 +723,12 @@ if (!file.exists(model_fname) || override_objects) {
   )
 
   scores_df[[model_code]] <- extract_score_model(bruar2)
-  saveRDS(
-    bruar2,
-    file = model_fname
-  )
+  if (save_models) {
+    saveRDS(
+      bruar2,
+      file = model_fname
+    )
+  }
 } else {
   cat("Loading existing ar2 model\n")
   bruar2 <- readRDS(model_fname)
@@ -825,10 +834,12 @@ if (!file.exists(model_fname) || override_objects) {
     )
   )
   scores_df[[model_code]] <- extract_score_model(bru1d)
-  saveRDS(
-    bru1d,
-    file = model_fname
-  )
+  if (save_models) {
+    saveRDS(
+      bru1d,
+      file = model_fname
+    )
+  }
 } else {
   cat("Loading existing LM+hour model\n")
   bru1d <- readRDS(model_fname)
@@ -929,10 +940,12 @@ if (!file.exists(model_fname) || re_run_st) {
   )
 
   scores_df[[model_code]] <- extract_score_model(bru0)
-  saveRDS(
-    bru0,
-    file = model_fname
-  )
+  if (save_models) {
+    saveRDS(
+      bru0,
+      file = model_fname
+    )
+  }
 } else {
   cat("Loading existing spatiotemporal model\n")
   bru0 <- readRDS(model_fname)
@@ -1122,10 +1135,12 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
     deviance = deviance(model_AIC0),
     R2 = summary(model_AIC0)$r.squared
   )
-  saveRDS(
-    model_AIC0,
-    file.path(model_path, model_code)
-  )
+  if (save_models) {
+    saveRDS(
+      model_AIC0,
+      file.path(model_path, model_code)
+    )
+  }
 } else {
   cat("Loading existing LM model\n")
   model_AIC0 <- readRDS(file.path(model_path, model_code))
@@ -1180,10 +1195,12 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
     deviance = deviance(model_AIC0_agg),
     R2 = summary(model_AIC0_agg)$r.squared
   )
-  saveRDS(
-    model_AIC0_agg,
-    file.path(model_path, model_code)
-  )
+  if (save_models) {
+    saveRDS(
+      model_AIC0_agg,
+      file.path(model_path, model_code)
+    )
+  }
 } else {
   cat("Loading existing GB aggregated LM\n")
   model_AIC0_agg <- readRDS(file.path(
@@ -1206,10 +1223,12 @@ if (!file.exists(file.path(model_path, qm_fname)) || override_objects) {
     method = "QUANT"
   )
 
-  saveRDS(
-    qqmod,
-    file.path(model_path, qm_fname)
-  )
+  if (save_models) {
+    saveRDS(
+      qqmod,
+      file.path(model_path, qm_fname)
+    )
+  }
 } else {
   cat("Loading existing quantile mapping model\n")
   qqmod <- readRDS(file.path(model_path, qm_fname))
