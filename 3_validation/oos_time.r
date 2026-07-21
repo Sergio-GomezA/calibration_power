@@ -12,8 +12,8 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 # 0.1 global parameter #####
 day_id <- 2
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- FALSE
-rerun_samples <- FALSE
+override_objects <- TRUE
+rerun_samples <- TRUE
 prec_init <- log(200)
 batch_name <- "batch2025"
 
@@ -56,7 +56,7 @@ if (local_run) {
   sample_path <- "/exports/eddie/scratch/s2441782/calibration/samples"
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   pixel_dims <- c(300, 300)
-  n_samp <- 5000
+  n_samp <- 1000
   .libPaths(temp_lib)
 }
 
@@ -86,6 +86,9 @@ sampled_days <- sampled_days_df %>%
 # sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
+
+alphas <- c(0.01, seq(0.05, 0.95, by = 0.05), 0.99)
+
 
 cat(
   "--------------------------------------------------------------------\n"
@@ -510,7 +513,8 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
         bru_model = mod_temp,
         newdata = wf_df_pred,
         n.samples = n_samp,
-        show.fig = FALSE
+        show.fig = FALSE,
+        alphas = alphas
       )
       test
     }
