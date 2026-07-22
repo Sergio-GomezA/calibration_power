@@ -128,33 +128,16 @@ cat(
 )
 
 # Read models ####
-mod_labels <- c(
-  # "Generic PC",
-  "Linear model",
-  "GB LM",
-  "QM",
-  "Spatio-temporal fine",
-  "Spatio-temporal coarse",
-  "LM+hour model",
-  "AR1 model",
-  "AR2 model"
-)
-est_cols <- c(
-  # "norm_power_est0",
-  "lm",
-  "agg_lm",
-  "qm",
-  "st0_m1",
-  "st0_m2",
-  "spde1d",
-  "ar1",
-  "ar2"
-)
+model_catalog <- read.csv("data/model_catalog.csv") %>%
+  na.omit()
 
 if (local_run) {
-  mod_labels <- mod_labels[!grepl("fine", mod_labels)]
-  est_cols <- est_cols[!grepl("st0_m2", est_cols)]
+  model_catalog <- model_catalog %>%
+    # filter(!grepl("fine", mod_labels)) %>%
+    filter(!grepl("st0", est_cols))
 }
+mod_labels <- model_catalog$mod_labels
+est_cols <- model_catalog$est_cols
 n_models <- length(est_cols)
 names(mod_labels) <- est_cols
 mod_vec <- list.files(model_path, pattern = d0_tag, full.names = TRUE)
@@ -166,28 +149,28 @@ exclusions <- if (local_run) {
 mod_vec <- mod_vec[!grepl(paste(exclusions, collapse = "|"), mod_vec)] %>%
   sort() # exclude meshes from st model
 
-heavy_models_fnames <- paste0(
-  "../calibration/model_objects/",
-  est_cols,
-  d0_tag,
-  ".rds"
-)[4:5] # placeholder
-if (local_run) {
-  heavy_models_fnames <- heavy_models_fnames[1]
-}
-model_df <- tibble(
-  label = mod_labels,
-  code = est_cols,
-  fname = if (length(mod_vec) == n_models) {
-    mod_vec
-  } else {
-    c(
-      mod_vec[1:3],
-      heavy_models_fnames,
-      mod_vec[4:6]
+# heavy_models_fnames <- paste0(
+#   "../calibration/model_objects/",
+#   est_cols,
+#   d0_tag,
+#   ".rds"
+# )[4:5] # placeholder
+# if (local_run) {
+#   heavy_models_fnames <- heavy_models_fnames[1]
+# }
+model_df <- model_catalog %>%
+  rename(code = est_cols, label = mod_labels) %>%
+  arrange(desc(nchar(mode_code_prefix))) %>%
+  mutate(
+    fname = map_chr(
+      mode_code_prefix,
+      ~ {
+        # browser()
+        matches <- mod_vec[str_detect(mod_vec, fixed(.x))]
+        if (length(matches) == 1) matches else matches[1]
+      }
     )
-  }
-) %>%
+  ) %>%
   mutate(
     type = case_when(
       grepl("lm", code) ~ "lm",
@@ -195,6 +178,10 @@ model_df <- tibble(
       TRUE ~ "bru"
     )
   )
+if (local_run) {
+  mod_labels <- mod_labels[!grepl("fine", mod_labels)]
+  est_cols <- est_cols[!grepl("st0", est_cols)]
+}
 
 # Predictions for next hours ####
 
@@ -420,7 +407,6 @@ lm_pred <- lapply(
 ) %>%
   bind_rows()
 
-
 lm_pred_fig_df <- lm_pred %>%
   st_drop_geometry() %>%
   group_by(time, model) %>%
@@ -501,10 +487,11 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       "Prediction band summary file found, but rerun_samples is TRUE. Recreating summary\n"
     )
   }
+  source("aux_funct.R")
   pred_band_summary <- lapply(
     seq_along(bru_df$fname),
     function(i) {
-      browser()
+      # browser()
       cat(
         "--------------------------------------------------------------------\n"
       )
