@@ -6,6 +6,7 @@ mod_labels <- c(
   "QM",
   "ST model fine",
   "ST model coarse",
+  "ST model coarser",
   "LM+hour model",
   "AR1 model",
   "AR2 model"
@@ -15,6 +16,7 @@ est_cols <- c(
   "lm",
   "agg_lm",
   "qm",
+  "st0_m0",
   "st0_m1",
   "st0_m2",
   "spde1d",
@@ -25,11 +27,20 @@ est_cols <- c(
 mode_code_prefix <- c(
   NA,
   "lm_model_aic0_",
-  "ts_bru0_ar1_",
-  "ts_bru0_ar2_",
-  "ts_bru0_1DSPDE_",
+  "lm_model_aic0_agg_",
+  "qm_model_",
+  "st_bru0_fine_",
   "st_bru0_coarse_",
   "st_bru0_very_coarse_",
-  "qm_model_",
-  "lm_model_aic0_agg_"
+  "ts_bru0_1DSPDE_",
+  "ts_bru0_ar1_",
+  "ts_bru0_ar2_"
 )
+
+data.frame(
+  mod_labels = mod_labels,
+  est_cols = est_cols,
+  mode_code_prefix = mode_code_prefix
+) -> model_catalog
+
+write.csv(model_catalog, "data/model_catalog.csv", row.names = FALSE)

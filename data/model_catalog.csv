@@ -1,0 +1,11 @@
+"mod_labels","est_cols","mode_code_prefix"
+"Generic PC","norm_power_est0",NA
+"Linear model","lm","lm_model_aic0_"
+"GB LM","agg_lm","lm_model_aic0_agg_"
+"QM","qm","qm_model_"
+"ST model fine","st0_m0","st_bru0_fine_"
+"ST model coarse","st0_m1","st_bru0_coarse_"
+"ST model coarser","st0_m2","st_bru0_very_coarse_"
+"LM+hour model","spde1d","ts_bru0_1DSPDE_"
+"AR1 model","ar1","ts_bru0_ar1_"
+"AR2 model","ar2","ts_bru0_ar2_"
