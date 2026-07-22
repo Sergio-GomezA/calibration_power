@@ -12,7 +12,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 # 0.1 global parameter #####
 day_id <- 1
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- TRUE
+override_objects <- FALSE
 rerun_samples <- TRUE
 prec_init <- log(200)
 task_prefix <- "spaceoos"
@@ -117,33 +117,16 @@ th <- t1 + hours(n.hours)
 
 
 # Read models ####
-mod_labels <- c(
-  # "Generic PC",
-  "Linear model",
-  "GB LM",
-  "QM",
-  "Spatio-temporal fine",
-  "Spatio-temporal coarse",
-  "LM+hour model",
-  "AR1 model",
-  "AR2 model"
-)
-est_cols <- c(
-  # "norm_power_est0",
-  "lm",
-  "agg_lm",
-  "qm",
-  "st0_m1",
-  "st0_m2",
-  "spde1d",
-  "ar1",
-  "ar2"
-)
+model_catalog <- read.csv("data/model_catalog.csv") %>%
+  na.omit()
 
 if (local_run) {
-  mod_labels <- mod_labels[!grepl("fine", mod_labels)]
-  est_cols <- est_cols[!grepl("st0_m2", est_cols)]
+  model_catalog <- model_catalog %>%
+    # filter(!grepl("fine", mod_labels)) %>%
+    filter(!grepl("st0", est_cols))
 }
+mod_labels <- model_catalog$mod_labels
+est_cols <- model_catalog$est_cols
 n_models <- length(est_cols)
 names(mod_labels) <- est_cols
 mod_vec <- list.files(model_path, pattern = d0_tag, full.names = TRUE)
@@ -155,19 +138,19 @@ exclusions <- if (local_run) {
 mod_vec <- mod_vec[!grepl(paste(exclusions, collapse = "|"), mod_vec)] %>%
   sort() # exclude meshes from st model
 
-model_df <- tibble(
-  label = mod_labels,
-  code = est_cols,
-  fname = if (length(mod_vec) == n_models) {
-    mod_vec
-  } else {
-    c(
-      mod_vec[1:3],
-      paste0("../calibration/model_objects/", est_cols, d0_tag, ".rds")[4:5],
-      mod_vec[4:6]
+model_df <- model_catalog %>%
+  rename(code = est_cols, label = mod_labels) %>%
+  arrange(desc(nchar(mode_code_prefix))) %>%
+  mutate(
+    fname = map_chr(
+      mode_code_prefix,
+      ~ {
+        # browser()
+        matches <- mod_vec[str_detect(mod_vec, fixed(.x))]
+        if (length(matches) == 1) matches else matches[1]
+      }
     )
-  }
-) %>%
+  ) %>%
   mutate(
     type = case_when(
       grepl("lm", code) ~ "lm",
@@ -175,6 +158,10 @@ model_df <- tibble(
       TRUE ~ "bru"
     )
   )
+if (local_run) {
+  mod_labels <- mod_labels[!grepl("fine", mod_labels)]
+  est_cols <- est_cols[!grepl("st0", est_cols)]
+}
 
 # Predictions for next hours ####
 
@@ -456,7 +443,7 @@ lm_pred_fig_df <- lm_pred %>%
 
 bru_df <- model_df %>% filter(type == "bru")
 
-source("aux_funct.R")
+# source("aux_funct.R")
 # mod_temp <- bruar1
 
 ### loop throgh all models #####

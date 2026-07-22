@@ -458,7 +458,7 @@ lm_pred_fig_df <- lm_pred %>%
 
 bru_df <- model_df %>% filter(type == "bru")
 
-source("aux_funct.R")
+# source("aux_funct.R")
 # mod_temp <- bruar1
 
 ### loop throgh all models #####
@@ -487,7 +487,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       "Prediction band summary file found, but rerun_samples is TRUE. Recreating summary\n"
     )
   }
-  source("aux_funct.R")
+  # source("aux_funct.R")
   pred_band_summary <- lapply(
     seq_along(bru_df$fname),
     function(i) {
