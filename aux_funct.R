@@ -1973,14 +1973,14 @@ bru_ci_plot <- function(
     cov_time <- coverage_df %>%
       filter(oos) %>%
       group_by(time) %>%
-      summarise(across(matches("coverage"), mean))
+      summarise(across(matches("coverage"), mean), .groups = "drop")
     cov_loc <- coverage_df %>%
       filter(oos) %>%
       group_by(coord_id, site_name) %>%
-      summarise(across(matches("coverage"), mean))
+      summarise(across(matches("coverage"), mean), .groups = "drop")
     cov_gbl <- coverage_df %>%
       filter(oos) %>%
-      summarise(across(matches("coverage"), mean))
+      summarise(across(matches("coverage"), mean), .groups = "drop")
   } else {
     cov_time <- NULL
     cov_loc <- NULL
