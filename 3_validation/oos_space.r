@@ -167,6 +167,8 @@ if (length(missing_models) > 0) {
   )
 
   model_df <- model_df %>% filter(!is.na(fname))
+  mod_labels <- model_df$label
+  est_cols <- model_df$code
 }
 if (local_run) {
   mod_labels <- mod_labels[!grepl("fine", mod_labels)]
