@@ -259,6 +259,7 @@ CRPS
 - [x] fix colors in space oos regimes
 - [x] recover st models in lwe
 - [x] new unfaceted lwe figures
+- [x] coverage bands with 95\% reference line
 - [ ] reliability diagrams with 95\% reference line
 - [ ] remove zeroes when mid regime is detected
 - [ ] add fitted values to prediction bands in grouped figures
