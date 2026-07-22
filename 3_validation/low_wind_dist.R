@@ -247,7 +247,7 @@ df_long0 <- model_df0 %>%
     estimate = pmin(1, pmax(0, estimate)), # clipping estimates to [0, 1]
     err = estimate - norm_potential,
     p_group3 = forcats::fct_rev(p_group3),
-    model = factor(model, levels = est_cols, labels = mod_labels)
+    # model = factor(model, levels = est_cols, labels = mod_labels)
   )
 
 # 2.1 Low wind events in observed data ####
@@ -487,9 +487,12 @@ low_events_model <- df_long0 %>%
     .groups = "drop"
   ) %>%
   dplyr::select(model, coord_id, start_time, duration_h) %>%
-  bind_rows(lwe_obs_pred)
+  bind_rows(lwe_obs_pred) %>%
+  mutate(
+    model = factor(model, levels = est_cols, labels = mod_labels)
+  )
 
-
+# low_events_model$model %>% unique() %>% sort() %>% print()
 low_events_model %>%
   filter(duration_h < 25) %>%
   # filter(
@@ -520,7 +523,8 @@ low_events_model %>%
     plot.title = element_text(hjust = 0.5),
     axis.text.x = element_text(angle = 45, hjust = 1),
     legend.position = "none"
-  )
+  ) +
+  scale_fill_npg()
 
 ggsave(
   sprintf(
@@ -532,17 +536,72 @@ ggsave(
   height = 6
 )
 
+low_events_model %>%
+  filter(duration_h < 25) %>%
+  ggplot(aes(x = duration_h)) +
+  geom_density(
+    # data = ~ dplyr::filter(.x, model != "observed"),
+    aes(colour = model),
+    alpha = 0.5
+  ) +
+  # geom_density(
+  #   data = ~ dplyr::filter(.x, model == "observed"),
+  #   aes(colour = model),
+  #   # colour = "darkred",
+  #   # linewidth = 1.2,
+  #   fill = NA
+  # ) +
+  labs(
+    title = "Distribution of Low Wind Events Duration",
+    x = "Duration (hours)",
+    y = "Frequency"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "inside",
+    legend.position.inside = c(0.7, 0.8)
+  ) +
+  guides(
+    colour = guide_legend(ncol = 2)
+  ) +
+  scale_color_manual(
+    values = c(
+      "Observed" = "darkred",
+      "Generic PC" = "#E69F00",
+      "Linear model" = "#56B4E9",
+      "AR1 model" = "#009E73",
+      "AR2 model" = "#F0E442",
+      "LM+hour model" = "#0072B2",
+      "ST model fine" = "#D55E00",
+      "ST model coarse" = "#CC79A7",
+      "QM" = "#999999",
+      "GB LM" = "#000000"
+    )
+  )
+
+ggsave(
+  sprintf(
+    "fig/%s/low_wind_duration_dens_t%s.pdf",
+    batch_name,
+    pow_threshold_label
+  ),
+  width = 6,
+  height = 4
+)
+
 obs <- low_events_model %>%
   filter(
-    model == "observed",
+    model == "Observed",
     duration_h < 25
   ) %>%
   pull(duration_h)
 
-probs <- seq(0, 1, length.out = 100)
+probs <- seq(0, 1, length.out = 101)
 
 qq_df <- low_events_model %>%
-  filter(model != "observed") %>%
+  filter(model != "Observed") %>%
   filter(duration_h < 25) %>%
   group_by(model) %>%
   summarise(
@@ -581,6 +640,48 @@ ggsave(
   height = 6
 )
 
+ggplot(qq_df, aes(x = obs_q, y = model_q)) +
+  geom_line(aes(col = model)) +
+  geom_abline(slope = 1, intercept = 0, colour = "darkred") +
+  # facet_wrap(
+  #   ~model,
+  #   scales = "free",
+  #   #  labeller = as_labeller(mod_labels)
+  # ) +
+  labs(
+    title = "Q-Q Plot of Low Wind Event Durations",
+    x = "Observed quantiles",
+    y = "Model quantiles"
+  ) +
+  # coord_equal() +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  scale_color_manual(
+    values = c(
+      "Generic PC" = "#E69F00",
+      "Linear model" = "#56B4E9",
+      "AR1 model" = "#009E73",
+      "AR2 model" = "#F0E442",
+      "LM+hour model" = "#0072B2",
+      "ST model fine" = "#D55E00",
+      "ST model coarse" = "#CC79A7",
+      "QM" = "#999999",
+      "GB LM" = "#000000"
+    )
+  ) +
+  coord_equal(ratio = 1)
+
+ggsave(
+  sprintf(
+    "fig/%s/low_wind_duration_qq_line_t%s.pdf",
+    batch_name,
+    pow_threshold_label
+  ),
+  width = 6,
+  height = 5
+)
 # 4. Low wind events in model samples ####
 ## 4.1 forecast samples ####
 cat("--------------------------------------------------------------------\n")
