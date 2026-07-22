@@ -258,10 +258,11 @@ CRPS
 - [ ] split document into annual rev report and main piece
 - [x] fix colors in space oos regimes
 - [x] recover st models in lwe
+- [x] new unfaceted lwe figures
 - [ ] reliability diagrams with 95\% reference line
 - [ ] remove zeroes when mid regime is detected
 - [ ] add fitted values to prediction bands in grouped figures
-- [ ] run onshore/offshore models separately
+- [?] run onshore/offshore models separately
 - [ ] predict for new wind fleet
   - [ ] prepare data for new wind farms (location, type, and capacity)
 - [ ] tweak models to improve coverage or lwe calibration
