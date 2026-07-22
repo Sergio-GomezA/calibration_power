@@ -787,7 +787,7 @@ cov_bands <- wf_fig_df %>%
 cov_bands %>%
   ggplot(aes(x = model, y = coverage)) +
   geom_col(fill = blues9[7]) +
-  geom_abline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
   geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
   facet_wrap(~tech_typ) +
   coord_cartesian(ylim = c(0, 1)) +
@@ -817,7 +817,7 @@ cov_bands <- wf_fig_df %>%
 cov_bands %>%
   ggplot(aes(x = model, y = coverage)) +
   geom_col(fill = blues9[7]) +
-  geom_abline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
   geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
   facet_wrap(~pgroup3) +
   coord_cartesian(ylim = c(0, 1)) +
@@ -1052,7 +1052,7 @@ cov_bands_wf <- wf_fig_df %>%
 cov_bands_wf %>%
   ggplot(aes(x = model, y = mean_coverage)) +
   geom_col(fill = blues9[7]) +
-  geom_abline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
   geom_text(aes(label = round(mean_coverage, 3)), vjust = -0.5) +
   coord_cartesian(ylim = c(0, 1)) +
   labs(x = "Model", y = "Mean coverage") +
@@ -1080,7 +1080,7 @@ cov_bands <- gb_fig_df %>%
 cov_bands %>%
   ggplot(aes(x = model, y = coverage)) +
   geom_col(fill = blues9[7]) +
-  geom_abline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
   geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
   coord_cartesian(ylim = c(0, 1)) +
   labs(x = "Model", y = "Coverage") +
@@ -1109,7 +1109,7 @@ cov_bands <- wf_fig_df %>%
 cov_bands %>%
   ggplot(aes(x = model, y = coverage)) +
   geom_col(fill = blues9[7]) +
-  geom_abline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
   geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
   facet_wrap(~tech_typ) +
   coord_cartesian(ylim = c(0, 1)) +
@@ -1142,7 +1142,7 @@ cov_bands <- wf_fig_df %>%
 cov_bands %>%
   ggplot(aes(x = model, y = coverage)) +
   geom_col(fill = blues9[7]) +
-  geom_abline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
   geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
   facet_wrap(~pgroup3) +
   coord_cartesian(ylim = c(0, 1)) +
