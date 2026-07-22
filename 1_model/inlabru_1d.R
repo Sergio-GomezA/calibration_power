@@ -93,7 +93,7 @@ inla.setOption(num.threads = sprintf(inla_core_option, mc))
 
 base_bru_options <- bru_options(
   bru_verbose = 3,
-  verbose = TRUE,
+  # verbose = TRUE,
   control.compute = list(
     dic = TRUE,
     cpo = TRUE,
@@ -1280,6 +1280,7 @@ est_cols <- c(
   "qm",
   "agg_lm"
 )
+
 n_models <- length(est_cols)
 n <- nrow(wf_df_frag)
 names(mod_labels) <- est_cols
