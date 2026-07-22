@@ -158,6 +158,16 @@ model_df <- model_catalog %>%
       TRUE ~ "bru"
     )
   )
+model_df %>% filter(is.na(fname)) %>% pull(code) -> missing_models
+if (length(missing_models) > 0) {
+  cat(
+    "Warning: The following models are missing from the model path:\n",
+    paste(missing_models, collapse = ", "),
+    "\n"
+  )
+
+  model_df <- model_df %>% filter(!is.na(fname))
+}
 if (local_run) {
   mod_labels <- mod_labels[!grepl("fine", mod_labels)]
   est_cols <- est_cols[!grepl("st0", est_cols)]
