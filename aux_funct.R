@@ -1842,7 +1842,7 @@ bru_ci_plot <- function(
     # print(bru_model$summary.hyperpar)
   }
 
-  browser()
+  # browser()
 
   if (!is.null(alphas)) {
     prob_len <- length(alphas)
@@ -1961,15 +1961,15 @@ bru_ci_plot <- function(
       summarise(
         !!!coverage_exprs,
         .groups = "drop"
-      ) %>%
-      {
-        if (oos_type == "time") {
-          ## oos for time
-          . %>% mutate(oos = time >= t1)
-        } else {
-          . %>% mutate(oos = time <= t1)
-        } ## oos for space)
-      }
+      )
+    # browser()
+    if (oos_type == "time") {
+      ## oos for time
+      coverage_df <- coverage_df %>% mutate(oos = time >= t1)
+    } else {
+      coverage_df <- coverage_df %>% mutate(oos = time <= t1)
+    } ## oos for space)
+
     cov_time <- coverage_df %>%
       filter(oos) %>%
       group_by(time) %>%
