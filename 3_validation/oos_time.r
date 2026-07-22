@@ -149,15 +149,6 @@ exclusions <- if (local_run) {
 mod_vec <- mod_vec[!grepl(paste(exclusions, collapse = "|"), mod_vec)] %>%
   sort() # exclude meshes from st model
 
-# heavy_models_fnames <- paste0(
-#   "../calibration/model_objects/",
-#   est_cols,
-#   d0_tag,
-#   ".rds"
-# )[4:5] # placeholder
-# if (local_run) {
-#   heavy_models_fnames <- heavy_models_fnames[1]
-# }
 model_df <- model_catalog %>%
   rename(code = est_cols, label = mod_labels) %>%
   arrange(desc(nchar(mode_code_prefix))) %>%
@@ -178,6 +169,19 @@ model_df <- model_catalog %>%
       TRUE ~ "bru"
     )
   )
+
+
+model_df %>% filter(is.na(fname)) %>% pull(code) -> missing_models
+if (length(missing_models) > 0) {
+  cat(
+    "Warning: The following models are missing from the model path:\n",
+    paste(missing_models, collapse = ", "),
+    "\n"
+  )
+
+  model_df <- model_df %>% filter(!is.na(fname))
+}
+
 if (local_run) {
   mod_labels <- mod_labels[!grepl("fine", mod_labels)]
   est_cols <- est_cols[!grepl("st0", est_cols)]
