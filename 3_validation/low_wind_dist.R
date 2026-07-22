@@ -121,16 +121,33 @@ model_df0 <- lapply(
     # print(d0)
     d0_tag <- base::format(d0, "%y%m%d")
 
+    # coarse
     readRDS(sprintf(
       "data/calibration_df_%s_%s.%s",
       # mesh_label,
-      "coarse",
+      "very_coarse",
       d0_tag,
       extension
-    ))
+    )) %>%
+      st_drop_geometry() %>%
+      left_join(
+        readRDS(sprintf(
+          "data/calibration_df_%s_%s.%s",
+          # mesh_label,
+          "coarse",
+          d0_tag,
+          extension
+        )) %>%
+          st_drop_geometry() %>%
+          dplyr::select(time, coord_id, st0_m1 = st),
+        by = c("time", "coord_id")
+      )
   }
 ) %>%
-  bind_rows()
+  bind_rows() %>%
+  rename(
+    st0_m2 = st
+  )
 
 pos_breaks <- with(
   model_df0,
@@ -147,8 +164,8 @@ mod_labels <- c(
   "AR1 model",
   "AR2 model",
   "LM+hour model",
-  "Spatio-temporal model fine",
-  "Spatio-temporal model coarse",
+  "ST model fine",
+  "ST model coarse",
   "QM",
   "GB LM",
   "Observed"
@@ -166,10 +183,10 @@ est_cols <- c(
   "observed"
 )
 
-if (local_run) {
-  mod_labels <- mod_labels[!grepl("fine", mod_labels)]
-  est_cols <- est_cols[!grepl("st0_m1", est_cols)]
-}
+# if (local_run) {
+#   mod_labels <- mod_labels[!grepl("fine", mod_labels)]
+#   est_cols <- est_cols[!grepl("st0_m1", est_cols)]
+# }
 n_models <- length(est_cols)
 names(mod_labels) <- est_cols
 samp_vec <- list.files(sample_path, pattern = d0_tag, full.names = TRUE)
@@ -525,6 +542,7 @@ obs <- low_events_model %>%
 probs <- seq(0, 1, length.out = 100)
 
 qq_df <- low_events_model %>%
+  filter(model != "observed") %>%
   filter(duration_h < 25) %>%
   group_by(model) %>%
   summarise(
