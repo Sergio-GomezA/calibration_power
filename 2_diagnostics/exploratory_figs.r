@@ -1159,6 +1159,23 @@ ggsave(
   # dpi = 300
 )
 
+## reliability diagram ####
+
+# reading cov_summaries for time
+cov_gbl <- lapply(
+  seq_along(sampled_days[-15]),
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    d0_tag <- base::format(d0, "%y%m%d")
+    readRDS(sprintf(
+      "summaries/pred_band_coverage_summary_%s.rds",
+      d0_tag
+    ))$cov_gbl
+  }
+) %>%
+  bind_rows()
+
+
 ## error metrics ####
 mod_labels <- c(
   # "Generic PC",
