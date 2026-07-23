@@ -1159,7 +1159,7 @@ ggsave(
   # dpi = 300
 )
 
-## reliability diagram ####
+# reliability diagrams ####
 
 ### cov_summaries for time ####
 cov_gbl <- lapply(
@@ -1232,11 +1232,12 @@ rel_df %>%
   theme(
     legend.position = "bottom",
     legend.title = element_blank()
-  )
+  ) +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
 ggsave(
   filename = sprintf("fig/%s/pred_band_reliability_diagram.pdf", batch_name),
-  width = 10,
-  height = 6,
+  width = 6,
+  height = 4,
   # dpi = 300
 )
 
@@ -1291,14 +1292,15 @@ rel_df %>%
   theme(
     legend.position = "bottom",
     legend.title = element_blank()
-  )
+  ) +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
 ggsave(
   filename = sprintf(
     "fig/%s/pred_band_reliability_diagram_spaceoos.pdf",
     batch_name
   ),
-  width = 10,
-  height = 6,
+  width = 6,
+  height = 4,
   # dpi = 300
 )
 
