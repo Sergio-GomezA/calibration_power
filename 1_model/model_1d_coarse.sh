@@ -5,7 +5,7 @@
 #$ -o /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 #$ -e /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 ##$ -l h_rt=4:00:0,h_vmem=16G
-#$ -pe sharedmem 12
+#$ -pe sharedmem 24
 #$ -M s2441782@ed.ac.uk
 #$ -m bea
 #$ -t 1-15
@@ -18,3 +18,5 @@ module load R/4.5
 
 # Run resolution code
 Rscript 1_model/inlabru_1d.R $SGE_TASK_ID 25 TRUE TRUE 3 batch2025 TRUE
+# file name/ day id/ mesh edge length / recreate files / 
+# rerun st model / days in traning samp / batch folder / save models
