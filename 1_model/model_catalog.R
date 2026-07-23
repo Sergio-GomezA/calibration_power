@@ -9,7 +9,10 @@ mod_labels <- c(
   "ST model coarser",
   "LM+hour model",
   "AR1 model",
-  "AR2 model"
+  "AR2 model",
+  "LM bru model",
+  "LM beta model",
+  "LM t model"
 )
 est_cols <- c(
   "norm_power_est0",
@@ -21,7 +24,10 @@ est_cols <- c(
   "st0_m2",
   "spde1d",
   "ar1",
-  "ar2"
+  "ar2",
+  "lm_bru",
+  "lm_beta",
+  "lm_t"
 )
 
 mode_code_prefix <- c(
@@ -34,7 +40,10 @@ mode_code_prefix <- c(
   "st_bru0_very_coarse_",
   "ts_bru0_1DSPDE_",
   "ts_bru0_ar1_",
-  "ts_bru0_ar2_"
+  "ts_bru0_ar2_",
+  "ts_bru0_lm",
+  "ts_bru0_lmbeta",
+  "ts_bru0_lmt"
 )
 
 data.frame(
