@@ -263,6 +263,7 @@ CRPS
 - [?] run onshore/offshore models separately
 - [ ] predict for new wind fleet
   - [ ] prepare data for new wind farms (location, type, and capacity)
+- [ ] Compare against ninja / hannah
 - [ ] tweak models to improve coverage or lwe calibration
  - [ ] lm model in inlabru
  - [ ] beta model
