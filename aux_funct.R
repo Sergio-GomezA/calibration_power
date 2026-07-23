@@ -1970,6 +1970,9 @@ bru_ci_plot <- function(
       coverage_df <- coverage_df %>% mutate(oos = time <= t1)
     } ## oos for space)
 
+    # drop qcols from pred df
+    pred_df <- pred_df %>% dplyr::select(-all_of(q_cols))
+
     cov_time <- coverage_df %>%
       filter(oos) %>%
       group_by(time) %>%
