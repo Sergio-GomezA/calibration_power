@@ -245,23 +245,20 @@ rmse metrics
 
 CRPS
 
-
-
 - [ ] finish writing methodology
 - [x] run with 5000 samples
 - [ ] update code pipeline to avoid saving models / samples
-  - [ ] get lgcpo and dic
-  - [ ] save gcpo, dic, etc
+  - [x] get lgcpo and dic
+  - [x] save gcpo, dic, etc
   - [ ] get CRPS
-
 
 - [ ] split document into annual rev report and main piece
 - [x] fix colors in space oos regimes
 - [x] recover st models in lwe
 - [x] new unfaceted lwe figures
 - [x] coverage bands with 95\% reference line
-- [ ] reliability diagrams with 95\% reference line
-- [ ] remove zeroes when mid regime is detected
+- [x] reliability diagrams with 95\% reference line
+- [x] mask zeroes when mid regime is detected
 - [ ] add fitted values to prediction bands in grouped figures
 - [?] run onshore/offshore models separately
 - [ ] predict for new wind fleet
