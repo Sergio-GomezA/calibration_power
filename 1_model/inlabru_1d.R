@@ -316,6 +316,61 @@ if (!override_objects && length(files_found) > 0) {
       by = c("date" = "date")
     )
 
+  # plot candidate anomalies, norm_potential == 0 and p_group3 == "mid"
+  cutprobs3 <- c(0.25, 0.75)
+  # p_quant3 <- quantile(gb_day_df$norm_power_est0, probs = cutprobs3)
+  p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
+
+  tol <- 0.01
+  norm_dist_tol <- 0.50
+  wf_df_frag <- wf_df_frag %>%
+    mutate(
+      # p_group3_est = cut(
+      #   norm_power_est0,
+      #   breaks = c(-Inf, p_quant3, Inf),
+      #   labels = c("low", "mid", "high")
+      # ),
+      # p_group3_hour = cut(
+      #   norm_potential,
+      #   breaks = c(-Inf, p_quant3, Inf),
+      #   labels = c("low", "mid", "high")
+      # ),
+      anomaly = case_when(
+        norm_potential <= tol & norm_power_est0 >= p_quant3[1] ~ TRUE,
+        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
+        abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
+        TRUE ~ FALSE
+      )
+    )
+  wf_df_frag %>%
+    ggplot() +
+    geom_point(
+      aes(norm_potential, norm_power_est0, color = anomaly),
+      size = 0.5
+    ) +
+    scale_color_manual(values = c("grey50", "darkred")) +
+    theme(legend.position = "bottom") +
+    labs(
+      x = "Elexon CF (%)",
+      y = "Generic PC(ERA5) CF (%)",
+      color = "Anomaly"
+    ) +
+    coord_fixed(ratio = 1)
+
+  ggsave(
+    sprintf("fig/%s/anomalies_%s.pdf", batch_name, d0_tag),
+    width = 4,
+    height = 4.5
+  )
+
+  # mask anomalies for model fitting
+
+  wf_df_frag <- wf_df_frag %>%
+    mutate(
+      norm_potential_orig = norm_potential,
+      norm_potential = ifelse(anomaly, NA, norm_potential)
+    )
+
   x <- wf_df_frag$pow_group %>% unique() %>% sort()
   min_jump <- min(diff(sort(x))) / diff(range(x))
   if (min_jump <= 1e-4) {
@@ -1246,7 +1301,7 @@ wgen_qm <- with(
   doQmapQUANT(norm_power_est0, qqmod, type = "linear")
 )
 scores_df[[qm_fname]] <- data.frame(
-  R2 = cor(wgen_qm, wf_df_frag$norm_potential)^2
+  R2 = cor(wgen_qm, wf_df_frag$norm_potential, use = "complete.obs")^2
 )
 # 3. model comparison ####
 
@@ -1284,46 +1339,6 @@ est_cols <- c(
 n_models <- length(est_cols)
 n <- nrow(wf_df_frag)
 names(mod_labels) <- est_cols
-# length(wgen_qm)
-# length(wf_df_frag$norm_potential)
-# length(bru0$summary.fitted.values[1:n, "mean"])
-# length(model_AIC0$fitted.values)
-# n <- nrow(wf_df_frag)
-# names(mod_labels) <- est_cols
-
-# ar_test <- predict(
-#   bruar1,
-#   newdata = wf_df_frag,
-#   # ~ data.frame(
-#   #   time_id = time_id,
-#   #   # latent = x,
-#   #   norm_potential_est = (Intercept +
-#   #     power_correction +
-#   #     wind)
-#   # ),
-#   ~ Intercept +
-#     power_correction +
-#     wind +
-#     u,
-#   n.samples = 10
-# )
-# length(ar_test$mean)
-# names(ar_test)
-# plot(ar_test$mean, wf_df_frag$norm_potential)
-
-# set.seed(1)
-# spde1d_pred <- predict(
-#   bru1d,
-#   newdata = wf_df_frag,
-#   ~ Intercept +
-#     power_correction +
-#     wind +
-#     hour,
-#   type = "response",
-#   n.samples = 100,
-#   verbose = TRUE,
-#   used.improved.mean = FALSE
-# )
 
 ## fitted values df ####
 
@@ -1411,6 +1426,7 @@ cat("--------------------------------------------------------------------\n")
 cat("Generating summary tables and figures\n")
 cat("--------------------------------------------------------------------\n")
 df_long0 <- model_df0 %>%
+  filter(!anomaly) %>%
   dplyr::select(
     date,
     time,
@@ -1892,10 +1908,10 @@ model_df_ts <- model_df0 %>%
     norm_potential,
     capacity,
     ws_h,
-    all_of(est_cols)
+    any_of(est_cols)
   ) %>%
   pivot_longer(
-    cols = all_of(c("norm_potential", est_cols)),
+    cols = any_of(c("norm_potential", est_cols)),
     names_to = "model",
     values_to = "estimate"
   ) %>%
@@ -2008,14 +2024,14 @@ model_df_ts2 <- model_df0 %>%
     norm_potential,
     capacity,
     ws_h,
-    all_of(est_cols)
+    any_of(est_cols)
   ) %>%
   mutate(across(
-    all_of(est_cols),
+    any_of(est_cols),
     ~ . - norm_potential
   )) %>%
   pivot_longer(
-    cols = all_of(est_cols),
+    cols = any_of(est_cols),
     names_to = "model",
     values_to = "error"
   )
@@ -2030,7 +2046,8 @@ model_df_ts2 %>%
     data = model_df_ts2 %>%
       group_by(time, model) %>%
       summarise(
-        error = sum(error * capacity) / sum(capacity),
+        error = sum(error * capacity, na.rm = TRUE) /
+          sum(capacity, na.rm = TRUE),
         .groups = "drop"
       ),
     aes(time, error, col = "capacity weighted avg."),
@@ -2039,7 +2056,7 @@ model_df_ts2 %>%
   geom_line(
     data = model_df_ts2 %>%
       group_by(time, model) %>%
-      summarise(error = mean(error), .groups = "drop"),
+      summarise(error = mean(error, na.rm = TRUE), .groups = "drop"),
     aes(time, error, col = "simple avg."),
     lwd = 1
   ) +
