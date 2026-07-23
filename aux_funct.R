@@ -1761,9 +1761,20 @@ plot.effects <- function(
     mutate(across(mean:upper, trans))
 
   # Plot using ggplot2
-  p1 <- ggplot(plot_data, aes(x = group, ...)) +
-    geom_line(aes(y = mean), color = "blue", lwd = 1) + # Plot mean
-    geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2) + # Plot credible intervals
+  layers <-
+    if (rand.effect %in% c("techno", "slope")) {
+      list(
+        geom_col(aes(y = mean), fill = blues9[7], width = 0.7),
+        geom_errorbar(aes(ymin = lower, ymax = upper), width = 0.2)
+      )
+    } else {
+      list(
+        geom_line(aes(y = mean), color = "blue", linewidth = 1),
+        geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.2)
+      )
+    }
+  p1 <- ggplot(plot_data, aes(x = group)) +
+    layers +
     labs(
       title = paste("Estimated effect for", rand.effect),
       x = paste(rand.effect),
@@ -2078,6 +2089,7 @@ extract_score_model <- function(mod.obj) {
   if (length(mod.obj$.args$family) > 1) {
     n <- length(mod.obj$.args$data$intercept) / 2
     result <- data.frame(
+      mlik = mod.obj$mlik[2],
       dic = if (!is.null(mod.obj$dic)) {
         sum(mod.obj$dic$dic[-c(1:n)], na.rm = TRUE)
       } else {
@@ -2101,6 +2113,7 @@ extract_score_model <- function(mod.obj) {
     )
   } else {
     result <- data.frame(
+      mlik = mod.obj$mlik[2],
       dic = if (!is.null(mod.obj$dic)) mod.obj$dic$dic else NA,
       waic = if (!is.null(mod.obj$waic)) mod.obj$waic$waic else NA,
       mean_log_cpo = if (!is.null(mod.obj$cpo)) {
