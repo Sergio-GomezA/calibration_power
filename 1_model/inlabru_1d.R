@@ -596,6 +596,302 @@ if (!file.exists(mesh_assess_fname) || override_objects) {
 }
 
 # 2. Model fitting ####
+## 2.0 bru lm model ####
+mod_tag <- "lm"
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  techno(tech_typ, model = "iid") + # random intercept by tech_typ
+  # norm_power_est0 +
+  slope(
+    tech_typ,
+    model = "iid",
+    weights = norm_power_est0
+  ) +
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) # smooth correction wind
+
+model_code <- sprintf("ts_bru0_%s_%s.rds", mod_tag, d0_tag)
+model_fname <- file.path(
+  model_path,
+  model_code
+)
+
+if (!file.exists(model_fname) || override_objects) {
+  cat("--------------------------------------------------------------------\n")
+  cat("Fitting bru lm model\n")
+  cat("--------------------------------------------------------------------\n")
+  brulm <- bru(
+    components = components0,
+    formula = norm_potential ~ Intercept +
+      techno +
+      slope +
+      # power_correction +
+      d_coast +
+      elev +
+      wind,
+    family = "gaussian",
+    control.family = list(
+      hyper = list(
+        prec = list(
+          prior = "pc.prec",
+          param = c(50, 0.05)
+        )
+      )
+    ),
+    data = wf_df_frag,
+    options = base_bru_options
+  )
+
+  scores_df[[model_code]] <- extract_score_model(brulm)
+
+  if (save_models) {
+    saveRDS(
+      brulm,
+      file = model_fname
+    )
+  }
+} else {
+  cat("Loading existing lm model\n")
+  brulm <- readRDS(model_fname)
+}
+
+summary(brulm)
+source("aux_funct.R")
+effect_names <- names(brulm$summary.random)
+excluded_effects <- c("u")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect %in% c("wind")) {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  # browser()
+  plot.effects(
+    brulm,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf("fig/%s/%s_effect_%s_%s.pdf", batch_name, effect, mod_tag, d0_tag),
+    width = 6,
+    height = 4
+  )
+}
+
+plot.hyper.dens(brulm)
+ggsave(
+  sprintf("fig/%s/hyperparameters_%s_%s.pdf", batch_name, mod_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+
+## 2.01 bru beta model ####
+mod_tag <- "lmbeta"
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  techno(tech_typ, model = "iid") + # random intercept by tech_typ
+  # norm_power_est0 +
+  slope(
+    tech_typ,
+    model = "iid",
+    weights = norm_power_est0
+  ) +
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) # smooth correction wind
+
+model_code <- sprintf("ts_bru0_%s_%s.rds", mod_tag, d0_tag)
+model_fname <- file.path(
+  model_path,
+  model_code
+)
+
+if (!file.exists(model_fname) || override_objects) {
+  cat("--------------------------------------------------------------------\n")
+  cat("Fitting bru lmbeta model\n")
+  cat("--------------------------------------------------------------------\n")
+  brulmbeta <- bru(
+    components = components0,
+    formula = norm_potential ~ Intercept +
+      techno +
+      slope +
+      # power_correction +
+      d_coast +
+      elev +
+      wind,
+    family = "beta",
+    control.family = list(
+      beta.censor.value = 0.005
+    ),
+    data = wf_df_frag,
+    options = base_bru_options
+  )
+
+  scores_df[[model_code]] <- extract_score_model(brulmbeta)
+
+  if (save_models) {
+    saveRDS(
+      brulmbeta,
+      file = model_fname
+    )
+  }
+} else {
+  cat("Loading existing lmbeta model\n")
+  brulmbeta <- readRDS(model_fname)
+}
+
+summary(brulmbeta)
+source("aux_funct.R")
+effect_names <- names(brulmbeta$summary.random)
+excluded_effects <- c("u")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect %in% c("wind")) {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  # browser()
+  plot.effects(
+    brulmbeta,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf("fig/%s/%s_effect_%s_%s.pdf", batch_name, effect, mod_tag, d0_tag),
+    width = 6,
+    height = 4
+  )
+}
+
+plot.hyper.dens(brulmbeta)
+ggsave(
+  sprintf("fig/%s/hyperparameters_%s_%s.pdf", batch_name, mod_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+
+## 2.01 bru t model ####
+mod_tag <- "lmt"
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  techno(tech_typ, model = "iid") + # random intercept by tech_typ
+  # norm_power_est0 +
+  slope(
+    tech_typ,
+    model = "iid",
+    weights = norm_power_est0
+  ) +
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) # smooth correction wind
+
+model_code <- sprintf("ts_bru0_%s_%s.rds", mod_tag, d0_tag)
+model_fname <- file.path(
+  model_path,
+  model_code
+)
+
+if (!file.exists(model_fname) || override_objects) {
+  cat("--------------------------------------------------------------------\n")
+  cat("Fitting bru lm t model\n")
+  cat("--------------------------------------------------------------------\n")
+  brulmt <- bru(
+    components = components0,
+    formula = norm_potential ~ Intercept +
+      techno +
+      slope +
+      # power_correction +
+      d_coast +
+      elev +
+      wind,
+    family = "t",
+    # control.family = list(
+    #   beta.censor.value = 0.005
+    # ),
+    data = wf_df_frag,
+    options = base_bru_options
+  )
+
+  scores_df[[model_code]] <- extract_score_model(brulmt)
+
+  if (save_models) {
+    saveRDS(
+      brulmt,
+      file = model_fname
+    )
+  }
+} else {
+  cat("Loading existing lmt model\n")
+  brulmt <- readRDS(model_fname)
+}
+
+summary(brulmt)
+source("aux_funct.R")
+effect_names <- names(brulmt$summary.random)
+excluded_effects <- c("u")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect %in% c("wind")) {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  # browser()
+  plot.effects(
+    brulmt,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf("fig/%s/%s_effect_%s_%s.pdf", batch_name, effect, mod_tag, d0_tag),
+    width = 6,
+    height = 4
+  )
+}
+
+plot.hyper.dens(brulmt)
+ggsave(
+  sprintf("fig/%s/hyperparameters_%s_%s.pdf", batch_name, mod_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+
 ## 2.1 AR1 temporal model ####
 ar_tag <- "ar1"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
@@ -1013,7 +1309,7 @@ if (!file.exists(model_fname) || re_run_st) {
   bru0 <- readRDS(model_fname)
 }
 
-## summary and effect plots ####
+### summary and effect plots ####
 summary(bru0)
 # bru0$summary.fixed[, 1:6]
 # bru0$summary.random$tech_typ[, 1:6]
