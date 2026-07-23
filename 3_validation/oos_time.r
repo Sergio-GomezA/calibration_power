@@ -12,8 +12,8 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 # 0.1 global parameter #####
 day_id <- 2
 # mesh_edge_par <- 20 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- TRUE
-rerun_samples <- TRUE
+override_objects <- FALSE
+rerun_samples <- FALSE
 prec_init <- log(200)
 batch_name <- "batch2025"
 
@@ -537,12 +537,20 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       )
     }
   )
+  samples_only <- lapply(
+    pred_band_summary,
+    function(x) {
+      list(
+        sample_df = x$sample_df
+      )
+    }
+  )
   names(pred_band_summary) <- bru_df$code
   names(summary_only) <- bru_df$code
   names(coverage_summary) <- bru_df$code
-
+  names(samples_only) <- bru_df$code
   saveRDS(summary_only, pred_summary_fname)
-  saveRDS(pred_band_summary, pred_samples_fname)
+  saveRDS(samples_only, pred_samples_fname)
   saveRDS(coverage_summary, cov_summary_fname)
 } else {
   cat("Loading existing prediction band summary\n")
@@ -827,16 +835,15 @@ var_wf <- wf_fig_df %>%
     .groups = "drop"
   )
 
-var_wf %>%
-  mutate(
-    scaled_var = var_res / n_loc
-  ) %>%
-  left_join(var_emp, by = "model", suffix = c("_wf", "_emp")) %>%
-  mutate(
-    rho_est = (var_res_emp - var_res_wf / n_loc) /
-      (var_res_wf * (1 - 1 / n_loc))
-  )
-
+# var_wf %>%
+#   mutate(
+#     scaled_var = var_res / n_loc
+#   ) %>%
+#   left_join(var_emp, by = "model", suffix = c("_wf", "_emp")) %>%
+#   mutate(
+#     rho_est = (var_res_emp - var_res_wf / n_loc) /
+#       (var_res_wf * (1 - 1 / n_loc))
+#   )
 
 endtime <- Sys.time()
 
