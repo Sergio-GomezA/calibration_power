@@ -1161,7 +1161,7 @@ ggsave(
 
 ## reliability diagram ####
 
-# reading cov_summaries for time
+### cov_summaries for time ####
 cov_gbl <- lapply(
   seq_along(sampled_days[-15]),
   function(i) {
@@ -1185,8 +1185,8 @@ cov_gbl <- lapply(
   }
 ) %>%
   bind_rows()
-list.files("summaries/pred_band_coverage_summary_*.rds") %>%
-  length()
+# list.files("summaries/pred_band_coverage_summary_*.rds") %>%
+#   length()
 model_palette <- c(
   "Observed" = "darkred",
   "Generic PC" = "#E69F00",
@@ -1215,8 +1215,10 @@ rel_df <- cov_gbl %>%
   mutate(
     nominal = as.numeric(gsub("coverage_", "", level)) / 100,
     model = factor(model, levels = names(mod_labels), labels = mod_labels)
-  )
-rel_df$model %>% unique()
+  ) %>%
+  group_by(model, nominal) %>%
+  summarise(empirical = mean(empirical, na.rm = TRUE), .groups = "drop")
+# rel_df$model %>% unique()
 rel_df %>%
   ggplot(aes(x = nominal, y = empirical, col = model)) +
   geom_line() +
@@ -1226,7 +1228,80 @@ rel_df %>%
     linetype = "dashed",
     color = "darkred"
   ) +
-  scale_color_manual(values = model_palette)
+  scale_color_manual(values = model_palette) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_blank()
+  )
+ggsave(
+  filename = sprintf("fig/%s/pred_band_reliability_diagram.pdf", batch_name),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
+
+### cov summaries for space ####
+cov_gbl <- lapply(
+  seq_along(sampled_days[-15]),
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    d0_tag <- base::format(d0, "%y%m%d")
+
+    cov_obj <- readRDS(sprintf(
+      "summaries/pred_band_coverage_summary_spaceoos_%s.rds",
+      d0_tag
+    ))
+    cov_gbl <- lapply(
+      seq_along(cov_obj),
+      \(x) {
+        cov_obj[[x]]$cov_gbl %>%
+          mutate(
+            model = cov_obj %>% names() %>% .[x],
+            date = d0
+          )
+      }
+    )
+  }
+) %>%
+  bind_rows()
+
+rel_df <- cov_gbl %>%
+  pivot_longer(
+    cols = matches("coverage"),
+    names_to = "level",
+    values_to = "empirical"
+  ) %>%
+  mutate(
+    nominal = as.numeric(gsub("coverage_", "", level)) / 100,
+    model = factor(model, levels = names(mod_labels), labels = mod_labels)
+  ) %>%
+  group_by(model, nominal) %>%
+  summarise(empirical = mean(empirical, na.rm = TRUE), .groups = "drop")
+# rel_df$model %>% unique()
+rel_df %>%
+  ggplot(aes(x = nominal, y = empirical, col = model)) +
+  geom_line() +
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    color = "darkred"
+  ) +
+  scale_color_manual(values = model_palette) +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_blank()
+  )
+ggsave(
+  filename = sprintf(
+    "fig/%s/pred_band_reliability_diagram_spaceoos.pdf",
+    batch_name
+  ),
+  width = 10,
+  height = 6,
+  # dpi = 300
+)
+
 
 ## error metrics ####
 mod_labels <- c(
