@@ -1167,14 +1167,66 @@ cov_gbl <- lapply(
   function(i) {
     d0 <- sampled_days_df$date[i] %>% as.Date()
     d0_tag <- base::format(d0, "%y%m%d")
-    readRDS(sprintf(
+
+    cov_obj <- readRDS(sprintf(
       "summaries/pred_band_coverage_summary_%s.rds",
       d0_tag
-    ))$cov_gbl
+    ))
+    cov_gbl <- lapply(
+      seq_along(cov_obj),
+      \(x) {
+        cov_obj[[x]]$cov_gbl %>%
+          mutate(
+            model = cov_obj %>% names() %>% .[x],
+            date = d0
+          )
+      }
+    )
   }
 ) %>%
   bind_rows()
-
+list.files("summaries/pred_band_coverage_summary_*.rds") %>%
+  length()
+model_palette <- c(
+  "Observed" = "darkred",
+  "Generic PC" = "#E69F00",
+  "Linear model" = "#56B4E9",
+  "AR1 model" = "#009E73",
+  "AR2 model" = "#F0E442",
+  "LM+hour model" = "#0072B2",
+  "ST model coarse" = "#D55E00",
+  "ST model coarser" = "#CC79A7",
+  "QM" = "#999999",
+  "GB LM" = "#000000"
+)
+model_catalog <- read.csv("data/model_catalog.csv") %>%
+  na.omit()
+mod_labels <- model_catalog$mod_labels
+est_cols <- model_catalog$est_cols
+n_models <- length(est_cols)
+names(mod_labels) <- est_cols
+# diabrams for time
+rel_df <- cov_gbl %>%
+  pivot_longer(
+    cols = matches("coverage"),
+    names_to = "level",
+    values_to = "empirical"
+  ) %>%
+  mutate(
+    nominal = as.numeric(gsub("coverage_", "", level)) / 100,
+    model = factor(model, levels = names(mod_labels), labels = mod_labels)
+  )
+rel_df$model %>% unique()
+rel_df %>%
+  ggplot(aes(x = nominal, y = empirical, col = model)) +
+  geom_line() +
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    color = "darkred"
+  ) +
+  scale_color_manual(values = model_palette)
 
 ## error metrics ####
 mod_labels <- c(
