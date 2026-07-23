@@ -858,7 +858,7 @@ if (!file.exists(model_fname) || override_objects) {
 }
 
 summary(brulmt)
-source("aux_funct.R")
+# source("aux_funct.R")
 effect_names <- names(brulmt$summary.random)
 excluded_effects <- c("u")
 effect_names <- setdiff(effect_names, excluded_effects)
@@ -1611,26 +1611,29 @@ write.csv(
 )
 
 ## 3.2 model labels and fitted values ####
-mod_labels <- c(
-  "Generic PC",
-  "Linear model",
-  "AR1 model",
-  "AR2 model",
-  # "LM+hour model",
-  "Spatio-temporal model",
-  "QM",
-  "GB LM"
-)
-est_cols <- c(
-  "norm_power_est0",
-  "lm",
-  "ar1",
-  "ar2",
-  # "spde1d",
-  "st",
-  "qm",
-  "agg_lm"
-)
+model_catalog <- read.csv("data/model_catalog.csv")
+mod_labels <- model_catalog$mod_labels
+est_cols <- model_catalog$est_cols
+# mod_labels <- c(
+#   "Generic PC",
+#   "Linear model",
+#   "AR1 model",
+#   "AR2 model",
+#   # "LM+hour model",
+#   "Spatio-temporal model",
+#   "QM",
+#   "GB LM"
+# )
+# est_cols <- c(
+#   "norm_power_est0",
+#   "lm",
+#   "ar1",
+#   "ar2",
+#   # "spde1d",
+#   "st",
+#   "qm",
+#   "agg_lm"
+# )
 
 n_models <- length(est_cols)
 n <- nrow(wf_df_frag)
@@ -1645,9 +1648,12 @@ model_df0 <- wf_df_frag %>%
     ar1 = bruar1$summary.fitted.values[1:n, "mean"],
     ar2 = bruar2$summary.fitted.values[1:n, "mean"],
     spde1d = bru1d$summary.fitted.values[1:n, "mean"],
-    st = bru0$summary.fitted.values[1:n, "mean"],
+    st0_m2 = bru0$summary.fitted.values[1:n, "mean"],
     qm = wgen_qm,
-    agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag)
+    agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag),
+    lm_bru = brulm$summary.fitted.values[1:n, "mean"],
+    lm_beta = brulmbeta$summary.fitted.values[1:n, "mean"],
+    lm_t = brulmt$summary.fitted.values[1:n, "mean"]
   ) %>%
   mutate(
     st_low = bru0$summary.fitted.values[1:n, "0.025quant"],
@@ -1789,8 +1795,9 @@ df_long0 %>%
     fill = "Model"
   ) +
   # coord_cartesian(xlim = c(-0.25, 0.25)) +
-  theme(legend.position = "bottom") +
-  scale_fill_manual(values = pal_lancet()(n_models))
+  theme(legend.position = "none") #+
+# scale_fill_manual(values = pal_lancet()(n_models))
+# scale_fill_manual(blues9)
 
 ggsave(
   sprintf(
@@ -1889,8 +1896,8 @@ df_long0 %>%
     y = "Density",
     fill = "Model"
   ) +
-  theme(legend.position = "bottom") +
-  scale_fill_manual(values = pal_lancet()(n_models))
+  theme(legend.position = "bottom") #+
+# scale_fill_manual(values = pal_lancet()(n_models))
 
 ggsave(
   sprintf(
@@ -1944,8 +1951,8 @@ df_long0 %>%
     y = "Technology Type",
     fill = "Model"
   ) +
-  theme(legend.position = "bottom") +
-  scale_fill_manual(values = pal_lancet()(n_models))
+  theme(legend.position = "bottom") #+
+# scale_fill_manual(values = pal_lancet()(n_models))
 
 ggsave(
   sprintf(
@@ -1998,8 +2005,8 @@ df_long0 %>%
     y = "Regime",
     fill = "Model"
   ) +
-  theme(legend.position = "bottom") +
-  scale_fill_manual(values = pal_lancet()(n_models))
+  theme(legend.position = "bottom") #+
+# scale_fill_manual(values = pal_lancet()(n_models))
 ggsave(
   sprintf(
     "fig/%s/error_distribution_by_regime_%s_%s.pdf",
@@ -2030,8 +2037,8 @@ df_long0 %>%
     fill = "Model"
   ) +
   theme(legend.position = "none") +
-  coord_cartesian(xlim = c(-0.5, 0.5)) +
-  scale_fill_manual(values = pal_lancet()(n_models))
+  coord_cartesian(xlim = c(-0.5, 0.5)) #+
+# scale_fill_manual(values = pal_lancet()(n_models))
 
 ggsave(
   sprintf(
@@ -2069,8 +2076,8 @@ df_long0 %>%
     x = "Hour of day",
     y = "RMSE",
     col = "Model"
-  ) +
-  scale_color_manual(values = pal_lancet()(n_models))
+  ) #+
+# scale_color_manual(values = pal_lancet()(n_models))
 
 ggsave(
   sprintf(
@@ -2124,8 +2131,8 @@ df_long0 %>%
     y = "Distance to Coast",
     fill = "Model"
   ) +
-  theme(legend.position = "bottom") +
-  scale_fill_manual(values = pal_lancet()(n_models))
+  theme(legend.position = "bottom") #+
+# scale_fill_manual(values = pal_lancet()(n_models))
 ggsave(
   sprintf(
     "fig/%s/error_distribution_by_dist_coast_%s_%s.pdf",
@@ -2178,8 +2185,8 @@ df_long0 %>%
     y = "Elevation",
     fill = "Model"
   ) +
-  theme(legend.position = "bottom") +
-  scale_fill_manual(values = pal_lancet()(n_models))
+  theme(legend.position = "bottom") # +
+# scale_fill_manual(values = pal_lancet()(n_models))
 ggsave(
   sprintf(
     "fig/%s/error_distribution_by_elevation_%s_%s.pdf",
