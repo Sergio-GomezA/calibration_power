@@ -9,3 +9,6 @@
 "LM+hour model","spde1d","ts_bru0_1DSPDE_"
 "AR1 model","ar1","ts_bru0_ar1_"
 "AR2 model","ar2","ts_bru0_ar2_"
+"LM bru model","lm_bru","ts_bru0_lm"
+"LM beta model","lm_beta","ts_bru0_lmbeta"
+"LM t model","lm_t","ts_bru0_lmt"
