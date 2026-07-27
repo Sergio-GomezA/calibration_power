@@ -4,14 +4,14 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 # 0.1 global parameter #####
 day_id <- 2
-mesh_edge_par <- 50 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- TRUE
+mesh_edge_par <- 25 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
+override_objects <- FALSE
 re_run_st <- FALSE
 prec_init <- log(200) # for u
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
 fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
-n.days.before <- 7
+n.days.before <- 3
 batch_name <- "batch2025"
 save_models <- FALSE
 
@@ -498,6 +498,18 @@ if (!file.exists(mesh_fname) || override_objects) {
 } else {
   cat("Loading existing mesh\n")
   wf.mesh <- readRDS(mesh_fname)
+  loc_unique <- wf_df_frag %>%
+    distinct(x, y) %>%
+    as.matrix()
+
+  if (mesh_edge_par <= 20) {
+    conv_par <- c(-.05, -.35)
+    max_n <- c(900, 300)
+  } else {
+    conv_par <- c(-.1, -.35)
+    max_n <- c(900, 150)
+  }
+  bnd <- fm_extensions(loc_unique, convex = conv_par)
 }
 
 ### 1.2 mesh assessment #####
