@@ -252,6 +252,7 @@ CRPS
   - [x] save gcpo, dic, etc
   - [ ] get CRPS
 
+
 - [ ] split document into annual rev report and main piece
 - [x] fix colors in space oos regimes
 - [x] recover st models in lwe
@@ -264,6 +265,7 @@ CRPS
 - [ ] predict for new wind fleet
   - [ ] prepare data for new wind farms (location, type, and capacity)
 - [ ] Compare against ninja / hannah
+
 - [ ] tweak models to improve coverage or lwe calibration
  - [ ] lm model in inlabru
  - [ ] beta model
@@ -274,3 +276,5 @@ CRPS
   - [ ] run more days to obtain full calibrated estimates
   - [ ] wind speed consitent estimate
   - [ ] loss factor estimates per region
+
+  - different lwe thresholds
