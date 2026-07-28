@@ -1895,7 +1895,7 @@ bru_ci_plot <- function(
     )
   )
   # browser()
-  samples <- generate(
+  samples <- inlabru::generate(
     bru_model,
     newdata = newdata,
     formula = formula_temp,
@@ -1934,7 +1934,7 @@ bru_ci_plot <- function(
     }
   ) %>%
     bind_rows() %>%
-    st_drop_geometry()
+    sf::st_drop_geometry()
 
   # summary by site and time
   wf_summary_df <- pred_df %>%
