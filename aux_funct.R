@@ -1836,7 +1836,8 @@ bru_ci_plot <- function(
   n.samples = 100,
   show.fig = TRUE,
   alphas = NULL,
-  oos_type = "time"
+  oos_type = "time",
+  family = "gaussian"
 ) {
   n <- nrow(newdata)
   lin_pred <- get_bru_formula(bru_model)
@@ -1855,16 +1856,37 @@ bru_ci_plot <- function(
 
   # browser()
 
+  switch(
+    family,
+    t = {
+      rfun <- "rt"
+      qfun <- "qt"
+      args <- sprintf("df = (%s), ncp = (%s)", prec_val, exp(lin_pred))
+    },
+    beta = {
+      rfun <- "rbeta"
+      qfun <- "qbeta"
+      shape1 <- sprintf("(%s) * (%s)", plogis(lin_pred), prec_val)
+      shape2 <- sprintf("(%s) - (%s)", prec_val, shape1)
+      args <- sprintf("shape1 = %s, shape2 = %s", shape1, shape2)
+    },
+    gaussian = {
+      rfun <- "rnorm"
+      qfun <- "qnorm"
+      args <- sprintf("mean = (%s), sd = 1 / sqrt((%s))", lin_pred, prec_val)
+    }
+  )
+
   if (!is.null(alphas)) {
     prob_len <- length(alphas)
     prob_points <- c(alphas / 2, 1 - alphas / 2)
     extra_quantiles <- paste(
       sprintf(
-        "q_%s = qnorm(%s, mean = (%s), sd = 1 / sqrt((%s)))",
+        "q_%s = %s(%s, %s)",
         gsub("\\.", "_", prob_points),
+        qfun,
         prob_points,
-        lin_pred,
-        prec_val
+        qargs
       ),
       collapse = ",\n       "
     )
@@ -1872,28 +1894,27 @@ bru_ci_plot <- function(
     extra_quantiles <- "q = NULL"
   }
 
-  formula_temp <- as.formula(
-    sprintf(
-      "~ data.frame(
-       coord_id = coord_id,
-       site_name = site_name,
-       time = time,
-       date = date,
-       pow_st = rnorm(n = %d, mean = (%s), sd = 1 / sqrt((%s))),
-       lwr = qnorm(0.025, mean = (%s), sd = 1 / sqrt((%s))),
-       upr = qnorm(0.975, mean = (%s), sd = 1 / sqrt((%s))),
-       %s
-       )",
-      n,
-      lin_pred,
-      prec_val,
-      lin_pred,
-      prec_val,
-      lin_pred,
-      prec_val,
-      extra_quantiles
-    )
-  )
+  formula_temp <- as.formula(sprintf(
+    "~ data.frame(
+      coord_id = coord_id,
+      site_name = site_name,
+      time = time,
+      date = date,
+      pow_st = %s(n = %d, %s),
+      lwr = %s(0.025, %s),
+      upr = %s(0.975, %s),
+      %s
+  )",
+    rfun,
+    n,
+    args,
+    qfun,
+    args,
+    qfun,
+    args,
+    extra_quantiles
+  ))
+
   # browser()
   samples <- inlabru::generate(
     bru_model,
@@ -2128,5 +2149,25 @@ extract_score_model <- function(mod.obj) {
       }
     )
   }
+  return(result)
+}
+
+
+extract_pit_model <- function(mod.obj) {
+  # browser()
+  # check if model has two likelihoods
+  # n <- if (length(mod.obj$.args$family) > 1) length(mod.obj$.args$data$intercept) / 2 else NULL
+
+  if (length(mod.obj$.args$family) > 1) {
+    n <- length(mod.obj$.args$data$intercept) / 2
+    pit_vals <- mod.obj$cpo$pit[-c(1:n)]
+  } else {
+    n <- length(mod.obj$cpo$pit)
+    pit_vals <- mod.obj$cpo$pit
+  }
+  data.frame(
+    id = 1:n,
+    pit = pit_vals
+  )
   return(result)
 }

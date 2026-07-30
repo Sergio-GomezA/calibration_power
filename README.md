@@ -252,6 +252,7 @@ CRPS
   - [ ] validate that lwe considers new models as well
   - [x] get lgcpo and dic
   - [x] save gcpo, dic, etc
+  - [x] get PIT
   - [ ] get CRPS
   - [ ] Brier score
 
@@ -275,6 +276,7 @@ CRPS
  - [x] beta model
  - [x] t student distribution
  - [ ] adapt sampling for models with non-gaussian families / new links
+   - [ ] test code for new families
 
 - [ ] next stage
   - [ ] run more days to obtain full calibrated estimates
