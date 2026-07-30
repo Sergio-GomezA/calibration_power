@@ -331,40 +331,40 @@ mesh_fname <- file.path(
   sprintf("spatial_mesh_%s_%s.rds", mesh_label, d0_tag)
 )
 
+loc_unique <- wf_df_frag %>%
+  distinct(x, y) %>%
+  as.matrix()
+if (mesh_edge_par <= 20) {
+  conv_par <- c(-.05, -.35)
+} else {
+  conv_par <- c(-.1, -.35)
+}
+bnd <- fm_extensions(loc_unique, convex = conv_par)
+bndin <- bnd[[1]]
+bndout <- bnd[[2]]
+
+uk_map <- rnaturalearth::ne_countries(
+  scale = "medium",
+  country = "United Kingdom",
+  returnclass = "sf"
+)
+coastline <- uk_map %>%
+  st_transform(crs = 27700) %>%
+  st_boundary()
+uk_map <- uk_map %>%
+  st_transform(crs = 27700) %>%
+  st_geometry() %>%
+  (\(g) g / 1000)() %>%
+  st_set_geometry(uk_map, .)
+
 if (!file.exists(mesh_fname) || override_objects) {
   cat("Mesh file not found, building new mesh\n")
 
-  loc_unique <- wf_df_frag %>%
-    distinct(x, y) %>%
-    as.matrix()
-
-  # bnd <- fm_extensions(loc_unique, convex = c(-.1, -.15))
-  # bnd <- fm_extensions(loc_unique, convex = c(-.08, -.3))
   if (mesh_edge_par <= 20) {
-    conv_par <- c(-.05, -.35)
     max_n <- c(900, 300)
   } else {
-    conv_par <- c(-.1, -.35)
     max_n <- c(900, 150)
   }
-  bnd <- fm_extensions(loc_unique, convex = conv_par)
-
-  bndin <- bnd[[1]]
-  bndout <- bnd[[2]]
-
-  uk_map <- rnaturalearth::ne_countries(
-    scale = "medium",
-    country = "United Kingdom",
-    returnclass = "sf"
-  )
-  coastline <- uk_map %>%
-    st_transform(crs = 27700) %>%
-    st_boundary()
-  uk_map <- uk_map %>%
-    st_transform(crs = 27700) %>%
-    st_geometry() %>%
-    (\(g) g / 1000)() %>%
-    st_set_geometry(uk_map, .)
 
   hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = edge_target * 2)
 
@@ -400,18 +400,6 @@ if (!file.exists(mesh_fname) || override_objects) {
 } else {
   cat("Loading existing mesh\n")
   wf.mesh <- readRDS(mesh_fname)
-  loc_unique <- wf_df_frag %>%
-    distinct(x, y) %>%
-    as.matrix()
-
-  if (mesh_edge_par <= 20) {
-    conv_par <- c(-.05, -.35)
-    max_n <- c(900, 300)
-  } else {
-    conv_par <- c(-.1, -.35)
-    max_n <- c(900, 150)
-  }
-  bnd <- fm_extensions(loc_unique, convex = conv_par)
 }
 
 ### 1.2 mesh assessment #####
