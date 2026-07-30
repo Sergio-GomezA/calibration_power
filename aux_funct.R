@@ -2165,7 +2165,7 @@ extract_pit_model <- function(mod.obj) {
     n <- length(mod.obj$cpo$pit)
     pit_vals <- mod.obj$cpo$pit
   }
-  data.frame(
+  result <- data.frame(
     id = 1:n,
     pit = pit_vals
   )
