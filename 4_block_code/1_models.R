@@ -36,6 +36,7 @@ spde1d_bru_opt <- as.bru_options(
   )
 )
 scores_df <- list()
+pit_list <- list()
 model_list <- list()
 
 cat(
@@ -564,6 +565,7 @@ if (!file.exists(model_fname) || override_objects) {
   )
 
   scores_df[[model_code]] <- extract_score_model(brulm)
+  pit_list[[model_code]] <- extract_pit_model(brulm)
 
   if (save_models) {
     saveRDS(
@@ -663,6 +665,7 @@ if (!file.exists(model_fname) || override_objects) {
   )
 
   scores_df[[model_code]] <- extract_score_model(brulmbeta)
+  pit_list[[model_code]] <- extract_pit_model(brulmbeta)
 
   if (save_models) {
     saveRDS(
@@ -753,7 +756,7 @@ if (!file.exists(model_fname) || override_objects) {
       d_coast +
       elev +
       wind,
-    family = "t",
+    family = "T",
     # control.family = list(
     #   beta.censor.value = 0.005
     # ),
@@ -762,6 +765,7 @@ if (!file.exists(model_fname) || override_objects) {
   )
 
   scores_df[[model_code]] <- extract_score_model(brulmt)
+  pit_list[[model_code]] <- extract_pit_model(brulmt)
 
   if (save_models) {
     saveRDS(
@@ -884,6 +888,7 @@ if (!file.exists(model_fname) || override_objects) {
   )
 
   scores_df[[model_code]] <- extract_score_model(bruar1)
+  pit_list[[model_code]] <- extract_pit_model(bruar1)
 
   if (save_models) {
     saveRDS(
@@ -997,6 +1002,8 @@ if (!file.exists(model_fname) || override_objects) {
   )
 
   scores_df[[model_code]] <- extract_score_model(bruar2)
+  pit_list[[model_code]] <- extract_pit_model(bruar2)
+
   if (save_models) {
     saveRDS(
       bruar2,
@@ -1110,6 +1117,8 @@ if (!file.exists(model_fname) || override_objects) {
     )
   )
   scores_df[[model_code]] <- extract_score_model(bru1d)
+  pit_list[[model_code]] <- extract_pit_model(bru1d)
+
   if (save_models) {
     saveRDS(
       bru1d,
@@ -1219,6 +1228,8 @@ if (!file.exists(model_fname) || re_run_st) {
   )
 
   scores_df[[model_code]] <- extract_score_model(bru0)
+  pit_list[[model_code]] <- extract_pit_model(bru0)
+
   if (save_models) {
     saveRDS(
       bru0,
@@ -1536,6 +1547,12 @@ scores_df <- list_rbind(scores_df, names_to = "model")
 write.csv(
   scores_df,
   file.path(sprintf("summaries/model_scores_%s.csv", d0_tag)),
+  row.names = FALSE
+)
+pit_list <- list_rbind(pit_list, names_to = "model")
+write.csv(
+  pit_list,
+  file.path(sprintf("summaries/model_pit_%s.csv", d0_tag)),
   row.names = FALSE
 )
 
