@@ -496,9 +496,9 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       cat(
         "--------------------------------------------------------------------\n"
       )
-      mod_temp <- readRDS(bru_df$fname[i])
+      # mod_temp <- readRDS(bru_df$fname[i])
       test <- bru_ci_plot(
-        bru_model = mod_temp,
+        bru_model = model_list[[bru_df$code[i]]],
         newdata = wf_df_pred,
         n.samples = n_samp,
         show.fig = FALSE,
