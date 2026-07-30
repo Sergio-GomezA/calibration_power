@@ -46,10 +46,17 @@ mode_code_prefix <- c(
   "ts_bru0_lmt"
 )
 
-data.frame(
-  mod_labels = mod_labels,
-  est_cols = est_cols,
-  mode_code_prefix = mode_code_prefix
+dplyr::mutate(
+  data.frame(
+    mod_labels = mod_labels,
+    est_cols = est_cols,
+    mode_code_prefix = mode_code_prefix
+  ),
+  family = dplyr::case_when(
+    est_cols == "lm_beta" ~ "beta",
+    est_cols == "lm_t" ~ "t",
+    TRUE ~ "gaussian"
+  )
 ) -> model_catalog
 
 write.csv(model_catalog, "data/model_catalog.csv", row.names = FALSE)
