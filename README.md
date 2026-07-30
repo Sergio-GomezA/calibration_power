@@ -248,10 +248,12 @@ CRPS
 - [ ] finish writing methodology
 - [x] run with 5000 samples
 - [ ] update code pipeline to avoid saving models / samples
+  - [ ] test new code structure
+  - [ ] validate that lwe considers new models as well
   - [x] get lgcpo and dic
   - [x] save gcpo, dic, etc
   - [ ] get CRPS
-
+  - [ ] Brier score
 
 - [ ] split document into annual rev report and main piece
 - [x] fix colors in space oos regimes
@@ -266,15 +268,21 @@ CRPS
   - [ ] prepare data for new wind farms (location, type, and capacity)
 - [ ] Compare against ninja / hannah
 
-- [ ] tweak models to improve coverage or lwe calibration
- - [ ] lm model in inlabru
- - [ ] beta model
- - [ ] t student distribution
+- [ ] LWE make sure anomalies are not considered in observations
 
+- [ ] tweak models to improve coverage or lwe calibration
+ - [x] lm model in inlabru
+ - [x] beta model
+ - [x] t student distribution
+ - [ ] adapt sampling for models with non-gaussian families / new links
 
 - [ ] next stage
   - [ ] run more days to obtain full calibrated estimates
   - [ ] wind speed consitent estimate
   - [ ] loss factor estimates per region
 
-  - different lwe thresholds
+- different lwe thresholds
+- PIT
+- CI width
+- CRPS
+
