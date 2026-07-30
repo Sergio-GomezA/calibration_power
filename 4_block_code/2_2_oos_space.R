@@ -503,7 +503,8 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
         n.samples = n_samp,
         show.fig = FALSE,
         alphas = alphas,
-        oos_type = "space"
+        oos_type = "space",
+        family = bru_df$family[i]
       )
       test
     }

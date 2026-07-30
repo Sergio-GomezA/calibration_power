@@ -487,7 +487,8 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
         n.samples = n_samp,
         show.fig = FALSE,
         alphas = alphas,
-        oos_type = "time"
+        oos_type = "time",
+        family = bru_df$family[i],
       )
       test
     }
