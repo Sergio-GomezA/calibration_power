@@ -113,7 +113,7 @@ inla.setOption(num.threads = sprintf(inla_core_option, mc))
 
 # model fitting ####
 
-source('1_models.R')
+source('4_block_code/1_models.R')
 
 ## Lite models #####
 
@@ -122,13 +122,13 @@ source('1_models.R')
 # Sample extraction ####
 
 ## OOS time ####
-source('2_1_oos_time.R')
+source('4_block_code/2_1_oos_time.R')
 
 ## OOS space ####
-source('2_2_oos_space.R')
+source('4_block_code/2_2_oos_space.R')
 
 ## OOS space-time ####
-# source('2_3_oos_space_time.R')
+# source('4_block_code/2_3_oos_space_time.R')
 
 # Diagnostics and Validation #####
 
