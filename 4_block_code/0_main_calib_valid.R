@@ -21,6 +21,7 @@ task_prefix <- "spaceoos"
 save_models <- FALSE
 save_samples <- FALSE
 
+rerun_samples <- TRUE
 
 # time validation
 n.days.time <- 0
