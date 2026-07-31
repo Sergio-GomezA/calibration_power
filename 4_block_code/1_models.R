@@ -735,19 +735,15 @@ if (!file.exists(model_fname) || override_objects) {
   cat("--------------------------------------------------------------------\n")
   cat("Fitting bru lm t model\n")
   cat("--------------------------------------------------------------------\n")
-  brulmt <- bru(
+  brulmt <- fit_bru_att(
     components = components0,
     formula = norm_potential ~ Intercept +
       techno +
       slope +
-      # power_correction +
       d_coast +
       elev +
       wind,
     family = "T",
-    # control.family = list(
-    #   beta.censor.value = 0.005
-    # ),
     data = wf_df_frag,
     options = base_bru_options
   )

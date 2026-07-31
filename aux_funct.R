@@ -2171,3 +2171,20 @@ extract_pit_model <- function(mod.obj) {
   )
   return(result)
 }
+
+fit_bru_att <- function(n_attempts = 3, ...) {
+  for (i in 1:n_attempts) {
+    message("Attempt ", i)
+
+    fit <- tryCatch(
+      bru(...),
+      error = function(e) NULL
+    )
+
+    if (!is.null(fit)) {
+      return(fit)
+    }
+  }
+
+  stop("bru failed after ", n_attempts, " attempts")
+}
