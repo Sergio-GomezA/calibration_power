@@ -275,7 +275,7 @@ CRPS
  - [x] lm model in inlabru
  - [x] beta model
  - [x] t student distribution
- - [ ] adapt sampling for models with non-gaussian families / new links
+ - [x] adapt sampling for models with non-gaussian families / new links
    - [ ] test code for new families
 
 - [ ] next stage
