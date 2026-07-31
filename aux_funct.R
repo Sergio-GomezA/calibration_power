@@ -2181,7 +2181,11 @@ fit_bru_att <- function(n_attempts = 3, ...) {
       error = function(e) NULL
     )
 
-    if (!is.null(fit)) {
+    valid_fit <- !is.null(fit) &&
+      !is.null(fit$bru_info) &&
+      !is.null(fit$summary.fixed)
+
+    if (valid_fit) {
       return(fit)
     }
   }
