@@ -148,6 +148,8 @@ exclusions <- if (local_run) {
 mod_vec <- mod_vec[!grepl(paste(exclusions, collapse = "|"), mod_vec)] %>%
   sort() # exclude meshes from st model
 
+mlist_names <- model_list %>% names()
+
 model_df <- model_catalog %>%
   rename(code = est_cols, label = mod_labels) %>%
   arrange(desc(nchar(mode_code_prefix))) %>%
@@ -163,13 +165,25 @@ model_df <- model_catalog %>%
   ) %>%
   mutate(
     type = case_when(
+      grepl("lm_", code) ~ "bru",
       grepl("lm", code) ~ "lm",
       grepl("qm", code) ~ "qm",
       TRUE ~ "bru"
     )
+  ) %>%
+  mutate(
+    # finding which models are in the model list
+    inlist = vapply(
+      mode_code_prefix,
+      \(prefix) any(startsWith(mlist_names, prefix)),
+      logical(1)
+    )
   )
 
-model_df %>% filter(is.na(fname)) %>% pull(code) -> missing_models
+model_df %>%
+  filter(is.na(fname), inlist == FALSE) %>%
+  pull(code) -> missing_models
+
 if (length(missing_models) > 0) {
   cat(
     "Warning: The following models are missing from the model path:\n",
@@ -177,7 +191,7 @@ if (length(missing_models) > 0) {
     "\n"
   )
 
-  model_df <- model_df %>% filter(!is.na(fname))
+  model_df <- model_df %>% filter(!is.na(fname) | inlist == TRUE)
   mod_labels <- model_df$label
   est_cols <- model_df$code
 }
