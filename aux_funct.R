@@ -1984,6 +1984,7 @@ bru_ci_plot <- function(
 
   samp_mat <- samples %>%
     lapply(function(x) x$pow_st[pred_ind]) %>%
+    setNames(paste0("samp_", seq_along(.))) %>%
     bind_cols() %>%
     as.matrix()
 
