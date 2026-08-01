@@ -74,7 +74,7 @@ require(ggsci)
 require(arrow)
 # require(ggspatial)
 
-source("aux_funct.R")
+# source("aux_funct.R")
 
 sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
   mutate(date = as.Date(date))
@@ -386,8 +386,13 @@ cat("--------------------------------------------------------------------\n")
 
 lm_df <- model_df %>% filter(type == "lm")
 
-lm_df %>% pull(fname) %>% map(readRDS) -> mod_list
-names(mod_list) <- lm_df %>% pull(code)
+if (save_models) {
+  lm_df %>% pull(fname) %>% map(readRDS) -> mod_list
+  names(mod_list) <- lm_df %>% pull(code)
+} else {
+  lm_mods <- paste0(lm_df %>% pull(mode_code_prefix), d0_tag, ".rds")
+  mod_list <- model_list[lm_mods]
+}
 
 lm_pred <- lapply(
   names(mod_list),
@@ -448,6 +453,55 @@ lm_pred_fig_df <- lm_pred %>%
 
 
 ## quantile mapping ####
+qm_df <- model_df %>% filter(type == "qm")
+
+if (save_models) {
+  qm_df %>% pull(fname) %>% map(readRDS) -> mod_list
+  names(mod_list) <- qm_df %>% pull(code)
+} else {
+  qm_mods <- paste0(qm_df %>% pull(mode_code_prefix), d0_tag, ".rds")
+  mod_list <- model_list[qm_mods]
+}
+
+qm_pred_df <- lapply(
+  names(mod_list),
+  function(mod) {
+    wf_df_pred %>%
+      dplyr::select(
+        coord_id,
+        site_name,
+        time,
+        date,
+        norm_potential,
+        norm_power_est0,
+        capacity,
+        tech_typ,
+        p_group3
+      ) %>%
+      mutate(
+        estimate = doQmapQUANT(
+          norm_power_est0,
+          mod_list[[mod]],
+          type = "linear"
+        )
+      ) %>%
+      mutate(
+        estimate = pmin(1, pmax(0, estimate)),
+        model = mod
+      )
+  }
+) %>%
+  bind_rows()
+
+qm_pred_fig_df <- qm_pred_df %>%
+  st_drop_geometry() %>%
+  group_by(time, model) %>%
+  summarise(
+    mean = sum(estimate * capacity) / sum(capacity),
+    norm_potential = sum(norm_potential * capacity) / sum(capacity),
+    norm_power_est0 = sum(norm_power_est0 * capacity) / sum(capacity),
+    .groups = "drop"
+  )
 
 ## bru models ####
 
