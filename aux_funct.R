@@ -1837,7 +1837,8 @@ bru_ci_plot <- function(
   show.fig = TRUE,
   alphas = NULL,
   oos_type = "time",
-  family = "gaussian"
+  family = "gaussian",
+  t_start = NULL
 ) {
   n <- nrow(newdata)
   lin_pred <- get_bru_formula(bru_model)
@@ -1886,7 +1887,7 @@ bru_ci_plot <- function(
         gsub("\\.", "_", prob_points),
         qfun,
         prob_points,
-        qargs
+        args
       ),
       collapse = ",\n       "
     )
@@ -1968,23 +1969,28 @@ bru_ci_plot <- function(
       .groups = "drop"
     )
 
-  browser()
-  # CRPS
-  crps <- scoringRules::crps_sample(
-    y = pred_df %>% pull(norm_potential), # day-ahead response
-    dat = samples %>%
-      lapply(function(x) x$pow_st) %>%
-      bind_cols() %>%
-      as.matrix()
-  )
+  # browser()
+  if (is.null(t_start)) {
+    t_start <- t1 # global variable
+  }
+  if (oos_type == "time") {
+    pred_ind <- which(newdata$time >= t_start)
+  } else if (oos_type == "space") {
+    pred_ind <- which(newdata$time < t_start)
+  } else {
+    pred_ind <- which(newdata$time >= t_start)
+  }
+  observed <- newdata$norm_potential[pred_ind]
 
-  # Energy
-  energy.s <- scoringRules::es_sample(
-    y = pred_df %>% pull(norm_potential), # day-ahead response
-    dat = samples %>%
-      lapply(function(x) x$pow_st) %>%
-      bind_cols() %>%
-      as.matrix()
+  samp_mat <- samples %>%
+    lapply(function(x) x$pow_st[pred_ind]) %>%
+    bind_cols() %>%
+    as.matrix()
+
+  # calculate scores
+  scores <- compute_scores(
+    observed = observed,
+    sample_mat = samp_mat
   )
 
   # coverage check for all q_ columns
@@ -2093,7 +2099,8 @@ bru_ci_plot <- function(
     formula = lin_pred,
     cov_gbl = cov_gbl,
     cov_time = cov_time,
-    cov_loc = cov_loc
+    cov_loc = cov_loc,
+    scores = scores
     # df_formula = formula_temp
   ))
 }
@@ -2212,4 +2219,47 @@ fit_bru_att <- function(n_attempts = 3, ...) {
   }
 
   stop("bru failed after ", n_attempts, " attempts")
+}
+
+
+compute_scores <- function(
+  observed,
+  sample_mat,
+  bs_thresholds = c(0.01, 0.05, 0.1, 0.2)
+) {
+  scores <- list()
+  # CRPS
+  crps <- scoringRules::crps_sample(
+    y = observed, # day-ahead response
+    dat = samp_mat
+  )
+  scores$crps <- mean(crps)
+  # Energy
+  energy.s <- scoringRules::es_sample(
+    y = observed, # day-ahead response
+    dat = samp_mat
+  )
+  scores$energy <- energy.s
+  # log
+  log.s <- scoringRules::logs_sample(
+    y = observed, # day-ahead response
+    dat = samp_mat
+  )
+  scores$log <- mean(log.s)
+
+  # Brier score
+
+  bs_vec <- lapply(
+    bs_thresholds,
+    function(thresh) {
+      prob_low <- rowMeans(samp_mat <= thresh)
+      event_low <- observed <= thresh
+      brier <- mean((prob_low - event_low)^2)
+    }
+  ) %>%
+    unlist() %>%
+    setNames(paste0("bs_", gsub("\\.", "_", bs_thresholds)))
+  scores$brier <- bs_vec
+
+  scores
 }
