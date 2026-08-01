@@ -528,6 +528,10 @@ cov_summary_fname <- sprintf(
   "summaries/pred_band_coverage_summary_%s.rds",
   d0_tag
 )
+scores_summary_fname <- sprintf(
+  "summaries/model_scores_summary_%s.csv",
+  d0_tag
+)
 if (!file.exists(pred_summary_fname) || rerun_samples) {
   if (!file.exists(pred_summary_fname)) {
     cat("Prediction band summary file not found, creating new summary\n")
@@ -592,13 +596,25 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       )
     }
   )
+  scores_summary <- pred_band_summary[1:7] %>%
+    lapply(\(x) {
+      tibble(
+        crps = x$scores$crps,
+        energy = x$scores$energy,
+        log = x$scores$log,
+        !!!setNames(as.list(x$scores$brier), names(x$scores$brier))
+      )
+    }) %>%
+    bind_rows(.id = "model")
 
   # names(pred_band_summary) <- bru_df$code
   names(summary_only) <- bru_df$code
   names(coverage_summary) <- bru_df$code
+  names(pred_band_summary) <- bru_df$code
 
   saveRDS(summary_only, pred_summary_fname)
   saveRDS(coverage_summary, cov_summary_fname)
+  write.csv(scores_summary, scores_summary_fname, row.names = FALSE)
 
   if (save_samples) {
     samples_only <- lapply(
@@ -612,9 +628,11 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
     names(samples_only) <- bru_df$code
     saveRDS(samples_only, pred_samples_fname)
   }
+  rm(pred_band_summary)
+  gc()
 } else {
   cat("Loading existing prediction band summary\n")
-  pred_band_summary <- readRDS(pred_summary_fname)
+  summary_only <- readRDS(pred_summary_fname)
 }
 
 # pred_band_summary %>% lapply(., \(z) z$formula)
@@ -626,7 +644,8 @@ gb_fig_df <- bind_rows(
   lapply(
     bru_df$code,
     function(code) {
-      pred_band_summary[[code]]$GB_summary %>%
+      summary_only[[code]]$GB_summary %>%
+        as.data.frame() %>%
         mutate(
           model = code
         )
@@ -718,20 +737,21 @@ wf_fig_df <- bind_rows(
     bru_df$code,
     function(code) {
       {
-        pred_band_summary[[code]]$wf_summary %>%
+        summary_only[[code]]$wf_summary %>%
+          as.data.frame() %>%
           mutate(
             model = code
           )
-      } %>%
-        left_join(
-          lm_pred %>%
-            dplyr::select(time, coord_id, norm_power_est0) %>%
-            unique(),
-          by = c("time", "coord_id")
-        )
+      }
     }
   ) %>%
-    bind_rows()
+    bind_rows() %>%
+    left_join(
+      lm_pred %>%
+        dplyr::select(time, coord_id, norm_power_est0) %>%
+        unique(),
+      by = c("time", "coord_id")
+    )
 ) %>%
   mutate(
     oos = ifelse(time >= t1, TRUE, FALSE)
