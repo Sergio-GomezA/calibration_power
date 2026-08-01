@@ -1857,7 +1857,7 @@ bru_ci_plot <- function(
     prec_val <- bru_model$.args$control.family[[1]]$hyper[[prec_par_elements[
       1
     ]]]$output.name %>%
-      gsub(" ", "_", .) %>%
+      gsub("[ -]+", "_", .) %>%
       as.character()
     cat(sprintf("Precision is not fixed. Using %s for sampling.\n", prec_val))
     # print(bru_model$summary.hyperpar)
@@ -1870,7 +1870,13 @@ bru_ci_plot <- function(
     t = {
       rfun <- "rt"
       qfun <- "qt"
-      args <- sprintf("df = (%s), ncp = (exp(%s))", prec_val, lin_pred)
+      dof <- bru_model$.args$control.family[[1]]$hyper[[prec_par_elements[
+        2
+      ]]]$output.name %>%
+        gsub("[ -]+", "_", .) %>%
+        as.character()
+      # args <- sprintf("df = (%s), ncp = (exp(%s))", dof, lin_pred)
+      args <- sprintf("df = (%s)", dof)
     },
     beta = {
       rfun <- "rbeta"
@@ -1887,15 +1893,35 @@ bru_ci_plot <- function(
   )
 
   if (!is.null(alphas)) {
-    prob_len <- length(alphas)
-    prob_points <- c(alphas / 2, 1 - alphas / 2)
+    prob_points <- c(0.025, 0.975, alphas / 2, 1 - alphas / 2)
+    quant_formula0 <- sprintf(
+      "%s(%s, %s)",
+      qfun,
+      prob_points,
+      args
+    )
+    quant_formula <- case_when(
+      family == "t" ~ sprintf(
+        "(%s) + (%s)/sqrt((%s))",
+        lin_pred,
+        quant_formula0,
+        prec_val
+      ),
+      TRUE ~ quant_formula0
+    )
     extra_quantiles <- paste(
-      sprintf(
-        "q_%s = %s(%s, %s)",
-        gsub("\\.", "_", prob_points),
-        qfun,
-        prob_points,
-        args
+      c(
+        sprintf(
+          "lwr = %s,
+          upr = %s",
+          quant_formula[1],
+          quant_formula[2]
+        ),
+        sprintf(
+          "q_%s = %s",
+          gsub("\\.", "_", prob_points[-c(1:2)]),
+          quant_formula[-c(1:2)]
+        )
       ),
       collapse = ",\n       "
     )
@@ -1903,6 +1929,16 @@ bru_ci_plot <- function(
     extra_quantiles <- "q = NULL"
   }
 
+  random_formula <- sprintf("%s(n = %d, %s)", rfun, n, args)
+  sample_w_noise <- case_when(
+    family == "t" ~ sprintf(
+      "(%s) + (%s)/sqrt((%s))",
+      lin_pred,
+      random_formula,
+      prec_val
+    ),
+    TRUE ~ random_formula
+  )
   formula_temp <- as.formula(sprintf(
     "~ data.frame(
       coord_id = coord_id,
@@ -1911,20 +1947,12 @@ bru_ci_plot <- function(
       date = date,
       lin_pred = (%s),
       prec = (%s),
-      pow_st = %s(n = %d, %s),
-      lwr = %s(0.025, %s),
-      upr = %s(0.975, %s),
+      pow_st = %s,
       %s
   )",
     lin_pred,
     prec_val,
-    rfun,
-    n,
-    args,
-    qfun,
-    args,
-    qfun,
-    args,
+    sample_w_noise,
     extra_quantiles
   ))
 
@@ -1935,6 +1963,12 @@ bru_ci_plot <- function(
     formula = formula_temp,
     n.samples = n.samples
   )
+  # samples <- inlabru::generate(
+  #   bru_model,
+  #   newdata = newdata,
+  #   # formula = formula_temp,
+  #   n.samples = 5
+  # )
 
   q_cols <- grepv("^q_", names(samples[[1]]))
 
