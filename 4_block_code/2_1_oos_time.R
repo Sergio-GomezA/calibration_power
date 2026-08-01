@@ -395,7 +395,7 @@ if (save_models) {
 }
 
 lm_pred <- lapply(
-  names(mod_list),
+  seq(mod_list),
   function(mod) {
     predict(mod_list[[mod]], newdata = wf_df_pred, interval = "prediction") %>%
       as.data.frame() %>%
@@ -424,7 +424,7 @@ lm_pred <- lapply(
         lwr = pmin(1, pmax(0, lwr)),
         upr = pmin(1, pmax(0, upr)),
         std_error = summary(mod_list[[mod]])$sigma,
-        model = mod
+        model = lm_df$code[mod]
       )
   }
 ) %>%
@@ -464,7 +464,7 @@ if (save_models) {
 }
 
 qm_pred_df <- lapply(
-  names(mod_list),
+  seq(mod_list),
   function(mod) {
     wf_df_pred %>%
       dplyr::select(
@@ -487,7 +487,7 @@ qm_pred_df <- lapply(
       ) %>%
       mutate(
         estimate = pmin(1, pmax(0, estimate)),
-        model = mod
+        model = qm_df$code[mod]
       )
   }
 ) %>%
