@@ -41,9 +41,9 @@ mode_code_prefix <- c(
   "ts_bru0_1DSPDE_",
   "ts_bru0_ar1_",
   "ts_bru0_ar2_",
-  "ts_bru0_lm",
-  "ts_bru0_lmbeta",
-  "ts_bru0_lmt"
+  "ts_bru0_lm_",
+  "ts_bru0_lmbeta_",
+  "ts_bru0_lmt_"
 )
 
 dplyr::mutate(
