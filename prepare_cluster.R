@@ -50,3 +50,5 @@ install.packages("elevatr", temp_lib, dependencies = TRUE)
 install.packages("ModelMetrics", temp_lib, dependencies = TRUE)
 install.packages("geosphere", temp_lib, dependencies = TRUE)
 install.packages("terra", temp_lib, dependencies = TRUE)
+
+install.packages("scoringRules", temp_lib, dependencies = TRUE)

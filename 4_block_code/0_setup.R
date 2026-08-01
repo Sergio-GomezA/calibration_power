@@ -77,6 +77,7 @@ if (local_run) {
   extra_path <- "~/Documents/elexon/extra"
   sample_path <- "~/Documents/elexon/samples"
   pixel_dims <- c(150, 150)
+  n_samp <- 10
   local_ext <- "rds" # previously "gpkg"
   driver <- "GPKG"
 } else {
@@ -87,6 +88,7 @@ if (local_run) {
   sample_path <- "/exports/eddie/scratch/s2441782/calibration/samples"
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   pixel_dims <- c(300, 300)
+  n_samp <- 1000
   driver <- "GeoJSON"
   .libPaths(temp_lib)
 }
