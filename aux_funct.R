@@ -2258,7 +2258,7 @@ compute_scores <- function(
     y = observed, # day-ahead response
     dat = sample_mat
   )
-  scores$log <- mean(log.s)
+  scores$log <- mean(log.s[is.finite(log.s)])
 
   # Brier score
 
@@ -2274,5 +2274,6 @@ compute_scores <- function(
     setNames(paste0("bs_", gsub("\\.", "_", bs_thresholds)))
   scores$brier <- bs_vec
 
+  # scores$log_obs <- log.s
   scores
 }
