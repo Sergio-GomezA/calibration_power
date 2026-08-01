@@ -1842,13 +1842,21 @@ bru_ci_plot <- function(
 ) {
   n <- nrow(newdata)
   lin_pred <- get_bru_formula(bru_model)
+
+  prec_par_elements <- bru_model$.args$control.family[[1]]$hyper %>% names()
+
   # check if prec is fixed
-  fix_prec <- bru_model$.args$control.family[[1]]$hyper$theta1$fixed
+  fix_prec <- bru_model$.args$control.family[[1]]$hyper[[prec_par_elements[
+    1
+  ]]]$fixed
   if (fix_prec) {
-    prec_val <- bru_model$.args$control.family[[1]]$hyper$theta1$initial %>%
-      as.character()
+    prec_val <- bru_model$.args$control.family[[1]]$hyper[[prec_par_elements[
+      1
+    ]]]$initial
   } else {
-    prec_val <- bru_model$.args$control.family[[1]]$hyper$theta1$output.name %>%
+    prec_val <- bru_model$.args$control.family[[1]]$hyper[[prec_par_elements[
+      1
+    ]]]$output.name %>%
       gsub(" ", "_", .) %>%
       as.character()
     cat(sprintf("Precision is not fixed. Using %s for sampling.\n", prec_val))
@@ -1862,12 +1870,12 @@ bru_ci_plot <- function(
     t = {
       rfun <- "rt"
       qfun <- "qt"
-      args <- sprintf("df = (%s), ncp = (%s)", prec_val, exp(lin_pred))
+      args <- sprintf("df = (%s), ncp = (exp(%s))", prec_val, lin_pred)
     },
     beta = {
       rfun <- "rbeta"
       qfun <- "qbeta"
-      shape1 <- sprintf("(%s) * (%s)", plogis(lin_pred), prec_val)
+      shape1 <- sprintf("plogis((%s)) * (%s)", lin_pred, prec_val)
       shape2 <- sprintf("(%s) - (%s)", prec_val, shape1)
       args <- sprintf("shape1 = %s, shape2 = %s", shape1, shape2)
     },
@@ -1901,11 +1909,15 @@ bru_ci_plot <- function(
       site_name = site_name,
       time = time,
       date = date,
+      lin_pred = (%s),
+      prec = (%s),
       pow_st = %s(n = %d, %s),
       lwr = %s(0.025, %s),
       upr = %s(0.975, %s),
       %s
   )",
+    lin_pred,
+    prec_val,
     rfun,
     n,
     args,
