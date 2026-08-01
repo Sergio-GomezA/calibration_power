@@ -1968,6 +1968,25 @@ bru_ci_plot <- function(
       .groups = "drop"
     )
 
+  browser()
+  # CRPS
+  crps <- scoringRules::crps_sample(
+    y = pred_df %>% pull(norm_potential), # day-ahead response
+    dat = samples %>%
+      lapply(function(x) x$pow_st) %>%
+      bind_cols() %>%
+      as.matrix()
+  )
+
+  # Energy
+  energy.s <- scoringRules::es_sample(
+    y = pred_df %>% pull(norm_potential), # day-ahead response
+    dat = samples %>%
+      lapply(function(x) x$pow_st) %>%
+      bind_cols() %>%
+      as.matrix()
+  )
+
   # coverage check for all q_ columns
   if (length(q_cols) > 0) {
     n_intervals <- length(q_cols) / 2
@@ -2187,6 +2206,8 @@ fit_bru_att <- function(n_attempts = 3, ...) {
 
     if (valid_fit) {
       return(fit)
+    } else {
+      message("bru failed on attempt ", i, ". Retrying...")
     }
   }
 
