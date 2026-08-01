@@ -537,6 +537,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
     )
   }
   # source("aux_funct.R")
+  bru_mods <- paste0(bru_df %>% pull(mode_code_prefix), d0_tag, ".rds")
   pred_band_summary <- lapply(
     seq_along(bru_df$fname),
     function(i) {
@@ -549,14 +550,24 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
         "--------------------------------------------------------------------\n"
       )
       # mod_temp <- readRDS(bru_df$fname[i])
-      test <- bru_ci_plot(
-        bru_model = model_list[[bru_df$code[i]]],
-        newdata = wf_df_pred,
-        n.samples = n_samp,
-        show.fig = FALSE,
-        alphas = alphas,
-        oos_type = "time",
-        family = bru_df$family[i],
+
+      test <- tryCatch(
+        {
+          bru_ci_plot(
+            bru_model = model_list[[bru_mods[i]]],
+            newdata = wf_df_pred,
+            n.samples = n_samp,
+            show.fig = FALSE,
+            alphas = alphas,
+            oos_type = "time",
+            family = bru_df$family[i]
+          )
+        },
+        error = function(e) {
+          cat("Error in processing model:", bru_df$label[i], "\n")
+          cat("Error message:", e$message, "\n")
+          return(NULL)
+        }
       )
       test
     }
@@ -581,22 +592,24 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       )
     }
   )
-  samples_only <- lapply(
-    pred_band_summary,
-    function(x) {
-      list(
-        sample_df = x$sample_df
-      )
-    }
-  )
-  names(pred_band_summary) <- bru_df$code
+
+  # names(pred_band_summary) <- bru_df$code
   names(summary_only) <- bru_df$code
   names(coverage_summary) <- bru_df$code
-  names(samples_only) <- bru_df$code
+
   saveRDS(summary_only, pred_summary_fname)
   saveRDS(coverage_summary, cov_summary_fname)
 
   if (save_samples) {
+    samples_only <- lapply(
+      pred_band_summary,
+      function(x) {
+        list(
+          sample_df = x$sample_df
+        )
+      }
+    )
+    names(samples_only) <- bru_df$code
     saveRDS(samples_only, pred_samples_fname)
   }
 } else {
