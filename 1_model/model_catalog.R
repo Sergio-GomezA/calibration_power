@@ -33,7 +33,7 @@ est_cols <- c(
 mode_code_prefix <- c(
   NA,
   "lm_model_aic0_",
-  "lm_model_aic0_agg_",
+  "gblm_model_aic0_",
   "qm_model_",
   "st_bru0_fine_",
   "st_bru0_coarse_",
