@@ -1,7 +1,7 @@
 "mod_labels","est_cols","mode_code_prefix","family"
 "Generic PC","norm_power_est0",NA,"gaussian"
 "Linear model","lm","lm_model_aic0_","gaussian"
-"GB LM","agg_lm","lm_model_aic0_agg_","gaussian"
+"GB LM","agg_lm","gblm_model_aic0_","gaussian"
 "QM","qm","qm_model_","gaussian"
 "ST model fine","st0_m0","st_bru0_fine_","gaussian"
 "ST model coarse","st0_m1","st_bru0_coarse_","gaussian"
