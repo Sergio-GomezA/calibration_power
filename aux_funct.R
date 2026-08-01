@@ -2231,19 +2231,19 @@ compute_scores <- function(
   # CRPS
   crps <- scoringRules::crps_sample(
     y = observed, # day-ahead response
-    dat = samp_mat
+    dat = sample_mat
   )
   scores$crps <- mean(crps)
   # Energy
   energy.s <- scoringRules::es_sample(
     y = observed, # day-ahead response
-    dat = samp_mat
+    dat = sample_mat
   )
   scores$energy <- energy.s
   # log
   log.s <- scoringRules::logs_sample(
     y = observed, # day-ahead response
-    dat = samp_mat
+    dat = sample_mat
   )
   scores$log <- mean(log.s)
 
@@ -2252,7 +2252,7 @@ compute_scores <- function(
   bs_vec <- lapply(
     bs_thresholds,
     function(thresh) {
-      prob_low <- rowMeans(samp_mat <= thresh)
+      prob_low <- rowMeans(sample_mat <= thresh)
       event_low <- observed <= thresh
       brier <- mean((prob_low - event_low)^2)
     }
