@@ -1186,7 +1186,7 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     control.group = list(model = "ar1")
   )
 
-model_code <- sprintf("st_bru0_%s_mesh_%s.rds", mesh_label, d0_tag)
+model_code <- sprintf("st_bru0_%s_%s.rds", mesh_label, d0_tag)
 model_fname <- file.path(
   model_path,
   model_code
@@ -1426,7 +1426,7 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
 
 ## 2.4 GB lm version #####
 
-model_code <- sprintf("lm_model_aic0_agg_%s.rds", d0_tag)
+model_code <- sprintf("gblm_model_aic0_%s.rds", d0_tag)
 
 if (!file.exists(file.path(model_path, model_code)) || override_objects) {
   cat("--------------------------------------------------------------------\n")
