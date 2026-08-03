@@ -8,7 +8,6 @@
 "ST model coarser","st0_m2","st_bru0_very_coarse_","gaussian"
 "LM+hour model","spde1d","ts_bru0_1DSPDE_","gaussian"
 "AR1 model","ar1","ts_bru0_ar1_","gaussian"
-"AR2 model","ar2","ts_bru0_ar2_","gaussian"
 "LM bru model","lm_bru","ts_bru0_lm_","gaussian"
 "LM beta model","lm_beta","ts_bru0_lmbeta_","beta"
 "LM t model","lm_t","ts_bru0_lmt_","t"
