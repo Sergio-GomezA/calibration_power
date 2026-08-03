@@ -616,20 +616,20 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
   saveRDS(coverage_summary, cov_summary_fname)
   write.csv(scores_summary, scores_summary_fname, row.names = FALSE)
 
-  if (save_samples) {
-    samples_only <- lapply(
-      pred_band_summary,
-      function(x) {
-        list(
-          sample_df = x$sample_df
-        )
-      }
-    )
-    names(samples_only) <- bru_df$code
-    saveRDS(samples_only, pred_samples_fname)
-  }
-  rm(pred_band_summary)
-  gc()
+  # if (save_samples) {
+  #   samples_only <- lapply(
+  #     pred_band_summary,
+  #     function(x) {
+  #       list(
+  #         sample_df = x$sample_df
+  #       )
+  #     }
+  #   )
+  #   names(samples_only) <- bru_df$code
+  #   saveRDS(samples_only, pred_samples_fname)
+  # }
+  # rm(pred_band_summary)
+  # gc()
 } else {
   cat("Loading existing prediction band summary\n")
   summary_only <- readRDS(pred_summary_fname)
