@@ -615,7 +615,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
 
   names(summary_only) <- bru_df$code
   names(coverage_summary) <- bru_df$code
-  names(samples_only) <- bru_df$code
+  names(pred_band_summary) <- bru_df$code
 
   saveRDS(summary_only, pred_summary_fname)
   saveRDS(coverage_summary, cov_summary_fname)
@@ -743,7 +743,7 @@ wf_fig_df <- bind_rows(
     ) %>%
     st_drop_geometry() %>%
     rename(fit = estimate),
-  qm_pred %>%
+  qm_pred_df %>%
     dplyr::select(
       coord_id,
       site_name,
