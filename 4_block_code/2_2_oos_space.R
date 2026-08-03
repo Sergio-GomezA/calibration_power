@@ -75,7 +75,7 @@ require(ggsci)
 require(arrow)
 # require(ggspatial)
 
-source("aux_funct.R")
+# source("aux_funct.R")
 
 sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
   mutate(date = as.Date(date))
@@ -114,6 +114,19 @@ t0 <- d0 - n.days.before
 t1 <- d0 + n.days
 th <- t1 + hours(n.hours)
 
+cat("Traning sample length for assessment and figures:")
+cat(
+  "",
+  n.days.before,
+  ifelse(n.days.before == 1, "day before", "days before"),
+  format(d0, "%Y-%m-%d"),
+  "\n"
+)
+cat("Prediction next", n.hours, "hours after", format(t1, "%Y-%m-%d"), "\n")
+
+cat(
+  "--------------------------------------------------------------------\n"
+)
 
 # Read models ####
 model_catalog <- read.csv("data/model_catalog.csv") %>%
@@ -137,6 +150,8 @@ exclusions <- if (local_run) {
 mod_vec <- mod_vec[!grepl(paste(exclusions, collapse = "|"), mod_vec)] %>%
   sort() # exclude meshes from st model
 
+mlist_names <- model_list %>% names()
+
 model_df <- model_catalog %>%
   rename(code = est_cols, label = mod_labels) %>%
   arrange(desc(nchar(mode_code_prefix))) %>%
@@ -152,12 +167,24 @@ model_df <- model_catalog %>%
   ) %>%
   mutate(
     type = case_when(
+      grepl("lm_", code) ~ "bru",
       grepl("lm", code) ~ "lm",
       grepl("qm", code) ~ "qm",
       TRUE ~ "bru"
     )
+  ) %>%
+  mutate(
+    # finding which models are in the model list
+    inlist = vapply(
+      mode_code_prefix,
+      \(prefix) any(startsWith(mlist_names, prefix)),
+      logical(1)
+    )
   )
-model_df %>% filter(is.na(fname)) %>% pull(code) -> missing_models
+
+model_df %>%
+  filter(is.na(fname), inlist == FALSE) %>%
+  pull(code) -> missing_models
 if (length(missing_models) > 0) {
   cat(
     "Warning: The following models are missing from the model path:\n",
@@ -165,7 +192,7 @@ if (length(missing_models) > 0) {
     "\n"
   )
 
-  model_df <- model_df %>% filter(!is.na(fname))
+  model_df <- model_df %>% filter(!is.na(fname) | inlist == TRUE)
   mod_labels <- model_df$label
   est_cols <- model_df$code
 }
@@ -179,7 +206,7 @@ if (local_run) {
 ## prediction df ####
 gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
 
-if (!file.exists(gb_day_df_fname)) {
+if (!file.exists(gb_day_df_fname) || override_objects) {
   if (!file.exists(gb_day_df_fname)) {
     cat("GB daily summary file not found, creating new summary\n")
   } else {
@@ -288,7 +315,7 @@ if (!override_objects && length(files_found) > 0) {
     # filter(date %in% sampled_days) %>%
     # filter(date >= d0, date <= d0 + n.days - 1) %>%
     filter(time >= t0, time < th) %>%
-    filter(coord_id %in% coord_list$coord_id[!coord_list$sampled]) %>%
+    filter(coord_id %in% coord_list$coord_id[!coord_list$sampled]) %>% # oos locatios
     arrange(site_name) %>%
     group_by(lon, lat, time) %>%
     summarise(
@@ -359,15 +386,22 @@ n_loc <- nrow(wf_df_pred %>% distinct(x, y))
 cat("Number of unique locations:", n_loc, "\n")
 n <- nrow(wf_df_pred)
 cat("Number of records in the dataset:", n, "\n")
+cat("--------------------------------------------------------------------\n")
+
 ## linear models ####
 
 lm_df <- model_df %>% filter(type == "lm")
 
-lm_df %>% pull(fname) %>% map(readRDS) -> mod_list
-names(mod_list) <- lm_df %>% pull(code)
+if (save_models) {
+  lm_df %>% pull(fname) %>% map(readRDS) -> mod_list
+  names(mod_list) <- lm_df %>% pull(code)
+} else {
+  lm_mods <- paste0(lm_df %>% pull(mode_code_prefix), d0_tag, ".rds")
+  mod_list <- model_list[lm_mods]
+}
 
 lm_pred <- lapply(
-  names(mod_list),
+  seq(mod_list),
   function(mod) {
     predict(mod_list[[mod]], newdata = wf_df_pred, interval = "prediction") %>%
       as.data.frame() %>%
@@ -396,12 +430,11 @@ lm_pred <- lapply(
         lwr = pmin(1, pmax(0, lwr)),
         upr = pmin(1, pmax(0, upr)),
         std_error = summary(mod_list[[mod]])$sigma,
-        model = mod
+        model = lm_df$code[mod]
       )
   }
 ) %>%
   bind_rows()
-
 
 lm_pred_fig_df <- lm_pred %>%
   st_drop_geometry() %>%
@@ -424,31 +457,56 @@ lm_pred_fig_df <- lm_pred %>%
     upr = pmin(1, pmax(0, upr))
   )
 
-# lm_pred_fig_df %>%
-#   ggplot() +
-#   geom_ribbon(
-#     aes(
-#       x = time,
-#       ymin = lwr,
-#       ymax = upr
-#     ),
-#     fill = blues9[5],
-#     alpha = 0.5
-#   ) +
-#   geom_line(
-#     aes(x = time, y = mean),
-#     color = blues9[9],
-#     lwd = 1
-#   ) +
-#   geom_line(
-#     aes(x = time, y = norm_potential),
-#     color = "darkred",
-#     lwd = 1
-#   ) +
-#   coord_cartesian(ylim = c(0, 1)) +
-#   facet_wrap(~model, nrow = 2)
-
 ## quantile mapping ####
+qm_df <- model_df %>% filter(type == "qm")
+
+if (save_models) {
+  qm_df %>% pull(fname) %>% map(readRDS) -> mod_list
+  names(mod_list) <- qm_df %>% pull(code)
+} else {
+  qm_mods <- paste0(qm_df %>% pull(mode_code_prefix), d0_tag, ".rds")
+  mod_list <- model_list[qm_mods]
+}
+
+qm_pred_df <- lapply(
+  seq(mod_list),
+  function(mod) {
+    wf_df_pred %>%
+      dplyr::select(
+        coord_id,
+        site_name,
+        time,
+        date,
+        norm_potential,
+        norm_power_est0,
+        capacity,
+        tech_typ,
+        p_group3
+      ) %>%
+      mutate(
+        estimate = doQmapQUANT(
+          norm_power_est0,
+          mod_list[[mod]],
+          type = "linear"
+        )
+      ) %>%
+      mutate(
+        estimate = pmin(1, pmax(0, estimate)),
+        model = qm_df$code[mod]
+      )
+  }
+) %>%
+  bind_rows()
+
+qm_pred_fig_df <- qm_pred_df %>%
+  st_drop_geometry() %>%
+  group_by(time, model) %>%
+  summarise(
+    mean = sum(estimate * capacity) / sum(capacity),
+    norm_potential = sum(norm_potential * capacity) / sum(capacity),
+    norm_power_est0 = sum(norm_power_est0 * capacity) / sum(capacity),
+    .groups = "drop"
+  )
 
 ## bru models ####
 
@@ -486,6 +544,8 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       "Prediction band summary file found, but rerun_samples is TRUE. Recreating summary\n"
     )
   }
+
+  bru_mods <- paste0(bru_df %>% pull(mode_code_prefix), d0_tag, ".rds")
   pred_band_summary <- lapply(
     seq_along(bru_df$fname),
     function(i) {
@@ -496,15 +556,23 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       cat(
         "--------------------------------------------------------------------\n"
       )
-      # mod_temp <- readRDS(bru_df$fname[i])
-      test <- bru_ci_plot(
-        bru_model = model_list[[bru_df$code[i]]],
-        newdata = wf_df_pred,
-        n.samples = n_samp,
-        show.fig = FALSE,
-        alphas = alphas,
-        oos_type = "space",
-        family = bru_df$family[i]
+      test <- tryCatch(
+        {
+          bru_ci_plot(
+            bru_model = model_list[[bru_mods[i]]],
+            newdata = wf_df_pred,
+            n.samples = n_samp,
+            show.fig = FALSE,
+            alphas = alphas,
+            oos_type = "space",
+            family = bru_df$family[i]
+          )
+        },
+        error = function(e) {
+          cat("Error in processing model:", bru_df$label[i], "\n")
+          cat("Error message:", e$message, "\n")
+          return(NULL)
+        }
       )
       test
     }
@@ -529,26 +597,42 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       )
     }
   )
-  samples_only <- lapply(
-    pred_band_summary,
-    function(x) {
-      list(
-        sample_df = x$sample_df
+  scores_summary <- pred_band_summary[1:7] %>%
+    lapply(\(x) {
+      tibble(
+        crps = x$scores$crps,
+        energy = x$scores$energy,
+        log = x$scores$log,
+        !!!setNames(as.list(x$scores$brier), names(x$scores$brier))
       )
-    }
-  )
-  names(pred_band_summary) <- bru_df$code
+    }) %>%
+    bind_rows(.id = "model")
+
   names(summary_only) <- bru_df$code
   names(coverage_summary) <- bru_df$code
   names(samples_only) <- bru_df$code
+
   saveRDS(summary_only, pred_summary_fname)
   saveRDS(coverage_summary, cov_summary_fname)
-  if (save_samples) {
-    saveRDS(samples_only, pred_samples_fname)
-  }
+  write.csv(scores_summary, scores_summary_fname, row.names = FALSE)
+
+  # if (save_samples) {
+  #   samples_only <- lapply(
+  #     pred_band_summary,
+  #     function(x) {
+  #       list(
+  #         sample_df = x$sample_df
+  #       )
+  #     }
+  #   )
+  #   names(samples_only) <- bru_df$code
+  #   saveRDS(samples_only, pred_samples_fname)
+  # }
+  # rm(pred_band_summary)
+  # gc()
 } else {
   cat("Loading existing prediction band summary\n")
-  pred_band_summary <- readRDS(pred_summary_fname)
+  summary_only <- readRDS(pred_summary_fname)
 }
 # pred_band_summary %>% lapply(., \(z) z$formula)
 
@@ -559,7 +643,8 @@ gb_fig_df <- bind_rows(
   lapply(
     bru_df$code,
     function(code) {
-      pred_band_summary[[code]]$GB_summary %>%
+      summary_only[[code]]$GB_summary %>%
+        as.data.frame() %>%
         mutate(
           model = code
         )
@@ -607,9 +692,14 @@ gb_fig_df %>%
     # color = "darkred",
     lwd = 1
   ) +
+  geom_vline(
+    xintercept = t1,
+    linetype = "dashed",
+    color = "black"
+  ) +
   # coord_cartesian(ylim = c(0, 1)) +
   facet_wrap(~model, nrow = 2, labeller = as_labeller(mod_labels)) +
-  scale_x_datetime(date_labels = "%m/%d") +
+  scale_x_datetime(date_labels = "%H:%M") +
   theme(legend.position = "bottom") +
   scale_color_manual(
     values = c("fit" = blues9[9], "observed" = "darkred", "PC(ERA5)" = "gray70")
@@ -650,19 +740,22 @@ wf_fig_df <- bind_rows(
   lapply(
     bru_df$code,
     function(code) {
-      pred_band_summary[[code]]$wf_summary %>%
-        mutate(
-          model = code
-        ) %>%
-        left_join(
-          lm_pred %>%
-            dplyr::select(time, coord_id, norm_power_est0) %>%
-            unique(),
-          by = c("time", "coord_id")
-        )
+      {
+        summary_only[[code]]$wf_summary %>%
+          as.data.frame() %>%
+          mutate(
+            model = code
+          )
+      }
     }
   ) %>%
-    bind_rows()
+    bind_rows() %>%
+    left_join(
+      lm_pred %>%
+        dplyr::select(time, coord_id, norm_power_est0) %>%
+        unique(),
+      by = c("time", "coord_id")
+    )
 ) %>%
   mutate(
     oos = ifelse(time < t1, TRUE, FALSE)
@@ -706,9 +799,14 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
         # color = "darkred",
         lwd = 1
       ) +
+      geom_vline(
+        xintercept = t1,
+        linetype = "dashed",
+        color = "black"
+      ) +
       facet_wrap(~site_name, scales = "free_y") +
       coord_cartesian(ylim = c(0, 1)) +
-      scale_x_datetime(date_labels = "%m/%d") +
+      scale_x_datetime(date_labels = "%H:%M") +
       theme(legend.position = "bottom") +
       scale_color_manual(
         values = c(
@@ -738,7 +836,7 @@ for (mod in est_cols[!grepl("qm", est_cols)]) {
 ## Bands coverage by model ####
 ### wf level
 cov_bands_wf <- wf_fig_df %>%
-  # filter(time >= t1) %>%
+  filter(time < t1) %>%
   group_by(model, coord_id) %>%
   summarise(
     coverage = mean(norm_potential >= lwr & norm_potential <= upr),
@@ -775,7 +873,7 @@ ggsave(
 )
 ### aggregated #####
 cov_bands <- gb_fig_df %>%
-  # filter(time >= t1) %>%
+  filter(time < t1) %>%
   group_by(model) %>%
   summarise(
     coverage = mean(norm_potential >= lwr & norm_potential <= upr),
@@ -831,16 +929,6 @@ var_wf <- wf_fig_df %>%
     sd_res = sd(norm_potential - fit),
     .groups = "drop"
   )
-
-# var_wf %>%
-#   mutate(
-#     scaled_var = var_res / n_loc
-#   ) %>%
-#   left_join(var_emp, by = "model", suffix = c("_wf", "_emp")) %>%
-#   mutate(
-#     rho_est = (var_res_emp - var_res_wf / n_loc) /
-#       (var_res_wf * (1 - 1 / n_loc))
-#   )
 
 endtime <- Sys.time()
 
