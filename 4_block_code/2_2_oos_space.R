@@ -536,6 +536,11 @@ cov_summary_fname <- sprintf(
   task_prefix,
   d0_tag
 )
+scores_summary_fname <- sprintf(
+  "summaries/model_scores_summary_%s_%s.csv",
+  task_prefix,
+  d0_tag
+)
 if (!file.exists(pred_summary_fname) || rerun_samples) {
   if (!file.exists(pred_summary_fname)) {
     cat("Prediction band summary file not found, creating new summary\n")
