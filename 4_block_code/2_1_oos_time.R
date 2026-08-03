@@ -729,7 +729,7 @@ wf_fig_df <- bind_rows(
     ) %>%
     st_drop_geometry() %>%
     rename(fit = estimate),
-  qm_pred %>%
+  qm_pred_df %>%
     dplyr::select(
       coord_id,
       site_name,
