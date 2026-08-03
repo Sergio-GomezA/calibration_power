@@ -35,6 +35,8 @@ n.hours.space <- 72
 
 cluster_ext <- "rds" # "geojson" previously
 
+pow_threshold <- 0.05
+
 if (local_run) {
   cat("Running in local mode\n")
 } else {
@@ -65,6 +67,9 @@ if (length(args) > 5) {
 }
 if (length(args) > 6) {
   save_models <- as.logical(args[7])
+}
+if (length(args) > 7) {
+  pow_threshold <- as.numeric(args[8])
 }
 
 ## 0.2 libraries and paths ####
