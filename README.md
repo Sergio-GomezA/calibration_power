@@ -285,8 +285,12 @@ CRPS
 
 - different lwe thresholds
 - PIT
+  - [ ] figure
 - CI width
+  - [ ] calculate and summarise
 - CRPS
+  - [ ] plot
 - add qm
 - check space validation
 - check lwe
+- [x] clean sample output
