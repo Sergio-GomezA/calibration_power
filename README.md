@@ -290,7 +290,7 @@ CRPS
   - [ ] calculate and summarise
 - CRPS
   - [ ] plot
-- add qm
-- check space validation
+- [x] add qm
+- [x] check space validation
 - check lwe
 - [x] clean sample output
