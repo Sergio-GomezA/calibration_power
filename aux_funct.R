@@ -1900,15 +1900,16 @@ bru_ci_plot <- function(
       prob_points,
       args
     )
-    quant_formula <- case_when(
-      family == "t" ~ sprintf(
+    if (family == "t") {
+      quant_formula <- sprintf(
         "(%s) + (%s)/sqrt((%s))",
         lin_pred,
         quant_formula0,
         prec_val
-      ),
-      TRUE ~ quant_formula0
-    )
+      )
+    } else {
+      quant_formula <- quant_formula0
+    }
     extra_quantiles <- paste(
       c(
         sprintf(
