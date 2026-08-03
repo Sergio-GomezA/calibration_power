@@ -451,7 +451,6 @@ lm_pred_fig_df <- lm_pred %>%
     upr = pmin(1, pmax(0, upr))
   )
 
-
 ## quantile mapping ####
 qm_df <- model_df %>% filter(type == "qm")
 
@@ -540,12 +539,11 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       "Prediction band summary file found, but rerun_samples is TRUE. Recreating summary\n"
     )
   }
-  # source("aux_funct.R")
+
   bru_mods <- paste0(bru_df %>% pull(mode_code_prefix), d0_tag, ".rds")
   pred_band_summary <- lapply(
     seq_along(bru_df$fname),
     function(i) {
-      # browser()
       cat(
         "--------------------------------------------------------------------\n"
       )
@@ -553,8 +551,6 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       cat(
         "--------------------------------------------------------------------\n"
       )
-      # mod_temp <- readRDS(bru_df$fname[i])
-
       test <- tryCatch(
         {
           bru_ci_plot(
@@ -607,7 +603,6 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
     }) %>%
     bind_rows(.id = "model")
 
-  # names(pred_band_summary) <- bru_df$code
   names(summary_only) <- bru_df$code
   names(coverage_summary) <- bru_df$code
   names(pred_band_summary) <- bru_df$code
@@ -914,7 +909,6 @@ var_wf <- wf_fig_df %>%
     sd_res = sd(norm_potential - fit),
     .groups = "drop"
   )
-
 
 endtime <- Sys.time()
 
