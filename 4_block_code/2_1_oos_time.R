@@ -636,6 +636,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
 ### GB aggregation summary ####
 gb_fig_df <- bind_rows(
   lm_pred_fig_df,
+  qm_pred_fig_df,
   lapply(
     bru_df$code,
     function(code) {
@@ -728,6 +729,19 @@ wf_fig_df <- bind_rows(
     ) %>%
     st_drop_geometry() %>%
     rename(fit = estimate),
+  qm_pred %>%
+    dplyr::select(
+      coord_id,
+      site_name,
+      time,
+      norm_potential,
+      norm_power_est0,
+      # capacity,
+      model,
+      estimate
+    ) %>%
+    st_drop_geometry() %>%
+    rename(fit = estimate),
   lapply(
     bru_df$code,
     function(code) {
@@ -757,7 +771,7 @@ saveRDS(
   sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag)
 )
 
-for (mod in est_cols[!grepl("qm", est_cols)]) {
+for (mod in est_cols) {
   for (k in 0:2) {
     # print(k)
     wf_fig_df %>%
