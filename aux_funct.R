@@ -2233,15 +2233,23 @@ extract_pit_model <- function(mod.obj) {
   # check if model has two likelihoods
   # n <- if (length(mod.obj$.args$family) > 1) length(mod.obj$.args$data$intercept) / 2 else NULL
 
-  if (length(mod.obj$.args$family) > 1) {
-    n <- length(mod.obj$.args$data$intercept) / 2
-    pit_vals <- mod.obj$cpo$pit[-c(1:n)]
-  } else {
-    n <- length(mod.obj$cpo$pit)
-    pit_vals <- mod.obj$cpo$pit
-  }
+  # if (length(mod.obj$.args$family) > 1) {
+  #   n <- length(mod.obj$.args$data$intercept) / 2
+  #   pit_vals <- mod.obj$cpo$pit[-c(1:n)]
+  # } else {
+  #   n <- length(mod.obj$cpo$pit)
+  #   pit_vals <- mod.obj$cpo$pit
+  # }
+  n <- length(mod.obj$cpo$pit)
+  pit_vals <- mod.obj$cpo$pit
+  time <- mod.obj$.args$data$time
+  site_name <- mod.obj$.args$data$site_name
+  coord_id <- mod.obj$.args$data$coord_id
   result <- data.frame(
     id = 1:n,
+    time = time,
+    site_name = site_name,
+    coord_id = coord_id,
     pit = pit_vals
   )
   return(result)
