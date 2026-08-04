@@ -192,7 +192,7 @@ if (local_run) {
 # Predictions for next hours ####
 
 ## prediction df ####
-gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
+gb_day_df_fname <- sprintf("data/GB_daily_summary.parquet")
 
 if (!file.exists(gb_day_df_fname) || override_objects) {
   if (!file.exists(gb_day_df_fname)) {
