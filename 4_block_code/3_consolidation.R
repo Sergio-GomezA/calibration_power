@@ -142,10 +142,12 @@ mod_labels <- model_catalog$mod_labels
 est_cols <- model_catalog$est_cols
 n_models <- length(est_cols)
 names(mod_labels) <- est_cols
+excluded_models <- c("qm", "lm_bru")
 
+# Time oos ####
 # read summary tables of prediction bands ######
 gb_fig_df <- lapply(
-  seq_along(sampled_days[-15]),
+  seq_along(sampled_days),
   function(i) {
     d0 <- sampled_days_df$date[i] %>% as.Date()
     # print(i)
@@ -159,9 +161,8 @@ gb_fig_df <- lapply(
 ) %>%
   bind_rows()
 
-
 wf_fig_df <- lapply(
-  seq_along(sampled_days[-15]),
+  seq_along(sampled_days),
   function(i) {
     d0 <- sampled_days_df$date[i] %>% as.Date()
     d0_tag <- base::format(d0, "%y%m%d")
@@ -173,7 +174,6 @@ wf_fig_df <- lapply(
   }
 ) %>%
   bind_rows()
-
 
 ## calibration fit scatter####
 # #
@@ -247,7 +247,7 @@ ggsave(
 ## Coverage bands #####
 
 ### wf level ####
-excluded_models <- c("qm", "lm_bru")
+
 cov_bands_wf <- wf_fig_df %>%
   filter(!model %in% excluded_models) %>%
   filter(oos) %>%
@@ -689,7 +689,7 @@ cov_gbl <- lapply(
   function(i) {
     d0 <- sampled_days_df$date[i] %>% as.Date()
     d0_tag <- base::format(d0, "%y%m%d")
-    browser()
+    # browser()
     cov_obj <- readRDS(sprintf(
       "summaries/pred_band_coverage_summary_%s.rds",
       d0_tag
@@ -765,7 +765,7 @@ ggsave(
 
 ### cov summaries for space ####
 cov_gbl <- lapply(
-  seq_along(sampled_days[-15]),
+  seq_along(sampled_days),
   function(i) {
     d0 <- sampled_days_df$date[i] %>% as.Date()
     d0_tag <- base::format(d0, "%y%m%d")
@@ -825,3 +825,66 @@ ggsave(
   height = 4,
   # dpi = 300
 )
+
+## error metrics ####
+
+metrics_table <- wf_fig_df %>%
+  group_by(oos, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = fit),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = fit),
+    # MDAPE = mdape(
+    #   actual = norm_potential,
+    #   predicted = fit,
+    #   pos_only = TRUE
+    # ),
+    Bias = mean(fit - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    model = mod_labels[model],
+    oos = ifelse(oos, "OOS", "IS")
+  ) %>%
+  pivot_wider(
+    names_from = oos,
+    values_from = c(
+      RMSE,
+      MAE,
+      # MDAPE,
+      Bias
+    )
+  )
+metrics_table
+metrics_table %>%
+  mutate(
+    across(
+      c(RMSE_IS, RMSE_OOS, MAE_IS, MAE_OOS, Bias_IS, Bias_OOS),
+      ~ round(., 3)
+    ),
+    # across(c(MDAPE_IS, MDAPE_OOS), ~ round(., 1))
+  ) %>%
+  kbl(
+    # format = "latex",
+    booktabs = TRUE,
+    align = "lcccccccc",
+    col.names = c(
+      "Model",
+      "IS",
+      "OOS",
+      "IS",
+      "OOS",
+      # "IS",
+      # "OOS",
+      "IS",
+      "OOS"
+    ),
+    caption = "Performance metrics for in-sample (IS) and out-of-sample (OOS) predictions."
+  ) %>%
+  add_header_above(c(
+    " " = 1,
+    "RMSE" = 2,
+    "MAE" = 2,
+    # "MDAPE (%)" = 2,
+    "Bias" = 2
+  )) %>%
+  kable_styling(latex_options = "hold_position")
