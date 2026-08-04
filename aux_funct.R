@@ -1893,7 +1893,8 @@ bru_ci_plot <- function(
   )
 
   if (!is.null(alphas)) {
-    prob_points <- c(0.025, 0.975, alphas / 2, 1 - alphas / 2)
+    prob_points0 <- c(alphas / 2, 1 - alphas / 2)
+    prob_points <- c(0.025, 0.975, prob_points0)
     quant_formula0 <- sprintf(
       "%s(%s, %s)",
       qfun,
@@ -1920,7 +1921,7 @@ bru_ci_plot <- function(
         ),
         sprintf(
           "q_%s = %s",
-          gsub("\\.", "_", prob_points[-c(1:2)]),
+          gsub("\\.", "_", prob_points0),
           quant_formula[-c(1:2)]
         )
       ),
@@ -2045,8 +2046,8 @@ bru_ci_plot <- function(
   if (length(q_cols) > 0) {
     n_intervals <- length(q_cols) / 2
 
-    lower_probs <- rev(prob_points[1:n_intervals])
-    upper_probs <- rev(prob_points)[1:n_intervals]
+    lower_probs <- rev(prob_points0[1:n_intervals])
+    upper_probs <- rev(prob_points0)[1:n_intervals]
     lower_cols <- rev(q_cols[1:n_intervals])
     upper_cols <- rev(q_cols)[1:n_intervals]
 
