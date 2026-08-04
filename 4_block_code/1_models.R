@@ -1573,10 +1573,14 @@ write.csv(
   file.path(sprintf("summaries/model_scores_%s.csv", d0_tag)),
   row.names = FALSE
 )
-pit_list <- list_rbind(pit_list, names_to = "model")
+pit_list <- list_rbind(pit_list, names_to = "model_code") %>%
+  mutate(
+    # removing date and .rds extension
+    code = sub("_[0-9]{6}\\.rds$", "", model_code)
+  )
 write.csv(
   pit_list,
-  file.path(sprintf("summaries/model_pit_%s.csv", d0_tag)),
+  gzfile(file.path(sprintf("summaries/model_pit_%s.csv.gz", d0_tag)), "w"),
   row.names = FALSE
 )
 
