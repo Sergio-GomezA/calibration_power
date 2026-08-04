@@ -891,3 +891,98 @@ ggsave(
   height = 4,
   # dpi = 300
 )
+
+# named listtest
+a <- list(
+  "GB" = list(tbl = gb_fig_df, extra = 1),
+  "WF" = list(tbl = wf_fig_df, extra = 2)
+)
+test <- lapply(
+  a,
+  function(element) {
+    element$tbl %>% head()
+  }
+) %>%
+  bind_rows(.id = "source")
+
+
+# PIT diagrams ####
+
+pit_df <- lapply(
+  seq_along(sampled_days),
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    d0_tag <- base::format(d0, "%y%m%d")
+    read.csv(sprintf("summaries/model_pit_%s.csv", d0_tag)) %>%
+      mutate(date = d0)
+  }
+) %>%
+  bind_rows() %>%
+  mutate(
+    model = factor(code, levels = est_cols, labels = mod_labels)
+  )
+
+
+# Scores table ####
+# CRPS LogScore Energy Brie
+## time ####
+model_catalog <- read.csv("data/model_catalog.csv") %>%
+  na.omit()
+model_df <- model_catalog %>%
+  rename(code = est_cols, label = mod_labels) %>%
+  arrange(desc(nchar(mode_code_prefix))) %>%
+  mutate(
+    type = case_when(
+      grepl("lm_", code) ~ "bru",
+      grepl("lm", code) ~ "lm",
+      grepl("qm", code) ~ "qm",
+      TRUE ~ "bru"
+    )
+  ) %>%
+  filter(!code %in% c("st0_m0", "st0_m1"))
+bru_df <- model_df %>% filter(type == "bru")
+scores_tbl <- lapply(
+  seq_along(sampled_days),
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    d0_tag <- base::format(d0, "%y%m%d")
+
+    read.csv(sprintf("summaries/model_scores_summary_%s.csv", d0_tag)) %>%
+      mutate(date = d0, model = bru_df$label)
+  }
+) %>%
+  bind_rows() %>%
+  group_by(model) %>%
+  summarise(
+    across(c(crps, energy, log, matches("bs")), ~ mean(., na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  arrange(crps) %>%
+  mutate(
+    model = factor(model, levels = model)
+  )
+## space ####
+scores_tbl <- lapply(
+  seq_along(sampled_days),
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    d0_tag <- base::format(d0, "%y%m%d")
+    read.csv(sprintf(
+      "summaries/model_scores_summary_spaceoos_%s.csv",
+      d0_tag
+    )) %>%
+      mutate(date = d0, model = bru_df$label)
+  }
+) %>%
+  bind_rows() %>%
+  group_by(model) %>%
+  summarise(
+    across(c(crps, energy, log, matches("bs")), ~ mean(., na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  arrange(crps) %>%
+  mutate(
+    model = factor(model, levels = model)
+  )
+
+# LWE diagram
