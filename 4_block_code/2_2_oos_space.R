@@ -585,6 +585,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       test
     }
   )
+  names(pred_band_summary) <- bru_df$code
   summary_only <- lapply(
     pred_band_summary,
     function(x) {
@@ -618,7 +619,6 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
 
   names(summary_only) <- bru_df$code
   names(coverage_summary) <- bru_df$code
-  names(pred_band_summary) <- bru_df$code
 
   saveRDS(summary_only, pred_summary_fname)
   saveRDS(coverage_summary, cov_summary_fname)
