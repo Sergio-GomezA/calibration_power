@@ -147,7 +147,7 @@ sampled_days <- sampled_days_df %>%
 d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
 
-gb_day_df_fname <- sprintf("data/GB_daily_summary_%s.parquet", d0_tag)
+gb_day_df_fname <- sprintf("data/GB_daily_summary.parquet")
 
 if (!file.exists(gb_day_df_fname) || override_objects) {
   cat("GB daily summary file not found, creating new summary\n")
