@@ -557,7 +557,7 @@ if (!file.exists(model_fname) || override_objects) {
   )
 
   scores_df[[model_code]] <- extract_score_model(brulm)
-  pit_list[[model_code]] <- extract_pit_model(brulm)
+  pit_list[[model_code]] <- extract_pit_model(brulm, wf_df_frag)
 
   if (save_models) {
     saveRDS(
