@@ -154,12 +154,18 @@ gb_fig_df <- lapply(
     d0_tag <- base::format(d0, "%y%m%d")
     readRDS(sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)) %>%
       mutate(
-        pgroup3 = sampled_days_df$p_group3[i] %>%
-          factor(levels = c("low", "mid", "high"))
+        date = as.Date(time)
       )
+    #   pgroup3 = sampled_days_df$p_group3[i] %>%
+    #     factor(levels = c("low", "mid", "high"))
+    # )
   }
 ) %>%
-  bind_rows()
+  bind_rows() %>%
+  left_join(
+    gb_day_df %>% dplyr::select(date, p_group3) %>% rename(pgroup3 = p_group3),
+    by = "date"
+  )
 
 wf_fig_df <- lapply(
   seq_along(sampled_days),
@@ -168,18 +174,23 @@ wf_fig_df <- lapply(
     d0_tag <- base::format(d0, "%y%m%d")
     readRDS(sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag)) %>%
       mutate(
-        pgroup3 = sampled_days_df$p_group3[i] %>%
-          factor(levels = c("low", "mid", "high"))
-      )
+        date = as.Date(time)
+      ) #%>%
+    #   pgroup3 = sampled_days_df$p_group3[i] %>%
+    #     factor(levels = c("low", "mid", "high"))
   }
 ) %>%
-  bind_rows()
+  bind_rows() %>%
+  left_join(
+    gb_day_df %>% dplyr::select(date, p_group3) %>% rename(pgroup3 = p_group3),
+    by = "date"
+  )
 
 ## calibration fit scatter####
 gb_fig_df %>%
   filter(oos) %>%
   ggplot(aes(x = norm_potential, y = mean, col = pgroup3)) +
-  geom_point() +
+  geom_point(alpha = 0.5) +
   geom_abline(
     slope = 1,
     intercept = 0,
@@ -205,7 +216,10 @@ ggsave(
 
 wf_fig_df %>%
   mutate(hour = hour(time)) %>%
-  filter(oos, hour <= 1) %>%
+  group_by(date) %>%
+  mutate(leadh = difftime(time, min(time), units = "hours")) %>%
+  ungroup() %>%
+  filter(oos, leadh <= 1) %>%
   # filter(oos, between(hour, 10, 14)) %>%
   # filter(oos) %>%
   ggplot(aes(x = norm_potential, y = fit)) +
@@ -893,18 +907,6 @@ ggsave(
 )
 
 # named listtest
-a <- list(
-  "GB" = list(tbl = gb_fig_df, extra = 1),
-  "WF" = list(tbl = wf_fig_df, extra = 2)
-)
-test <- lapply(
-  a,
-  function(element) {
-    element$tbl %>% head()
-  }
-) %>%
-  bind_rows(.id = "source")
-
 
 # PIT diagrams ####
 
@@ -913,16 +915,47 @@ pit_df <- lapply(
   function(i) {
     d0 <- sampled_days_df$date[i] %>% as.Date()
     d0_tag <- base::format(d0, "%y%m%d")
-    read.csv(sprintf("summaries/model_pit_%s.csv", d0_tag)) %>%
+    read.csv(sprintf("summaries/model_pit_%s.csv.gz", d0_tag)) %>%
       mutate(date = d0)
   }
 ) %>%
   bind_rows() %>%
-  mutate(
-    model = factor(code, levels = est_cols, labels = mod_labels)
+  filter(!code %in% c("ts_bru0_ar2")) %>%
+  mutate(code = paste0(code, "_")) %>%
+  left_join(
+    model_df %>% dplyr::select(mode_code_prefix, code),
+    by = c("code" = "mode_code_prefix")
   )
+# mutate(
+#   code = model_df$code[model_df$mode_code_prefix == paste0(code, "_")],
+#   model = factor(code, levels = est_cols, labels = mod_labels)
+# )
 
-
+p <- pit_df %>%
+  mutate(model = factor(code.y, levels = est_cols, labels = mod_labels)) %>%
+  ggplot() +
+  geom_abline(aes(slope = 1, intercept = 0), col = "darkgray") +
+  stat_ecdf(aes(pit, col = model), na.rm = TRUE, lwd = 0.8) +
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(.75, .25),
+    plot.title = element_text(size = 10), # Adjust title font size
+    axis.text = element_text(size = 8), # Adjust axis text font size
+    axis.title = element_text(size = 9), # Adjust axis label font size
+    legend.text = element_text(size = 8), # Adjust legend text font size
+    legend.title = element_text(size = 8), # Adjust legend title font size
+    legend.background = element_blank(), # Makes background completely transparent
+    legend.box.background = element_rect(fill = NA, color = NA) # No border
+  ) +
+  coord_fixed(ratio = 1, xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "PIT", y = "ECDF", col = "")
+p
+ggsave(
+  filename = sprintf("fig/%s/pit_diagram.pdf", batch_name),
+  width = 6,
+  height = 4,
+  # dpi = 300
+)
 # Scores table ####
 # CRPS LogScore Energy Brie
 ## time ####
@@ -1515,3 +1548,24 @@ ggsave(
   width = 6,
   height = 5
 )
+
+
+# update currently used figures in overleaf ####
+
+path1 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power_main_doc/spfig"
+path2 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power/fig/batch2025"
+
+# Files to update in overleaf
+files1 <- list.files(path1)
+
+# Full paths to matching files in path2
+source_files <- file.path(path2, files1)
+
+# Keep only files that actually exist in path2
+source_files <- source_files[file.exists(source_files)]
+
+# Destination paths in path1
+dest_files <- file.path(path1, basename(source_files))
+
+# Copy and overwrite
+file.copy(source_files, dest_files, overwrite = TRUE)
