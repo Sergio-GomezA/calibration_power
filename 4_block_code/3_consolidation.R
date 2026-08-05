@@ -388,7 +388,7 @@ ggsave(
 )
 
 ## Error metrics #####
-metrics_table <- wf_fig_df %>%
+metrics_table_t <- wf_fig_df %>%
   group_by(oos, model) %>%
   summarise(
     RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = fit),
@@ -413,9 +413,10 @@ metrics_table <- wf_fig_df %>%
       # MDAPE,
       Bias
     )
-  )
-metrics_table
-metrics_table %>%
+  ) %>%
+  arrange(desc(RMSE_OOS))
+metrics_table_t
+metrics_table_t %>%
   mutate(
     across(
       c(RMSE_IS, RMSE_OOS, MAE_IS, MAE_OOS, Bias_IS, Bias_OOS),
@@ -476,7 +477,7 @@ gb_fig_df <- lapply(
   )
 
 wf_fig_df <- lapply(
-  seq_along(sampled_days[-15]),
+  seq_along(sampled_days),
   function(i) {
     d0 <- sampled_days_df$date[i] %>% as.Date()
     d0_tag <- base::format(d0, "%y%m%d")
@@ -723,7 +724,8 @@ metrics_table <- wf_fig_df %>%
       # MDAPE,
       Bias
     )
-  )
+  ) %>%
+  arrange(desc(RMSE_OOS))
 metrics_table
 metrics_table %>%
   mutate(
@@ -974,7 +976,7 @@ model_df <- model_catalog %>%
   ) %>%
   filter(!code %in% c("st0_m0", "st0_m1"))
 bru_df <- model_df %>% filter(type == "bru")
-scores_tbl <- lapply(
+scores_tbl_t <- lapply(
   seq_along(sampled_days),
   function(i) {
     d0 <- sampled_days_df$date[i] %>% as.Date()
@@ -1047,9 +1049,7 @@ model_df0 <- lapply(
 
     # coarse
     readRDS(sprintf(
-      "data/calibration_df_%s_%s.%s",
-      # mesh_label,
-      "very_coarse",
+      "summaries/WF_fig_band_summary_%s.%s",
       d0_tag,
       extension
     )) %>%
@@ -1058,73 +1058,21 @@ model_df0 <- lapply(
 ) %>%
   bind_rows()
 
-pos_breaks <- with(
-  model_df0,
-  quantile(elevation[elevation > 0], probs = seq(0, 1, 1 / 3))
-)
-pos_levels <- levels(cut(
-  model_df0$elevation[model_df0$elevation > 0],
-  breaks = pos_breaks,
-  include.lowest = TRUE
-))
-
-df_long0 <- model_df0 %>%
-  dplyr::select(
-    date,
-    time,
-    site_name,
-    coord_id,
-    elevation,
-    dist_coast,
-    capacity,
-    tech_typ,
-    p_group3,
-    norm_potential,
-    any_of(est_cols)
-  ) %>%
-  mutate(
-    hour = hour(time),
-    elevation = pmax(0, elevation),
-    p_group3 = factor(p_group3, levels = c("low", "mid", "high")),
-    dist_coast_g4 = cut(
-      dist_coast,
-      breaks = quantile(dist_coast, probs = seq(0, 1, 0.25)),
-      include.lowest = TRUE
-    ),
-    elevation_g4 = ifelse(
-      elevation == 0,
-      "0",
-      as.character(
-        cut(
-          elevation,
-          breaks = pos_breaks,
-          include.lowest = TRUE,
-          # labels = c("Low", "Mid", "High")
-        )
-      )
-    ),
-    elevation_g4 = factor(
-      elevation_g4,
-      levels = c("0", pos_levels)
-    )
-  ) %>%
-  pivot_longer(
-    cols = any_of(est_cols),
-    names_to = "model",
-    values_to = "estimate"
-  ) %>%
-  mutate(
-    estimate = pmin(1, pmax(0, estimate)), # clipping estimates to [0, 1]
-    err = estimate - norm_potential,
-    p_group3 = forcats::fct_rev(p_group3),
-    # model = factor(model, levels = est_cols, labels = mod_labels)
-  )
+# pos_breaks <- with(
+#   model_df0,
+#   quantile(elevation[elevation > 0], probs = seq(0, 1, 1 / 3))
+# )
+# pos_levels <- levels(cut(
+#   model_df0$elevation[model_df0$elevation > 0],
+#   breaks = pos_breaks,
+#   include.lowest = TRUE
+# ))
 
 ## 2.1 Low wind events in observed data ####
 cat("--------------------------------------------------------------------\n")
 cat("Low wind events in observed data\n")
 cat("--------------------------------------------------------------------\n")
-
+max_h_duration <- 100
 lwe_obs_pred_fname <- file.path(
   "summaries",
   sprintf(
@@ -1227,7 +1175,7 @@ if (!file.exists(lwe_obs_pred_fname) | override_objects) {
       start_time = first(time),
       end_time = last(time),
       duration_h = pmin(
-        100,
+        max_h_duration,
         as.numeric(difftime(end_time, start_time, units = "hours")) +
           1
       ),
@@ -1309,7 +1257,7 @@ if (!file.exists(lwe_obs_pred_fname) | override_objects) {
       start_time = first(time),
       end_time = last(time),
       duration_h = pmin(
-        100,
+        max_h_duration,
         as.numeric(difftime(end_time, start_time, units = "hours")) +
           1
       ),
@@ -1333,14 +1281,15 @@ cat("--------------------------------------------------------------------\n")
 cat("Low wind events in model mean predictions\n")
 cat("--------------------------------------------------------------------\n")
 
-low_events_model <- df_long0 %>%
+low_events_model <- model_df0 %>%
+  filter(model %in% est_cols) %>%
   st_drop_geometry() %>%
   # filter(model == "Spatio-temporal model") %>%
   filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
   arrange(model, coord_id, time) %>%
   group_by(model, coord_id) %>%
   mutate(
-    below = estimate < pow_threshold,
+    below = fit < pow_threshold,
     run_id = cumsum(below != lag(below, default = first(below)))
   ) %>%
   filter(below) %>%
@@ -1355,12 +1304,16 @@ low_events_model <- df_long0 %>%
   dplyr::select(model, coord_id, start_time, duration_h) %>%
   bind_rows(lwe_obs_pred) %>%
   mutate(
-    model = factor(model, levels = est_cols, labels = mod_labels)
+    model = factor(
+      model,
+      levels = c(est_cols, "observed"),
+      labels = c(mod_labels, "observed" = "Observed")
+    )
   )
 
 # low_events_model$model %>% unique() %>% sort() %>% print()
 low_events_model %>%
-  filter(duration_h < 24 * 7) %>%
+  filter(duration_h < max_h_duration) %>%
   # filter(
   #   model %in%
   #     c("observed", "Linear model", "AR1 model", "QM", "Spatio-temporal model")
@@ -1402,13 +1355,21 @@ ggsave(
   height = 6
 )
 
+mods <- unique(low_events_model$model)
+# Default hue palette
+cols <- scales::hue_pal()(length(mods))
+names(cols) <- mods
+cols["Observed"] <- "darkred"
+
 low_events_model %>%
-  filter(duration_h < 24 * 7) %>%
+  filter(duration_h < max_h_duration) %>%
   ggplot(aes(x = duration_h)) +
   geom_density(
     # data = ~ dplyr::filter(.x, model != "observed"),
     aes(colour = model),
-    alpha = 0.5
+    alpha = 0.5,
+    key_glyph = "path",
+    lwd = 1
   ) +
   # geom_density(
   #   data = ~ dplyr::filter(.x, model == "observed"),
@@ -1427,25 +1388,12 @@ low_events_model %>%
     plot.title = element_text(hjust = 0.5),
     axis.text.x = element_text(angle = 45, hjust = 1),
     legend.position = "inside",
-    legend.position.inside = c(0.7, 0.8)
+    legend.position.inside = c(0.7, 0.7)
   ) +
   guides(
     colour = guide_legend(ncol = 2)
   ) +
-  scale_color_manual(
-    values = c(
-      "Observed" = "darkred",
-      "Generic PC" = "#E69F00",
-      "Linear model" = "#56B4E9",
-      "AR1 model" = "#009E73",
-      "AR2 model" = "#F0E442",
-      "LM+hour model" = "#0072B2",
-      "ST model fine" = "#D55E00",
-      "ST model coarse" = "#CC79A7",
-      "QM" = "#999999",
-      "GB LM" = "#000000"
-    )
-  )
+  scale_color_manual(values = cols)
 
 ggsave(
   sprintf(
@@ -1459,8 +1407,8 @@ ggsave(
 
 obs <- low_events_model %>%
   filter(
-    model == "observed",
-    duration_h < 24 * 7
+    model == "Observed",
+    duration_h < max_h_duration
   ) %>%
   pull(duration_h)
 
@@ -1468,7 +1416,7 @@ probs <- seq(0, 1, length.out = 101)
 
 qq_df <- low_events_model %>%
   filter(model != "observed") %>%
-  filter(duration_h < 24 * 7) %>%
+  filter(duration_h < max_h_duration) %>%
   group_by(model) %>%
   summarise(
     obs_q = list(quantile(obs, probs = probs, na.rm = TRUE)),
