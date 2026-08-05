@@ -1,8 +1,7 @@
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
-mc <- ifelse(local_run, 1, available_cores())
 pow_threshold <- 0.05
-pow_threshold_label <- as.character(pow_threshold) %>% gsub("\\.", "_", .)
+pow_threshold_label <- gsub("\\.", "_", as.character(pow_threshold))
 
 
 override_objects <- FALSE
@@ -54,9 +53,10 @@ require(kableExtra)
 # require(ggspatial)
 
 source("aux_funct.R")
+mc <- ifelse(local_run, 1, available_cores())
 
-# sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
-#   mutate(date = as.Date(date))
+sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
+  mutate(date = as.Date(date))
 
 # sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
 #   mutate(date = as.Date(date))
@@ -142,7 +142,24 @@ mod_labels <- model_catalog$mod_labels
 est_cols <- model_catalog$est_cols
 n_models <- length(est_cols)
 names(mod_labels) <- est_cols
-excluded_models <- c("qm", "lm_bru")
+excluded_models0 <- c("lm_bru")
+excluded_models <- c("lm_bru", "qm")
+
+model_catalog <- read.csv("data/model_catalog.csv") %>%
+  na.omit()
+model_df <- model_catalog %>%
+  rename(code = est_cols, label = mod_labels) %>%
+  arrange(desc(nchar(mode_code_prefix))) %>%
+  mutate(
+    type = case_when(
+      grepl("lm_", code) ~ "bru",
+      grepl("lm", code) ~ "lm",
+      grepl("qm", code) ~ "qm",
+      TRUE ~ "bru"
+    )
+  ) %>%
+  filter(!code %in% c("st0_m0", "st0_m1"))
+bru_df <- model_df %>% filter(type == "bru")
 
 # Time oos ####
 ## read summary tables of prediction bands ######
@@ -189,6 +206,7 @@ wf_fig_df <- lapply(
 ## calibration fit scatter####
 gb_fig_df %>%
   filter(oos) %>%
+  filter(!model %in% excluded_models0) %>%
   ggplot(aes(x = norm_potential, y = mean, col = pgroup3)) +
   geom_point(alpha = 0.5) +
   geom_abline(
@@ -215,6 +233,7 @@ ggsave(
 )
 
 wf_fig_df %>%
+  filter(!model %in% excluded_models0) %>%
   mutate(hour = hour(time)) %>%
   group_by(date) %>%
   mutate(leadh = difftime(time, min(time), units = "hours")) %>%
@@ -389,6 +408,7 @@ ggsave(
 
 ## Error metrics #####
 metrics_table_t <- wf_fig_df %>%
+  filter(!model %in% excluded_models0) %>%
   group_by(oos, model) %>%
   summarise(
     RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = fit),
@@ -502,6 +522,7 @@ wf_fig_df <- lapply(
 ## scatter #####
 gb_fig_df %>%
   filter(oos) %>%
+  filter(!model %in% excluded_models0) %>%
   ggplot(aes(x = norm_potential, y = mean, col = pgroup3)) +
   geom_point() +
   geom_abline(
@@ -529,6 +550,7 @@ ggsave(
 
 wf_fig_df %>%
   filter(oos) %>%
+  filter(!model %in% excluded_models0) %>%
   ggplot(aes(x = norm_potential, y = fit)) +
   geom_hex() +
   geom_abline(
@@ -700,6 +722,7 @@ ggsave(
 ## error metrics ####
 
 metrics_table <- wf_fig_df %>%
+  filter(!model %in% excluded_models0) %>%
   group_by(oos, model) %>%
   summarise(
     RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = fit),
@@ -832,6 +855,7 @@ rel_df %>%
     color = "darkred"
   ) +
   # scale_color_manual(values = model_palette) +
+  scale_color_aaas() +
   guides(colour = guide_legend(nrow = 2)) +
   theme(
     legend.position = "bottom",
@@ -893,6 +917,7 @@ rel_df %>%
     color = "darkred"
   ) +
   # scale_color_manual(values = model_palette) +
+  scale_color_aaas() +
   theme(
     legend.position = "bottom",
     legend.title = element_blank()
@@ -911,7 +936,6 @@ ggsave(
 # named listtest
 
 # PIT diagrams ####
-
 pit_df <- lapply(
   seq_along(sampled_days),
   function(i) {
@@ -961,21 +985,7 @@ ggsave(
 # Scores table ####
 # CRPS LogScore Energy Brie
 ## time ####
-model_catalog <- read.csv("data/model_catalog.csv") %>%
-  na.omit()
-model_df <- model_catalog %>%
-  rename(code = est_cols, label = mod_labels) %>%
-  arrange(desc(nchar(mode_code_prefix))) %>%
-  mutate(
-    type = case_when(
-      grepl("lm_", code) ~ "bru",
-      grepl("lm", code) ~ "lm",
-      grepl("qm", code) ~ "qm",
-      TRUE ~ "bru"
-    )
-  ) %>%
-  filter(!code %in% c("st0_m0", "st0_m1"))
-bru_df <- model_df %>% filter(type == "bru")
+
 scores_tbl_t <- lapply(
   seq_along(sampled_days),
   function(i) {
@@ -1313,6 +1323,7 @@ low_events_model <- model_df0 %>%
 
 # low_events_model$model %>% unique() %>% sort() %>% print()
 low_events_model %>%
+  filter(!model %in% excluded_models0) %>%
   filter(duration_h < max_h_duration) %>%
   # filter(
   #   model %in%
@@ -1360,8 +1371,10 @@ mods <- unique(low_events_model$model)
 cols <- scales::hue_pal()(length(mods))
 names(cols) <- mods
 cols["Observed"] <- "darkred"
-
+# excluded_models0
+# mod_labels
 low_events_model %>%
+  filter(!model %in% mod_labels[excluded_models0]) %>%
   filter(duration_h < max_h_duration) %>%
   ggplot(aes(x = duration_h)) +
   geom_density(
@@ -1412,10 +1425,11 @@ obs <- low_events_model %>%
   ) %>%
   pull(duration_h)
 
-probs <- seq(0, 1, length.out = 101)
+probs <- seq(0, 1, length.out = 51)
 
 qq_df <- low_events_model %>%
-  filter(model != "observed") %>%
+  filter(model != "Observed") %>%
+  filter(!model %in% mod_labels[c("agg_lm", "qm", "lm_bru")]) %>%
   filter(duration_h < max_h_duration) %>%
   group_by(model) %>%
   summarise(
@@ -1472,19 +1486,19 @@ ggplot(qq_df, aes(x = obs_q, y = model_q)) +
   theme(
     plot.title = element_text(hjust = 0.5)
   ) +
-  scale_color_manual(
-    values = c(
-      "Generic PC" = "#E69F00",
-      "Linear model" = "#56B4E9",
-      "AR1 model" = "#009E73",
-      "AR2 model" = "#F0E442",
-      "LM+hour model" = "#0072B2",
-      "ST model fine" = "#D55E00",
-      "ST model coarse" = "#CC79A7",
-      "QM" = "#999999",
-      "GB LM" = "#000000"
-    )
-  ) +
+  # scale_color_manual(
+  #   values = c(
+  #     "Generic PC" = "#E69F00",
+  #     "Linear model" = "#56B4E9",
+  #     "AR1 model" = "#009E73",
+  #     "AR2 model" = "#F0E442",
+  #     "LM+hour model" = "#0072B2",
+  #     "ST model fine" = "#D55E00",
+  #     "ST model coarse" = "#CC79A7",
+  #     "QM" = "#999999",
+  #     "GB LM" = "#000000"
+  #   )
+  # ) +
   coord_equal(ratio = 1)
 
 ggsave(
@@ -1496,7 +1510,6 @@ ggsave(
   width = 6,
   height = 5
 )
-
 
 # update currently used figures in overleaf ####
 
