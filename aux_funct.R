@@ -2228,7 +2228,7 @@ extract_score_model <- function(mod.obj) {
 }
 
 
-extract_pit_model <- function(mod.obj) {
+extract_pit_model <- function(mod.obj, data = NULL) {
   # browser()
   # check if model has two likelihoods
   # n <- if (length(mod.obj$.args$family) > 1) length(mod.obj$.args$data$intercept) / 2 else NULL
@@ -2242,9 +2242,17 @@ extract_pit_model <- function(mod.obj) {
   # }
   n <- length(mod.obj$cpo$pit)
   pit_vals <- mod.obj$cpo$pit
-  time <- mod.obj$.args$data$time
-  site_name <- mod.obj$.args$data$site_name
-  coord_id <- mod.obj$.args$data$coord_id
+
+  if (!is.null(data)) {
+    time <- data$time
+    site_name <- data$site_name
+    coord_id <- data$coord_id
+  } else {
+    time <- rep(NA, n)
+    site_name <- rep(NA, n)
+    coord_id <- rep(NA, n)
+  }
+
   result <- data.frame(
     id = 1:n,
     time = time,
