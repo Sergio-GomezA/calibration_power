@@ -65,6 +65,12 @@ sampled_days <- sampled_days_df %>%
   pull(date) %>%
   sort()
 
+extension <- "rds"
+coord_list_fname <- "data/coord_list.csv"
+
+cat("Loading existing coordinate list\n")
+coord_list <- read.csv(coord_list_fname)
+
 
 gb_day_df_fname <- sprintf("data/GB_daily_summary.parquet")
 
@@ -127,6 +133,39 @@ if (!file.exists(gb_day_df_fname) || override_objects) {
   cat("Loading existing GB daily summary\n")
   gb_day_df <- read_parquet(gb_day_df_fname)
 }
+
+GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
+  rename(time = halfHourEndTime) %>%
+  mutate(
+    err = norm_power_est0 - norm_potential,
+    error0 = norm_potential - norm_power_est0,
+    date = as.Date(time)
+  )
+pacf_df <- GB_df %>%
+  arrange(tech_typ, time) %>%
+  group_by(tech_typ) %>%
+  summarise(
+    pacf = list(
+      pacf(err, plot = FALSE, na.action = na.pass)
+    ),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    lag = map(pacf, ~ .x$lag),
+    acf = map(pacf, ~ .x$acf)
+  ) %>%
+  dplyr::select(-pacf) %>%
+  unnest(c(lag, acf))
+
+ggplot(pacf_df, aes(x = lag, y = acf)) +
+  geom_hline(yintercept = 0, colour = "grey60") +
+  geom_segment(aes(xend = lag, yend = 0)) +
+  facet_wrap(~tech_typ, scales = "free_y") +
+  labs(
+    x = "Lag",
+    y = "Partial autocorrelation"
+  ) +
+  theme_bw()
 
 
 # Read models ####
@@ -300,6 +339,7 @@ cov_bands_wf <- wf_fig_df %>%
 cov_bands_wf %>%
   ggplot(aes(x = model, y = mean_coverage)) +
   geom_col(fill = blues9[7]) +
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
   geom_text(aes(label = round(mean_coverage, 3)), vjust = -0.5) +
   coord_cartesian(ylim = c(0, 1)) +
   labs(x = "Model", y = "Mean coverage") +
@@ -328,6 +368,7 @@ cov_bands <- gb_fig_df %>%
 cov_bands %>%
   ggplot(aes(x = model, y = coverage)) +
   geom_col(fill = blues9[7]) +
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
   geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
   coord_cartesian(ylim = c(0, 1)) +
   labs(x = "Model", y = "Coverage") +
@@ -445,7 +486,7 @@ metrics_table_t %>%
     # across(c(MDAPE_IS, MDAPE_OOS), ~ round(., 1))
   ) %>%
   kbl(
-    # format = "latex",
+    format = "latex",
     booktabs = TRUE,
     align = "lcccccccc",
     col.names = c(
@@ -759,7 +800,7 @@ metrics_table %>%
     # across(c(MDAPE_IS, MDAPE_OOS), ~ round(., 1))
   ) %>%
   kbl(
-    # format = "latex",
+    format = "latex",
     booktabs = TRUE,
     align = "lcccccccc",
     col.names = c(
@@ -813,18 +854,18 @@ cov_gbl <- lapply(
   bind_rows()
 # list.files("summaries/pred_band_coverage_summary_*.rds") %>%
 #   length()
-model_palette <- c(
-  "Observed" = "darkred",
-  "Generic PC" = "#E69F00",
-  "LM bru model" = "#56B4E9",
-  "LM t model" = "#F0E442",
-  "LM+hour model" = "#0072B2",
-  "AR1 model" = "#009E73",
-  "LM beta model" = "#D55E00",
-  "ST model coarser" = "#CC79A7",
-  "QM" = "#999999",
-  "GB LM" = "#000000"
-)
+# model_palette <- c(
+#   "Observed" = "darkred",
+#   "Generic PC" = "#E69F00",
+#   "LM bru model" = "#56B4E9",
+#   "LM t model" = "#F0E442",
+#   "LM+hour model" = "#0072B2",
+#   "AR1 model" = "#009E73",
+#   "LM beta model" = "#D55E00",
+#   "ST model coarser" = "#CC79A7",
+#   "QM" = "#999999",
+#   "GB LM" = "#000000"
+# )
 # model_catalog <- read.csv("data/model_catalog.csv") %>%
 #   na.omit()
 # mod_labels <- model_catalog$mod_labels
@@ -854,8 +895,8 @@ rel_df %>%
     linetype = "dashed",
     color = "darkred"
   ) +
-  # scale_color_manual(values = model_palette) +
-  scale_color_aaas() +
+  scale_color_manual(values = cols) +
+  # scale_color_aaas() +
   guides(colour = guide_legend(nrow = 2)) +
   theme(
     legend.position = "bottom",
@@ -916,8 +957,8 @@ rel_df %>%
     linetype = "dashed",
     color = "darkred"
   ) +
-  # scale_color_manual(values = model_palette) +
-  scale_color_aaas() +
+  scale_color_manual(values = cols) +
+  # scale_color_aaas() +
   theme(
     legend.position = "bottom",
     legend.title = element_blank()
@@ -974,7 +1015,8 @@ p <- pit_df %>%
     legend.box.background = element_rect(fill = NA, color = NA) # No border
   ) +
   coord_fixed(ratio = 1, xlim = c(0, 1), ylim = c(0, 1)) +
-  labs(x = "PIT", y = "ECDF", col = "")
+  labs(x = "PIT", y = "ECDF", col = "") +
+  scale_color_manual(values = cols)
 p
 ggsave(
   filename = sprintf("fig/%s/pit_diagram.pdf", batch_name),
@@ -1006,6 +1048,50 @@ scores_tbl_t <- lapply(
   mutate(
     model = factor(model, levels = model)
   )
+scores_tbl_t %>%
+  dplyr::select(-bs_0_2) %>%
+  kbl(
+    format = "latex",
+    booktabs = TRUE,
+    digits = 3,
+    align = "lcccccc",
+    col.names = c(
+      "Model",
+      "CRPS",
+      "Energy",
+      "Log",
+      "BS (CF < 1%)",
+      "BS (CF < 5%)",
+      "BS (CF < 10%)"
+    ),
+    caption = "Average scores for out-of-sample predictions across all sampled days."
+  ) %>%
+  kable_styling(latex_options = "hold_position")
+
+scores_tbl_t %>%
+  dplyr::select(-bs_0_2) %>%
+  kbl(
+    format = "latex",
+    booktabs = TRUE,
+    digits = 3,
+    align = "lcccccc",
+    col.names = c(
+      "Model",
+      "CRPS",
+      "Energy",
+      "Log",
+      "1\\%",
+      "5\\%",
+      "10\\%"
+    ),
+    caption = "Average scores for out-of-sample predictions across all sampled days."
+  ) %>%
+  add_header_above(c(
+    " " = 4,
+    "Brier score (CF threshold)" = 3
+  )) %>%
+  kable_styling(latex_options = "hold_position")
+
 ## space ####
 scores_tbl <- lapply(
   seq_along(sampled_days),
@@ -1031,10 +1117,7 @@ scores_tbl <- lapply(
   )
 
 # LWE diagram ####
-coord_list_fname <- "data/coord_list.csv"
 
-cat("Loading existing coordinate list\n")
-coord_list <- read.csv(coord_list_fname)
 cat(
   "--------------------------------------------------------------------\n"
 )
@@ -1373,6 +1456,7 @@ names(cols) <- mods
 cols["Observed"] <- "darkred"
 # excluded_models0
 # mod_labels
+# density plot of low wind event durations
 low_events_model %>%
   filter(!model %in% mod_labels[excluded_models0]) %>%
   filter(duration_h < max_h_duration) %>%
@@ -1418,6 +1502,43 @@ ggsave(
   height = 4
 )
 
+# CDF plot of low wind event durations
+low_events_model %>%
+  filter(!model %in% mod_labels[excluded_models0]) %>%
+  # filter(model %in% c("Observed", "QM")) %>%
+  filter(duration_h < max_h_duration) %>%
+  ggplot(aes(x = duration_h)) +
+  stat_ecdf(
+    aes(colour = model),
+    alpha = 0.5,
+    key_glyph = "path",
+    lwd = 1
+  ) +
+  labs(
+    title = "Cumulative Distribution of Low Wind Events Duration",
+    x = "Duration (hours)",
+    y = "Cumulative Probability"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "inside",
+    legend.position.inside = c(0.7, 0.3)
+  ) +
+  guides(
+    colour = guide_legend(ncol = 2)
+  ) +
+  scale_color_manual(values = cols)
+ggsave(
+  sprintf(
+    "fig/%s/low_wind_duration_cdf_t%s.pdf",
+    batch_name,
+    pow_threshold_label
+  ),
+  width = 6,
+  height = 4
+)
 obs <- low_events_model %>%
   filter(
     model == "Observed",
@@ -1486,19 +1607,9 @@ ggplot(qq_df, aes(x = obs_q, y = model_q)) +
   theme(
     plot.title = element_text(hjust = 0.5)
   ) +
-  # scale_color_manual(
-  #   values = c(
-  #     "Generic PC" = "#E69F00",
-  #     "Linear model" = "#56B4E9",
-  #     "AR1 model" = "#009E73",
-  #     "AR2 model" = "#F0E442",
-  #     "LM+hour model" = "#0072B2",
-  #     "ST model fine" = "#D55E00",
-  #     "ST model coarse" = "#CC79A7",
-  #     "QM" = "#999999",
-  #     "GB LM" = "#000000"
-  #   )
-  # ) +
+  scale_color_manual(
+    values = cols
+  ) +
   coord_equal(ratio = 1)
 
 ggsave(
