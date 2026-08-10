@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2026-07-14"
+date: "2026-08-05"
 format: 
   beamer:
     theme: Rochester
@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "wpow_calibration_slides_26-07-14.pdf"
+    output-file: "wpow_calibration_slides_26-08-05.pdf"
 header-includes:
   - \usepackage{graphicx}
   - \setbeamerfont{itemize/enumerate body}{size=\footnotesize}
@@ -63,11 +63,8 @@ theme_set(theme_bw())
 ### New
 \begin{itemize}
   \item Updated validation framework
-  \item OOS assessment
-  \begin{itemize}
-    \item OOS time
-    \item OOS locations
-  \end{itemize}
+  \item Anomalies exclusions
+  \item Probabilistic scores
   \item Low wind events distribution
 \end{itemize}
 
@@ -76,13 +73,34 @@ theme_set(theme_bw())
 
 # Model validation framework
 
+## Anomalies exclusion
+::: {.columns}
+
+::: {.column width="50%"}
+- Data contains observations consistent with curtailment or outages
+- These anomalies are excluded from the data set to avoid biasing the calibration
+- Exclusions:
+  - Elexon close to 0% when ERA5 estimate is beyond mid regime
+  - ERA5 estimate close to 100% when Elexon is below mid regime
+  - Difference greater than 50%
+:::
+
+::: {.column width="50%"}
+\centering
+\small Anomalies excluded from data set
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/anomalies_250127.pdf}
+:::
+
+:::
+
 ## Updated models
 \begin{itemize}
     \item Wind farm level models
     \begin{enumerate}    
         \item Linear model (LM)
-        \item Linear model with hour effect
-        \item Linear model with AR1 (or AR2) errors
+        \item Linear model with AR1 errors
+        \item LM beta or t student errors
         \item Spatio-temporal model
         \item Quantile mapping (QM)
    \end{enumerate}
@@ -125,7 +143,7 @@ The additional term $u_{it}$ is a separable spatiotemporal random effect. It con
 <!-- \footnotesize -->
 - Run models on a sample of days
   - 80/20 WF split for training and testing
-  - Training with 3 days to predict the 4th
+  - Training with 7 days to predict the next 72 hours
   - Randomly chosen 15 days from 2025, 5 per regime
 
 \vspace{0.5cm}
@@ -181,7 +199,7 @@ The additional term $u_{it}$ is a separable spatiotemporal random effect. It con
 - Objective is to assess performance by regime
 - t+1 day are from specific regimes of wind speed
 - Randomly chosen 5 days per regime
-- Previous 3 days can be anything
+- Previous week, t+2, and t+3 can be anything
 :::
 
 ::: {.column width="50%"}
@@ -207,16 +225,17 @@ The additional term $u_{it}$ is a separable spatiotemporal random effect. It con
 \centering
 \begin{tabular}{lcc}
 \toprule
-Model & RMSE (IS) & RMSE (OOS) \\
+Model & IS & OOS \\
 \midrule
-GB LM                  & 0.212 & 0.203 \\
-AR1 model              & 0.184 & 0.193 \\
-AR2 model              & 0.184 & 0.194 \\
-Linear model           & 0.189 & 0.188 \\
-LM+hour model          & 0.061 & 0.193 \\
+ST model coarser & 0.202 & 0.210 \\
+LM t model & 0.212 & 0.208 \\
+QM & 0.192 & 0.199 \\
+AR1 model & 0.186 & 0.188 \\
+GB LM & 0.180 & 0.185 \\
 \addlinespace
-Spatio-temporal coarse & 0.104 & 0.182 \\
-Spatio-temporal fine   & 0.071 & 0.171 \\
+Linear model & 0.175 & 0.182 \\
+LM+hour model & 0.176 & 0.181 \\
+LM beta model & 0.175 & 0.181 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -231,6 +250,49 @@ Spatio-temporal fine   & 0.071 & 0.171 \\
 :::
 
 :::
+
+## Reliability diagrams
+
+::: {.columns}
+
+::: {.column width="50%"}
+- Linear model is the closest to true coverage, with some underdispertion in the upper tail
+- LM Beta model and AR1 do better at lower tail but worse at upper tail
+:::
+
+::: {.column width="50%"}
+\centering
+\small Coverage for day-ahead prediction bands
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/pred_band_reliability_diagram.pdf}
+:::
+
+:::
+
+## Probabilistic scores
+
+
+
+\begin{table}[!h]
+
+\centering
+\begin{tabular}[t]{lcccccc}
+\toprule
+\multicolumn{4}{c}{ } & \multicolumn{3}{c}{Brier score (CF threshold)} \\
+\cmidrule(l{3pt}r{3pt}){5-7}
+Model & CRPS & Energy & Log & 1\% & 5\% & 10\%\\
+\midrule
+\textbf{LM beta model} & \textbf{0.086} & \textbf{11.426} & \textbf{-0.471} & \textbf{0.083} & \textbf{0.098} & \textbf{0.110}\\
+LM+hour model & 0.094 & 11.665 & 0.558 & 0.097 & 0.115 & 0.124\\
+LM bru model & 0.094 & 11.685 & 0.564 & 0.098 & 0.115 & 0.124\\
+AR1 model & 0.102 & 12.295 & 0.681 & 0.121 & 0.151 & 0.161\\
+ST model coarser & 0.121 & 14.424 & 2.806 & 0.130 & 0.163 & 0.181\\
+\addlinespace
+LM t model & 0.169 & 36.843 & 0.153 & 0.131 & 0.143 & 0.148\\
+\bottomrule
+\end{tabular}
+\end{table}
+
 
 # Out-of-sample analysis
 
@@ -250,7 +312,27 @@ Spatio-temporal fine   & 0.071 & 0.171 \\
 \centering
 \small Spatiotemporal model coarse (27-01-2025)
 
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_st0_m1_250127_2.pdf}
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_st0_m2_250127_2.pdf}
+:::
+
+:::
+
+## Wind farm prediction bands (oos time)
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+\small LM beta (27-01-2025)
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_lm_beta_250127_2.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\small LM t-student (16-09-2025)
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/WF_pred_band_lm_t_250916_2.pdf}
 :::
 
 :::
@@ -460,65 +542,28 @@ Spatio-temporal fine   & 0.071 & 0.171 \\
 ## Low wind events (LWE) analisys
 
 - Calibration should also consider LWE
-- Using 0.1 as threshold for LWE
+- Using 0.05 as threshold for LWE
 - Testing that model matches:
   - observed frequency of events
   - distribution of duration
 
-## Low wind speed events (insample)
+## Low wind speed events duration distribution
 
 ::: {.columns}
 
 ::: {.column width="50%"}
 \centering
-Low wind speed events distribution
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/low_wind_duration_dist_t0_1.pdf}
+CDF
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/low_wind_duration_cdf_t0_05.pdf}
 :::
 
 ::: {.column width="50%"}
 \centering
-Low wind speed events distribution
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/low_wind_duration_qq_t0_1.pdf}
+QQ plot
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/low_wind_duration_qq_line_t0_05.pdf}
 :::
 
 :::
-
-## Low wind speed events (oos time)
-
-::: {.columns}
-
-::: {.column width="50%"}
-\centering
-Low wind speed events distribution
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/pred_samples_lwe_duration_dist_t0_1.pdf}
-:::
-
-::: {.column width="50%"}
-\centering
-Low wind speed events distribution
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/pred_samples_lwe_duration_qq_t0_1.pdf}
-:::
-
-:::
-
-## Low wind speed events (oos space)
-
-::: {.columns}
-
-::: {.column width="50%"}
-\centering
-Low wind speed events distribution
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/newloc_samples_lwe_duration_dist_t0_1.pdf}
-:::
-
-::: {.column width="50%"}
-\centering
-Low wind speed events distribution
-\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/batch2025/newloc_samples_lwe_duration_qq_t0_1.pdf}
-:::
-
-:::
-
 
 # Next steps
 
