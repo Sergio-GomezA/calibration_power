@@ -285,12 +285,26 @@ CRPS
 
 - different lwe thresholds
 - PIT
-  - [ ] figure
+  - [x] figure
 - CI width
   - [ ] calculate and summarise
 - CRPS
-  - [ ] plot
+  - [x] table
 - [x] add qm
 - [x] check space validation
 - check lwe
 - [x] clean sample output
+
+
+- [ ] annual review draft
+- [ ] Annual review form
+- [ ] collapsing uncertainty in GMRF
+- [ ] new batch
+- [ ] new models: 
+  - [ ] aggregate consitent uncertainty
+  - [ ] LM beta with AR
+  - [ ] LM beta with ST
+  - [ ] Random effects region
+  - [ ] Anomalies
+  - [ ] regime switching
+  - [ ] ensemble?
