@@ -62,12 +62,38 @@ theme_set(theme_bw())
 
 ### New
 \begin{itemize}
+  \item Annual Review 2026
   \item Updated validation framework
   \item Anomalies exclusions
   \item Probabilistic scores
   \item Low wind events distribution
 \end{itemize}
 
+
+## Annual Review
+
+### Project 3: Extension of Statistical Calibration to Solar Generation
+
+- Extend the wind calibration to solar generation
+- Test wind benchmark models and validation framework
+- Add solar-specific adjustments on the solar loss factor:
+  - Account for diurnal cycles, 
+  - cloud coverage, 
+  - terrain effects 
+- **Goals:**
+  - Obtain calibrated solar estimates matching the aggregated data
+  - Characterise low-generation events for solar
+  - Estimate the joint distribution of low-generation events
+
+## Annual Review
+### Project 4: Impact of Low-Generation Events on Regional Demand and Transmission
+
+- Measure impact of low-generation events given energy demand requirements
+- Build on the low-generation events distribution to assess demand shortfalls
+- Construct a regional demand model using Elexon data, calibrated to observed national demand
+- **Goals:**
+  - Understand how low-generation events interact with demand dynamics and transmission constraints
+  - Evaluate frequency and severity of worst-case scenarios, in terms of megawatt-hour gaps
 
 
 
