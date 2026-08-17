@@ -225,3 +225,9 @@ coverage_results %>%
     cov_loc = mean(cov_loc),
     cov_aggr = mean(observed >= q0.025 & observed <= q0.975)
   )
+
+write.csv(
+  coverage_results,
+  file = sprintf("5_extra/coverage_results_sim_n%d.csv", n),
+  row.names = FALSE
+)
