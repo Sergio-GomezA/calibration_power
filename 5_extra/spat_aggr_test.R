@@ -208,12 +208,34 @@ ggsave(
 
 int.plot <- plot(fit, "Intercept")
 spde.range <- spde.posterior(fit, "field", what = "range")
-spde.logvar <- spde.posterior(fit, "field", what = "variance")
-range.plot <- plot(spde.range)
-var.plot <- plot(spde.logvar)
+spde.var <- spde.posterior(fit, "field", what = "variance")
+range.plot <- plot(spde.range) +
+  geom_vline(
+    xintercept = true_range,
+    col = "red",
+    linetype = "dashed"
+  ) +
+  labs(title = "Range posterior", x = "Range", y = "Density") +
+  theme_bw()
+var.plot <- plot(spde.var) +
+  geom_vline(
+    xintercept = (true_sigma^2),
+    col = "red",
+    linetype = "dashed"
+  ) +
+  labs(title = "Variance posterior", x = "Log variance", y = "Density") +
+  theme_bw()
 
 (range.plot / var.plot / int.plot)
-
+ggsave(
+  sprintf(
+    "fig/testing/est_hyper_range%d_sd%s.pdf",
+    true_range,
+    sub("\\.", "_", sprintf("%.2f", true_sigma))
+  ),
+  width = 4,
+  height = 6
+)
 
 csc <- colsc(
   pred[["median"]],
@@ -284,13 +306,38 @@ ggsave(
 
 # samples for aggregation ####
 
+grab_prec_name <- fit$.args$control.family[[1]]$hyper[[
+  "theta1"
+]]$output.name %>%
+  gsub("[ -]+", "_", .) %>%
+  as.character()
+
 samp_loc <- generate(
   fit,
   mydata,
   ~ field + Intercept,
   n.samples = 1000
 )
-
+# samp_loc <- generate(
+#   fit,
+#   mydata,
+#   as.formula(sprintf(
+#     "~ data.frame(
+#     geometry = geometry,
+#     lin_pred = field + Intercept,
+#     prec = %s,
+#     lin_pred_noise = rnorm(n, mean = field + Intercept, sd = 1/sqrt((%s))),
+#     lwr = qnorm(0.025, mean = field + Intercept, sd = 1/sqrt((%s))),
+#     upr = qnorm(0.975, mean = field + Intercept, sd = 1/sqrt((%s)))
+#   )",
+#     grab_prec_name,
+#     grab_prec_name,
+#     grab_prec_name,
+#     grab_prec_name
+#   )),
+#   n.samples = 1000
+# )
+# samp_loc[[1]]
 ## double check coverages with samples at locations
 
 ## get quantiles
