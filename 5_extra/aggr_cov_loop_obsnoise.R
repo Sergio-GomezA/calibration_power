@@ -7,7 +7,7 @@ library(fmesher)
 library(mgcv)
 library(ggplot2)
 require(patchwork)
-
+require(sf)
 theme_set(theme_bw())
 
 set.seed(2026)
@@ -165,10 +165,10 @@ check_agg_cov <- function(n) {
   ) /
     n
   # calculate aggregate coverage
-  aggr_samples <- samp_loc %>%
-    as.data.frame() %>%
-    summarise_all(sum) %>%
-    t()
+  # aggr_samples <- samp_loc %>%
+  #   as.data.frame() %>%
+  #   summarise_all(sum) %>%
+  #   t()
 
   aggr_samples <- lapply(
     seq_along(samp_loc),
@@ -197,12 +197,12 @@ check_agg_cov <- function(n) {
       )
     )
 }
-
+# test <- check_agg_cov(150)
 
 cat("Progress: ")
 n_failed <- 0
-
-coverage_results <- lapply(1:N, function(i) {
+# debug(check_agg_cov)
+coverage_results <- lapply(1:4, function(i) {
   if (i %in% round(seq(1, N, length.out = 50))) {
     cat("-")
     flush.console()
