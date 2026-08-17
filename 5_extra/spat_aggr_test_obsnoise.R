@@ -405,7 +405,7 @@ coverage_loc <- sum(
     mydata$observed <= mydata$q0.975
 ) /
   n
-samp_loc[[1]] %>% head()
+
 aggr_samples <- lapply(
   seq_along(samp_loc),
   function(s) {
