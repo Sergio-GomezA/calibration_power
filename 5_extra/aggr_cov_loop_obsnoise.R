@@ -102,27 +102,61 @@ check_agg_cov <- function(n) {
       in_ci = above_lwr & below_upr
     )
 
+  grab_prec_name <- fit$.args$control.family[[1]]$hyper[[
+    "theta1"
+  ]]$output.name %>%
+    gsub("[ -]+", "_", .) %>%
+    as.character()
   samp_loc <- generate(
     fit,
     mydata,
-    ~ field + Intercept,
+    as.formula(sprintf(
+      "~ data.frame(
+    geometry = geometry,
+    lin_pred = field + Intercept,
+    prec = %s,
+    lin_pred_noise = rnorm(n, mean = field + Intercept, sd = 1/sqrt((%s))),
+    lwr = qnorm(0.025, mean = field + Intercept, sd = 1/sqrt((%s))),
+    upr = qnorm(0.975, mean = field + Intercept, sd = 1/sqrt((%s)))
+  )",
+      grab_prec_name,
+      grab_prec_name,
+      grab_prec_name,
+      grab_prec_name
+    )),
     n.samples = 1000
   )
 
   # calculate coverage
-  mydata <-
-    bind_cols(
-      mydata,
-      apply(
-        samp_loc,
-        1,
-        function(x) {
-          quantile(x, probs = c(0.025, 0.5, 0.975))
-        }
+  samp_df <- lapply(
+    seq_along(samp_loc),
+    function(s) {
+      data.frame(
+        geometry = samp_loc[[s]]$geometry,
+        fit = samp_loc[[s]]$lin_pred_noise,
+        lwr = samp_loc[[s]]$lwr,
+        upr = samp_loc[[s]]$upr
       ) %>%
-        t() %>%
-        as.data.frame() %>%
-        setNames(c("q0.025", "median", "q0.975"))
+        mutate(sim = s)
+    }
+  ) %>%
+    bind_rows()
+
+  mydata <- samp_df %>%
+    group_by(geometry) %>%
+    summarise(
+      q0.025 = quantile(fit, probs = 0.025),
+      median = quantile(fit, probs = 0.5),
+      q0.975 = quantile(fit, probs = 0.975)
+    ) %>%
+    bind_cols(
+      mydata %>%
+        st_drop_geometry()
+    ) %>%
+    mutate(
+      above_lwr = observed >= q0.025,
+      below_upr = observed <= q0.975,
+      in_ci = above_lwr & below_upr
     )
 
   coverage_loc <- sum(
@@ -136,11 +170,25 @@ check_agg_cov <- function(n) {
     summarise_all(sum) %>%
     t()
 
-  aggr_samples %>%
-    quantile(probs = c(0.025, 0.5, 0.975)) %>%
-    t() %>%
-    as.data.frame() %>%
-    setNames(c("q0.025", "median", "q0.975")) %>%
+  aggr_samples <- lapply(
+    seq_along(samp_loc),
+    function(s) {
+      data.frame(
+        geometry = samp_loc[[s]]$geometry,
+        fit = samp_loc[[s]]$lin_pred_noise
+      ) %>%
+        summarise(
+          fit = sum(fit)
+        ) %>%
+        mutate(sim = s)
+    }
+  ) %>%
+    bind_rows() %>%
+    summarise(
+      q0.025 = quantile(fit, probs = 0.025),
+      median = quantile(fit, probs = 0.5),
+      q0.975 = quantile(fit, probs = 0.975)
+    ) %>%
     bind_cols(
       data.frame(
         observed = sum(mydata$observed),
