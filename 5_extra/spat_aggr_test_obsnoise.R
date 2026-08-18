@@ -270,6 +270,8 @@ csc <- colsc(
 # calculate 95% CI coverage ####
 
 coverage <- mean(mydata$in_ci, na.rm = TRUE)
+coverage_is <- mean(mydata$in_ci[!mydata$oos], na.rm = TRUE)
+coverage_oos <- mean(mydata$in_ci[mydata$oos], na.rm = TRUE)
 
 gmedian <- ggplot() +
   gg(pred["median"], geom = "tile") +
@@ -397,6 +399,8 @@ mydata_2 <- samp_df %>%
 # plot field again with updated in_ci variable
 
 coverage_noise <- mean(mydata_2$in_ci_noise)
+coverage_noise_is <- mean(mydata_2$in_ci_noise[!mydata_2$oos])
+coverage_noise_oos <- mean(mydata_2$in_ci_noise[mydata_2$oos])
 
 pl_truth <- ggplot() +
   gg(truth, aes(fill = field), geom = "tile") +
@@ -460,22 +464,47 @@ ggsave(
 
 mydata_2 %>%
   ggplot() +
-  geom_point(aes(fit, observed), col = "blue") +
+  geom_abline(slope = 1, intercept = 0, col = "red") +
+  geom_errorbar(
+    aes(x = fit, ymin = lwr, ymax = upr),
+    col = "blue",
+    alpha = 0.5
+  ) +
+  geom_point(aes(fit, observed, color = in_ci)) +
+  labs(x = "Posterior mean", y = "Observed data")
+ggsave(
+  sprintf(
+    "fig/testing/%s_scatter+error_range%d_sd%s_obs.pdf",
+    prefix,
+    true_range,
+    sub("\\.", "_", sprintf("%.2f", true_sigma))
+  ),
+  width = 4,
+  height = 4
+)
+
+mydata_2 %>%
+  ggplot() +
   geom_abline(slope = 1, intercept = 0, col = "red") +
   geom_errorbar(
     aes(x = fit, ymin = q0.025, ymax = q0.975),
     col = "blue",
     alpha = 0.5
   ) +
+  geom_point(aes(fit, observed, color = in_ci_noise)) +
   labs(x = "Posterior mean", y = "Observed data")
+ggsave(
+  sprintf(
+    "fig/testing/%s_scatter+obserror_range%d_sd%s_obs_noise.pdf",
+    prefix,
+    true_range,
+    sub("\\.", "_", sprintf("%.2f", true_sigma))
+  ),
+  width = 4,
+  height = 4
+)
 
 ## compare with observed data
-
-coverage_loc <- sum(
-  mydata_2$observed >= mydata_2$q0.025 &
-    mydata_2$observed <= mydata_2$q0.975
-) /
-  n
 
 aggr_samples <- lapply(
   seq_along(samp_loc),
@@ -501,6 +530,10 @@ aggr_samples <- lapply(
       observed = sum(mydata_2$observed),
       fit = sum(mydata_2$fit),
       cov_nonoise = coverage,
-      cov_loc = coverage_loc
+      cov_nonoise_is = coverage_is,
+      cov_nonoise_oos = coverage_oos,
+      cov_noise = coverage_noise,
+      cov_noise_is = coverage_noise_is,
+      cov_noise_oos = coverage_noise_oos
     )
   )
