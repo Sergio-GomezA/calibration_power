@@ -360,7 +360,7 @@ samp_df <- lapply(
 ) %>%
   bind_rows()
 
-mydata <- samp_df %>%
+mydata_2 <- samp_df %>%
   group_by(geometry) %>%
   summarise(
     q0.025 = quantile(fit, probs = 0.025),
@@ -380,7 +380,7 @@ mydata <- samp_df %>%
 # plot field again with updated in_ci variable
 
 coverage_noise <- sum(
-  mydata$in_ci_noise
+  mydata_2$in_ci_noise
 ) /
   n
 pl_truth <- ggplot() +
@@ -398,7 +398,7 @@ pl_posterior_sample <- ggplot() +
 # Common colour scale for the truth and estimate:
 csc <- colsc(truth$field, pred$mean, pred$sample)
 updated_points <- geom_sf(
-  data = mydata,
+  data = mydata_2,
   aes(geometry = geometry, col = in_ci_noise),
   inherit.aes = FALSE,
   size = 0.5
@@ -443,7 +443,7 @@ ggsave(
 #       setNames(c("q0.025", "median", "q0.975"))
 #   )
 
-mydata %>%
+mydata_2 %>%
   ggplot() +
   geom_point(aes(fit, observed), col = "blue") +
   geom_abline(slope = 1, intercept = 0, col = "red") +
@@ -457,8 +457,8 @@ mydata %>%
 ## compare with observed data
 
 coverage_loc <- sum(
-  mydata$observed >= mydata$q0.025 &
-    mydata$observed <= mydata$q0.975
+  mydata_2$observed >= mydata_2$q0.025 &
+    mydata_2$observed <= mydata_2$q0.975
 ) /
   n
 
@@ -483,8 +483,9 @@ aggr_samples <- lapply(
   ) %>%
   bind_cols(
     data.frame(
-      observed = sum(mydata$observed),
-      fit = sum(mydata$fit),
+      observed = sum(mydata_2$observed),
+      fit = sum(mydata_2$fit),
+      cov_nonoise = coverage,
       cov_loc = coverage_loc
     )
   )
