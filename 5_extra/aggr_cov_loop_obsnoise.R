@@ -266,14 +266,17 @@ coverage_results <- lapply(1:N, function(i) {
     }
   )
 }) %>%
-  bind_rows()
+  bind_rows() %>%
+  mutate(
+    aggr_in_ci = ifelse(observed >= q0.025 & observed <= q0.975, 1, 0)
+  )
 
 cat(sprintf(" done (%d failed)\n", n_failed))
 
 coverage_results %>%
   summarise(
     across(matches("cov_"), mean, na.rm = TRUE),
-    cov_aggr = mean(observed >= q0.025 & observed <= q0.975)
+    cov_aggr = mean(aggr_in_ci, na.rm = TRUE)
   )
 
 write.csv(
