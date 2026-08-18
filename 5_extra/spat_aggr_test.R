@@ -55,7 +55,8 @@ matern_fine <-
     prior.range = c(1, 0.01)
   )
 true_range <- 4
-true_sigma <- 1
+true_sigma <- 2
+extra_noise <- 1
 true_Q <- inla.spde.precision(
   matern_fine,
   theta = log(c(true_range, true_sigma))
@@ -117,7 +118,7 @@ mydata$observed <-
     loc = mydata,
     field = true_field
   ) +
-  rnorm(n, sd = 0.4)
+  rnorm(n, sd = extra_noise)
 cscB <- colscB(truth$field)
 ggplot() +
   gg(mydata, aes(col = observed)) +
@@ -396,6 +397,8 @@ aggr_samples %>%
   setNames(c("q0.025", "median", "q0.975")) %>%
   bind_cols(
     data.frame(
-      observed = sum(mydata$observed)
+      observed = sum(mydata$observed),
+      fit = sum(mydata$fit),
+      coverage_loc = coverage_loc
     )
   )

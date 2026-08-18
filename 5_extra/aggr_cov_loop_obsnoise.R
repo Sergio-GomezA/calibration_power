@@ -61,7 +61,8 @@ matern_fine <-
     prior.range = c(1, 0.01)
   )
 true_range <- 4
-true_sigma <- 1
+true_sigma <- 2
+extra_noise <- 1
 true_Q <- inla.spde.precision(
   matern_fine,
   theta = log(c(true_range, true_sigma))
@@ -100,7 +101,7 @@ check_agg_cov <- function(n) {
       loc = mydata,
       field = true_field
     ) +
-    rnorm(n, sd = 0.4)
+    rnorm(n, sd = extra_noise)
   # fit model
   mesh <- fm_mesh_2d(
     loc = fm_hexagon_lattice(bnd, edge_len = edgeA * 2),
