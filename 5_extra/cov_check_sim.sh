@@ -5,7 +5,7 @@
 #$ -o /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 #$ -e /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 #$ -l h_rt=4:00:0,h_vmem=16G,h_rss=16G
-#$ -pe sharedmem 4
+#$ -pe sharedmem 8
 #$ -M s2441782@ed.ac.uk
 #$ -m bea
 ##$ -t 1-15
@@ -17,5 +17,5 @@ source /etc/profile.d/modules.sh
 module load R/4.5
 
 # Run resolution code
-Rscript 5_extra/aggr_cov_loop_obsnoise.R 500 100 0.2
+Rscript 5_extra/aggr_cov_loop_obsnoise.R 250 200 0.2
 # nloc / n simulations / oos percentage
