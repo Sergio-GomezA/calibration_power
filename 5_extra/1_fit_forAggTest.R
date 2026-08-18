@@ -1,0 +1,1816 @@
+starttime <- Sys.time()
+
+require(tidyverse)
+require(sf)
+require(INLA)
+require(inlabru)
+require(fmesher)
+require(ggspatial)
+require(ModelMetrics)
+require(qmap)
+require(ggridges)
+require(ggthemes)
+require(ggsci)
+require(arrow)
+
+base_bru_options <- bru_options(
+  bru_verbose = 3,
+  # verbose = TRUE,
+  control.compute = list(
+    dic = TRUE,
+    cpo = TRUE,
+    waic = TRUE,
+    control.gcpo = list(enable = TRUE, num.level.sets = 3)
+  )
+)
+
+scores_df <- list()
+pit_list <- list()
+model_list <- list()
+
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+cat("Running model fitting\n")
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+# 1. data preparation ####
+
+cat("Preparing data for model fitting\n")
+
+sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
+  mutate(date = as.Date(date))
+
+sampled_days <- sampled_days_df %>%
+  pull(date)
+
+## 1.0.1 GB daily summary ####
+
+d0 <- sampled_days[day_id] %>% as.Date()
+d0_tag <- base::format(d0, "%y%m%d")
+
+gb_day_df_fname <- sprintf("data/GB_daily_summary.parquet")
+
+if (!file.exists(gb_day_df_fname) || override_objects) {
+  cat("GB daily summary file not found, creating new summary\n")
+  GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
+    rename(time = halfHourEndTime) %>%
+    mutate(
+      err = norm_power_est0 - norm_potential,
+      error0 = norm_potential - norm_power_est0,
+      date = as.Date(time)
+    )
+
+  gb_day_df <- GB_df %>%
+    group_by(date, tech_typ) %>%
+    summarise(
+      across(
+        c(norm_power_est0, norm_potential),
+        ~ sum(. * capacity) / sum(capacity)
+      ),
+      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+      across(c(capacity), mean)
+    ) %>%
+    summarise(
+      across(
+        c(norm_power_est0, norm_potential),
+        ~ sum(. * capacity) / sum(capacity)
+      ),
+      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+      across(c(capacity), sum),
+      .groups = "drop"
+    )
+
+  cutprobs3 <- c(0.25, 0.75)
+  p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
+  cutprobs7 <- c(0.1, 0.2, 0.25, 0.75, 0.8, 0.9)
+  p_quant7 <- quantile(gb_day_df$norm_potential, probs = cutprobs7)
+
+  gb_day_df <- gb_day_df %>%
+    mutate(
+      p_group3 = cut(
+        norm_potential,
+        breaks = c(-Inf, p_quant3, Inf),
+        labels = c("low", "mid", "high")
+      ),
+      p_group7 = cut(
+        norm_potential,
+        breaks = c(-Inf, p_quant7, Inf)
+      )
+    )
+
+  write_parquet(gb_day_df, gb_day_df_fname)
+} else {
+  cat("Loading existing GB daily summary\n")
+  GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
+    rename(time = halfHourEndTime) %>%
+    mutate(
+      err = norm_power_est0 - norm_potential,
+      error0 = norm_potential - norm_power_est0,
+      date = as.Date(time)
+    )
+  gb_day_df <- read_parquet(gb_day_df_fname)
+}
+
+
+extension <- ifelse(local_run, local_ext, cluster_ext)
+df_pattern <- sprintf("^calibration_df_.*_%s\\.%s$", d0_tag, extension)
+files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
+
+if (!override_objects && length(files_found) > 0) {
+  cat(
+    "Calibration data file already exists for this day. Loading existing data.\n"
+  )
+  if (extension != "rds") {
+    wf_df_frag <- st_read(files_found[1])
+  } else {
+    wf_df_frag <- readRDS(files_found[1])
+  }
+} else {
+  cat(
+    "No existing calibration data file found for this day. Preparing new data.\n"
+  )
+
+  pwr_curv_df <- read_parquet(file.path(
+    gen_path,
+    "power_curve_all_enriched.parquet"
+  ))
+
+  coord_list_fname <- "data/coord_list.csv"
+  if (!file.exists(coord_list_fname)) {
+    cat("Creating new coordinate list\n")
+    set.seed(1)
+    coord_list <- pwr_curv_df %>%
+      distinct(coord_id, tech_typ) %>%
+      arrange(coord_id)
+
+    coord_samp <- coord_list %>%
+      group_by(tech_typ) %>%
+      slice_sample(prop = 0.8)
+
+    coord_list <- coord_list %>%
+      mutate(
+        sampled = ifelse(coord_id %in% coord_samp$coord_id, TRUE, FALSE)
+      )
+    write.csv(
+      coord_list,
+      file = coord_list_fname,
+      row.names = FALSE
+    )
+  } else {
+    cat("Loading existing coordinate list\n")
+    coord_list <- read.csv(coord_list_fname)
+  }
+
+  n.days <- 0
+  # n.days.before <- 7
+
+  wf_df_frag <- pwr_curv_df %>%
+    rename(time = halfHourEndTime) %>%
+    mutate(
+      date = as.Date(time),
+      elevation = pmax(0, elevation),
+      site_name = site_name %>%
+        gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
+        trimws()
+    ) %>%
+    # filter(date %in% sampled_days) %>%
+    filter(date >= d0 - n.days.before, date <= d0 + n.days - 1) %>%
+    filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
+    arrange(site_name) %>%
+    group_by(lon, lat, time) %>%
+    summarise(
+      site_name = first(site_name),
+      coord_id = first(coord_id),
+      elevation = first(elevation),
+      dist_coast = first(dist_coast),
+      tech_typ = first(tech_typ),
+      across(c(ws_h, wd10, wd100), mean),
+      ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
+      across(c(potential, power_est0, capacity, curtailment), sum),
+      .groups = "drop"
+    ) %>%
+    mutate(t = difftime(time, min(time), units = "hours") %>% as.numeric()) %>%
+    mutate(
+      norm_potential = pmin(1, potential / capacity),
+      norm_power_est0 = power_est0 / capacity,
+      error0 = norm_potential - norm_power_est0
+    ) %>%
+    st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+    mutate(lon = st_coordinates(.)[, 1], lat = st_coordinates(.)[, 2]) %>%
+    st_transform(crs = 27700) %>%
+    mutate(
+      x = st_coordinates(.)[, 1] / 1000,
+      y = st_coordinates(.)[, 2] / 1000,
+    ) %>%
+    # st_drop_geometry() %>%
+    mutate(
+      # site_id = as.integer(factor(site_name)),
+      ws_group = inla.group(ws_h, n = 20, method = "quantile"),
+      pow_group = inla.group(norm_power_est0, n = 20, method = "quantile"),
+      d_coast_group = inla.group(dist_coast, n = 10, method = "quantile"),
+      elev_group = inla.group(elevation, n = 10, method = "quantile"),
+      time_id = as.integer(factor(time)),
+      date = as.Date(time)
+    ) %>%
+    left_join(
+      gb_day_df %>% dplyr::select(date, p_group3),
+      by = c("date" = "date")
+    )
+
+  # plot candidate anomalies, norm_potential == 0 and p_group3 == "mid"
+  cutprobs3 <- c(0.25, 0.75)
+  # p_quant3 <- quantile(gb_day_df$norm_power_est0, probs = cutprobs3)
+  p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
+
+  tol <- 0.01
+  norm_dist_tol <- 0.50
+  wf_df_frag <- wf_df_frag %>%
+    mutate(
+      anomaly = case_when(
+        norm_potential <= tol & norm_power_est0 >= p_quant3[1] ~ TRUE,
+        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
+        abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
+        TRUE ~ FALSE
+      )
+    )
+  wf_df_frag %>%
+    ggplot() +
+    geom_point(
+      aes(norm_potential, norm_power_est0, color = anomaly),
+      size = 0.5
+    ) +
+    scale_color_manual(values = c("grey50", "darkred")) +
+    theme(legend.position = "bottom") +
+    labs(
+      x = "Elexon CF (%)",
+      y = "Generic PC(ERA5) CF (%)",
+      color = "Anomaly"
+    ) +
+    coord_fixed(ratio = 1)
+
+  ggsave(
+    sprintf("fig/%s/anomalies_%s.pdf", batch_name, d0_tag),
+    width = 4,
+    height = 4.5
+  )
+
+  # mask anomalies for model fitting
+
+  wf_df_frag <- wf_df_frag %>%
+    mutate(
+      norm_potential_orig = norm_potential,
+      norm_potential = ifelse(anomaly, NA, norm_potential)
+    )
+
+  x <- wf_df_frag$pow_group %>% unique() %>% sort()
+  min_jump <- min(diff(sort(x))) / diff(range(x))
+  if (min_jump <= 1e-4) {
+    wf_df_frag <- wf_df_frag %>%
+      mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
+  }
+
+  cat("Converting coordinates to km\n")
+  wf_df_frag <- wf_df_frag %>%
+    st_geometry() %>%
+    (\(g) g / 1000)() %>%
+    st_set_geometry(wf_df_frag, .)
+
+  wf_df_fname <- sprintf(
+    "data/calibration_df_%s_%s.%s",
+    "base",
+    d0_tag,
+    extension
+  )
+  if (extension == "geojson" & file.exists(wf_df_fname)) {
+    file.remove(wf_df_fname)
+  }
+  if (extension != "rds") {
+    st_write(
+      wf_df_frag,
+      wf_df_fname,
+      driver = driver,
+      append = FALSE,
+      quiet = TRUE
+    )
+  } else {
+    saveRDS(
+      wf_df_frag,
+      wf_df_fname
+    )
+  }
+}
+cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
+n <- nrow(wf_df_frag)
+cat("Number of records in the dataset:", n, "\n")
+
+## 1.1 mesh building #####
+cat("Building spatial mesh\n")
+
+edge_target <- mesh_edge_par # km
+mesh_label <- case_when(
+  edge_target >= 50 ~ "very_coarse",
+  edge_target >= 20 ~ "coarse",
+  edge_target < 20 ~ "fine"
+)
+mesh_fname <- file.path(
+  extra_path,
+  "meshes",
+  sprintf("spatial_mesh_%s_%s.rds", mesh_label, d0_tag)
+)
+
+loc_unique <- wf_df_frag %>%
+  distinct(x, y) %>%
+  as.matrix()
+if (mesh_edge_par <= 20) {
+  conv_par <- c(-.05, -.35)
+} else {
+  conv_par <- c(-.1, -.35)
+}
+bnd <- fm_extensions(loc_unique, convex = conv_par)
+bndin <- bnd[[1]]
+bndout <- bnd[[2]]
+
+uk_map <- rnaturalearth::ne_countries(
+  scale = "medium",
+  country = "United Kingdom",
+  returnclass = "sf"
+)
+coastline <- uk_map %>%
+  st_transform(crs = 27700) %>%
+  st_boundary()
+uk_map <- uk_map %>%
+  st_transform(crs = 27700) %>%
+  st_geometry() %>%
+  (\(g) g / 1000)() %>%
+  st_set_geometry(uk_map, .)
+
+if (!file.exists(mesh_fname) || override_objects) {
+  cat("Mesh file not found, building new mesh\n")
+
+  if (mesh_edge_par <= 20) {
+    max_n <- c(900, 300)
+  } else {
+    max_n <- c(900, 150)
+  }
+
+  hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = edge_target * 2)
+
+  wf.mesh <- fm_mesh_2d(
+    # loc = loc_unique,
+    loc = hex_0,
+    boundary = bnd,
+    # max.edge = c(100, 150), # km
+    min.angle = 30,
+    # offset = -0.2,
+    cutoff = edge_target,
+    max.n.strict = max_n
+  )
+  saveRDS(
+    wf.mesh,
+    mesh_fname
+  )
+  ggplot() +
+    geom_sf(data = uk_map, fill = NA, color = "black") +
+    gg(wf.mesh) +
+    geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+    annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+    theme_void()
+  ggsave(
+    file.path(
+      extra_path,
+      "mesh_figs",
+      sprintf("spatial_mesh_%s_%s.pdf", mesh_label, d0_tag)
+    ),
+    width = 4,
+    height = 6
+  )
+} else {
+  cat("Loading existing mesh\n")
+  wf.mesh <- readRDS(mesh_fname)
+}
+
+### 1.2 mesh assessment #####
+# mesh_assess_fname <- file.path(
+#   extra_path,
+#   "mesh_figs",
+#   sprintf("spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag)
+# )
+# if (!file.exists(mesh_assess_fname) || override_objects) {
+#   cat("Assessing spatial mesh\n")
+#   mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70)
+
+#   ggplot() +
+#     geom_sf(
+#       data = mesh_assessment %>%
+#         st_filter(., bndout),
+#       aes(col = edge.len)
+#     ) +
+#     geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+#     geom_sf(data = uk_map, fill = NA, color = "white") +
+#     annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+#     theme_void() +
+#     scale_color_viridis_c(option = "D")
+#   ggsave(
+#     file.path(
+#       extra_path,
+#       "mesh_figs",
+#       sprintf("spatial_mesh_%s_assessment_edgelen_%s.pdf", mesh_label, d0_tag)
+#     ),
+#     width = 4,
+#     height = 6
+#   )
+#   # sd.dev should be close to 1
+#   ggplot() +
+#     gg(
+#       data = mesh_assessment %>%
+#         st_filter(., bndout),
+#       aes(col = sd.dev)
+#     ) +
+#     geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+#     geom_sf(data = uk_map, fill = NA, color = "white") +
+#     annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+#     theme_void() #+
+#   # scale_color_viridis_c(option = "D")
+#   ggsave(
+#     file.path(
+#       extra_path,
+#       "mesh_figs",
+#       sprintf("spatial_mesh_%s_assessment_sddev_%s.pdf", mesh_label, d0_tag)
+#     ),
+#     width = 4,
+#     height = 6
+#   )
+
+#   ggplot() +
+#     geom_sf(
+#       data = mesh_assessment %>%
+#         st_filter(., bndin),
+#       aes(col = edge.len)
+#     ) +
+#     geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+#     geom_sf(data = uk_map, fill = NA, color = "white") +
+#     annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+#     theme_void() +
+#     scale_color_viridis_c(option = "D")
+#   ggsave(
+#     file.path(
+#       extra_path,
+#       "mesh_figs",
+#       sprintf("spatial_mesh_%s_assessment2_edgelen_%s.pdf", mesh_label, d0_tag)
+#     ),
+#     width = 4,
+#     height = 6
+#   )
+#   # sd.dev should be close to 1
+#   ggplot() +
+#     gg(
+#       data = mesh_assessment %>%
+#         st_filter(., bndin),
+#       aes(col = sd.dev)
+#     ) +
+#     geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+#     geom_sf(data = uk_map, fill = NA, color = "white") +
+#     annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+#     theme_void() #+
+#   # scale_color_viridis_c(option = "D")
+#   ggsave(
+#     file.path(
+#       extra_path,
+#       "mesh_figs",
+#       sprintf("spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag)
+#     ),
+#     width = 4,
+#     height = 6
+#   )
+# }
+
+# 2. Model fitting ####
+## 2.0 bru lm model ####
+mod_tag <- "lm"
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  techno(tech_typ, model = "iid") + # random intercept by tech_typ
+  # norm_power_est0 +
+  slope(
+    tech_typ,
+    model = "iid",
+    weights = norm_power_est0
+  ) +
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) # smooth correction wind
+
+model_code <- sprintf("ts_bru0_%s_%s.rds", mod_tag, d0_tag)
+model_fname <- file.path(
+  model_path,
+  model_code
+)
+
+if (!file.exists(model_fname) || override_objects) {
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  cat("Fitting bru lm model\n")
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  brulm <- bru(
+    components = components0,
+    formula = norm_potential ~ Intercept +
+      techno +
+      slope +
+      # power_correction +
+      d_coast +
+      elev +
+      wind,
+    family = "gaussian",
+    control.family = list(
+      hyper = list(
+        prec = list(
+          prior = "pc.prec",
+          param = c(50, 0.05)
+        )
+      )
+    ),
+    data = wf_df_frag,
+    options = base_bru_options
+  )
+
+  scores_df[[model_code]] <- extract_score_model(brulm)
+  pit_list[[model_code]] <- extract_pit_model(brulm, wf_df_frag)
+
+  if (save_models) {
+    saveRDS(
+      brulm,
+      file = model_fname
+    )
+  } else {
+    model_list[[model_code]] <- brulm
+  }
+} else {
+  cat("Loading existing lm model\n")
+  brulm <- readRDS(model_fname)
+}
+
+summary(brulm)
+source("aux_funct.R")
+effect_names <- names(brulm$summary.random)
+excluded_effects <- c("u")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect %in% c("wind")) {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  # browser()
+  plot.effects(
+    brulm,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf("fig/%s/%s_effect_%s_%s.pdf", batch_name, effect, mod_tag, d0_tag),
+    width = 6,
+    height = 4
+  )
+}
+
+plot.hyper.dens(brulm)
+ggsave(
+  sprintf("fig/%s/hyperparameters_%s_%s.pdf", batch_name, mod_tag, d0_tag),
+  width = 6,
+  height = 4
+)
+
+
+## 2.4 ST SPDE model ####
+spde <- INLA::inla.spde2.pcmatern(
+  mesh = wf.mesh,
+  prior.range = c(50, 0.5), # P(range < 100 km)=0.5
+  prior.sigma = c(0.2, 0.5) # P(sd > 0.2)=0.5
+)
+
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  norm_power_est0 +
+  # power_correction(
+  #   pow_group,
+  #   model = "rw2",
+  #   # replicate = tech_typ,
+  #   constr = TRUE
+  # ) + # smooth correction power
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
+  st_field(
+    geometry,
+    model = spde,
+    group = time_id,
+    control.group = list(model = "ar1")
+  )
+
+model_code <- sprintf("st_bru0_%s_%s.rds", mesh_label, d0_tag)
+model_fname <- file.path(
+  model_path,
+  model_code
+)
+
+if (!file.exists(model_fname) || re_run_st) {
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  cat("Fitting spatiotemporal model\n")
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  bru0 <- bru(
+    components = components0,
+    formula = norm_potential ~ Intercept +
+      norm_power_est0 +
+      # power_correction +
+      d_coast +
+      elev +
+      wind +
+      st_field,
+    family = "gaussian",
+    data = wf_df_frag %>%
+      filter(date >= d0 - n.days.before.heavy),
+    options = base_bru_options
+  )
+
+  scores_df[[model_code]] <- extract_score_model(bru0)
+  pit_list[[model_code]] <- extract_pit_model(bru0)
+
+  if (save_models) {
+    saveRDS(
+      bru0,
+      file = model_fname
+    )
+  } else {
+    model_list[[model_code]] <- bru0
+  }
+} else {
+  cat("Loading existing spatiotemporal model\n")
+  bru0 <- readRDS(model_fname)
+}
+
+### summary and effect plots ####
+summary(bru0)
+# bru0$summary.fixed[, 1:6]
+# bru0$summary.random$tech_typ[, 1:6]
+# bru0$summary.random$tech_power[, 1:6]
+
+# source("aux_funct.R")
+effect_names <- names(bru0$summary.random)
+excluded_effects <- c("u", "hour", "st_field")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect == "wind") {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  plot.effects(
+    bru0,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf(
+      "fig/%s/%s_effect_%s_%s.pdf",
+      batch_name,
+      effect,
+      mesh_label,
+      d0_tag
+    ),
+    width = 6,
+    height = 4
+  )
+}
+plot.hyper.dens(bru0)
+ggsave(
+  sprintf("fig/%s/hyperparameters_%s_%s.pdf", batch_name, mesh_label, d0_tag),
+  width = 6,
+  height = 4
+)
+
+
+### plot intensity of spatial field ####
+
+ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf", dims = pixel_dims)
+ppxl_all <- fm_cprod(
+  ppxl,
+  data.frame(
+    # time_id = unique(wf_df_frag$time_id)
+    time_id = c(9, 12, 18)
+  )
+)
+
+set.seed(1)
+safe_predict <- function(model, newdata, fun, n1 = 100, n2 = 10) {
+  tryCatch(
+    {
+      fun(model, newdata, n.samples = n1)
+    },
+    error = function(e) {
+      message("First predict failed: ", conditionMessage(e))
+      message("Retrying with n.samples = ", n2)
+
+      tryCatch(
+        {
+          fun(model, newdata, n.samples = n2)
+        },
+        error = function(e2) {
+          message("Second predict also failed: ", conditionMessage(e2))
+          stop(e2)
+        }
+      )
+    }
+  )
+}
+pow_est_st <- safe_predict(
+  model = bru0,
+  newdata = ppxl_all,
+  fun = function(model, newdata, n.samples) {
+    predict(
+      model,
+      newdata,
+      ~ data.frame(
+        time_id = time_id,
+        norm_potential_est = pmax(-1, pmin(1, st_field)) # should i cap this?
+      ),
+      n.samples = n.samples
+    )
+  },
+  n1 = 100,
+  n2 = 10
+)
+
+
+p_median <- ggplot() +
+  gg(pow_est_st, geom = "tile", aes(fill = q0.5)) +
+  geom_sf(data = uk_map, fill = NA, color = "black", alpha = 0.5) +
+  # gg(wf.mesh, alpha = 0.5) +
+  geom_point(data = loc_unique, aes(x, y), color = "darkred", size = 0.5) +
+  facet_wrap(
+    ~time_id,
+    labeller = as_labeller(c("9" = "9:00", "12" = "12:00", "18" = "18:00"))
+  ) +
+  coord_sf() +
+  scale_fill_viridis_c() +
+  theme_void()
+p_median
+ggsave(
+  sprintf(
+    "fig/%s/%s_spatial_field_median_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 10,
+  height = 6
+)
+
+p_sd <- ggplot() +
+  gg(pow_est_st, geom = "tile", aes(fill = sd)) +
+  geom_sf(data = uk_map, fill = NA, color = "white", alpha = 0.5) +
+  # gg(wf.mesh, alpha = 0.5) +
+  geom_point(data = loc_unique, aes(x, y), color = "darkred", size = 0.5) +
+  facet_wrap(
+    ~time_id,
+    labeller = as_labeller(c("9" = "9:00", "12" = "12:00", "18" = "18:00"))
+  ) +
+  coord_sf() +
+  scale_fill_viridis_c(option = "inferno") +
+  theme_void()
+p_sd
+ggsave(
+  sprintf("fig/%s/%s_spatial_field_sd_%s.pdf", batch_name, mesh_label, d0_tag),
+  width = 10,
+  height = 6
+)
+
+
+## 2.3 lm wf version ####
+
+model_code <- sprintf("lm_model_aic0_%s.rds", d0_tag)
+
+if (!file.exists(file.path(model_path, model_code)) || override_objects) {
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  cat("Fitting LM model\n")
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  base_model <- lm(
+    norm_potential ~ norm_power_est0,
+    data = wf_df_frag
+  )
+
+  full_model0 <- lm(
+    norm_potential ~
+      tech_typ +
+      tech_typ *
+        norm_power_est0 +
+      # norm_power_est0 * month +
+      # hour +
+      # dist_coast * tech_typ +
+      # elevation * tech_typ +
+      # dist_coast:tech_typ +
+      # elevation:tech_typ +
+      tech_typ * poly(dist_coast, 2) +
+      tech_typ * poly(elevation, 3) +
+      tech_typ * poly(ws_h_wmean, 3),
+    data = wf_df_frag
+  )
+
+  model_AIC0 <- step(
+    base_model,
+    scope = list(lower = base_model, upper = full_model0),
+    # steps = 5,
+    k = 2
+  )
+  scores_df[[model_code]] <- data.frame(
+    AIC = AIC(model_AIC0),
+    BIC = BIC(model_AIC0),
+    logLik = as.numeric(logLik(model_AIC0)),
+    deviance = deviance(model_AIC0),
+    R2 = summary(model_AIC0)$r.squared
+  )
+  if (save_models) {
+    saveRDS(
+      model_AIC0,
+      file.path(model_path, model_code)
+    )
+  } else {
+    model_list[[model_code]] <- model_AIC0
+  }
+} else {
+  cat("Loading existing LM model\n")
+  model_AIC0 <- readRDS(file.path(model_path, model_code))
+}
+
+## 2.4 GB lm version #####
+
+model_code <- sprintf("gblm_model_aic0_%s.rds", d0_tag)
+
+if (!file.exists(file.path(model_path, model_code)) || override_objects) {
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  cat("Fitting GB aggregated LM\n")
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  samp_gb <- GB_df
+  # %>%
+  # filter(date %in% sampled_days) %>%
+
+  base_model_agg <- lm(
+    norm_potential ~ norm_power_est0,
+    data = samp_gb
+  )
+
+  full_model0_agg <- lm(
+    norm_potential ~
+      tech_typ +
+      tech_typ *
+        norm_power_est0 +
+      # norm_power_est0 * month +
+      # hour +
+      # dist_coast * tech_typ +
+      # elevation * tech_typ +
+      # dist_coast:tech_typ +
+      # elevation:tech_typ +
+      # tech_typ * poly(dist_coast, 2) +
+      # tech_typ * poly(elevation, 3) +
+      tech_typ * poly(ws_h_wmean, 3),
+    data = samp_gb
+  )
+  summary(full_model0_agg)
+
+  model_AIC0_agg <- step(
+    base_model_agg,
+    scope = list(lower = base_model_agg, upper = full_model0_agg),
+    # steps = 5,
+    k = 2
+  )
+
+  scores_df[[model_code]] <- data.frame(
+    AIC = AIC(model_AIC0_agg),
+    BIC = BIC(model_AIC0_agg),
+    logLik = as.numeric(logLik(model_AIC0_agg)),
+    deviance = deviance(model_AIC0_agg),
+    R2 = summary(model_AIC0_agg)$r.squared
+  )
+  if (save_models) {
+    saveRDS(
+      model_AIC0_agg,
+      file.path(model_path, model_code)
+    )
+  } else {
+    model_list[[model_code]] <- model_AIC0_agg
+  }
+} else {
+  cat("Loading existing GB aggregated LM\n")
+  model_AIC0_agg <- readRDS(file.path(
+    model_path,
+    model_code
+  ))
+}
+
+## 2.5 QM version ####
+
+qm_fname <- sprintf("qm_model_%s.rds", d0_tag)
+
+if (!file.exists(file.path(model_path, qm_fname)) || override_objects) {
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  cat("Fitting quantile mapping model\n")
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  qqmod <- fitQmap(
+    obs = wf_df_frag %>% pull(norm_potential),
+    mod = wf_df_frag %>% pull(norm_power_est0),
+    method = "QUANT"
+  )
+
+  if (save_models) {
+    saveRDS(
+      qqmod,
+      file.path(model_path, qm_fname)
+    )
+  } else {
+    model_list[[qm_fname]] <- qqmod
+  }
+} else {
+  cat("Loading existing quantile mapping model\n")
+  qqmod <- readRDS(file.path(model_path, qm_fname))
+}
+
+wgen_qm <- with(
+  wf_df_frag,
+  doQmapQUANT(norm_power_est0, qqmod, type = "linear")
+)
+scores_df[[qm_fname]] <- data.frame(
+  R2 = cor(wgen_qm, wf_df_frag$norm_potential, use = "complete.obs")^2
+)
+# 3. model comparison ####
+
+## 3.1 Model scores object saved ####
+
+scores_df <- list_rbind(scores_df, names_to = "model")
+write.csv(
+  scores_df,
+  file.path(sprintf("summaries/%s/model_scores_%s.csv", batch_name, d0_tag)),
+  row.names = FALSE
+)
+pit_list <- list_rbind(pit_list, names_to = "model_code") %>%
+  mutate(
+    # removing date and .rds extension
+    code = sub("_[0-9]{6}\\.rds$", "", model_code)
+  )
+write.csv(
+  pit_list,
+  gzfile(
+    file.path(sprintf("summaries/%s/model_pit_%s.csv.gz", batch_name, d0_tag)),
+    "w"
+  ),
+  row.names = FALSE
+)
+
+## 3.2 model labels and fitted values ####
+model_catalog <- read.csv("data/model_catalog.csv")
+mod_labels <- model_catalog$mod_labels
+est_cols <- model_catalog$est_cols
+
+
+n_models <- length(est_cols)
+n <- nrow(wf_df_frag)
+names(mod_labels) <- est_cols
+
+## fitted values df ####
+
+model_df0 <- wf_df_frag %>%
+  mutate(
+    date = as.Date(time),
+    lm = predict(model_AIC0, newdata = .),
+    # ar1 = bruar1$summary.fitted.values[1:n, "mean"],
+    # ar2 = bruar2$summary.fitted.values[1:n, "mean"],
+    # spde1d = bru1d$summary.fitted.values[1:n, "mean"],
+    st0_m2 = bru0$summary.fitted.values[1:n, "mean"],
+    qm = wgen_qm,
+    agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag),
+    lm_bru = brulm$summary.fitted.values[1:n, "mean"],
+    # lm_beta = brulmbeta$summary.fitted.values[1:n, "mean"],
+    # lm_t = brulmt$summary.fitted.values[1:n, "mean"]
+  ) %>%
+  mutate(
+    st_low = bru0$summary.fitted.values[1:n, "0.025quant"],
+    st_high = bru0$summary.fitted.values[1:n, "0.975quant"]
+  )
+
+model_df_fname <- sprintf(
+  "data/calibration_df_%s_%s.%s",
+  mesh_label,
+  d0_tag,
+  extension
+)
+
+if (extension == "geojson" & file.exists(model_df_fname)) {
+  cat("GeoJSON file already exists. Overwriting...\n")
+  file.remove(model_df_fname)
+}
+
+if (extension != "rds") {
+  st_write(
+    model_df0,
+    model_df_fname,
+    driver = driver,
+    append = FALSE,
+  )
+} else {
+  saveRDS(
+    model_df0,
+    model_df_fname
+  )
+}
+
+
+## 3.1 Exploring fitted values ####
+
+if (extension != "rds") {
+  model_df0 <- st_read(model_df_fname)
+} else {
+  model_df0 <- readRDS(model_df_fname)
+}
+
+
+pos_breaks <- with(
+  model_df0,
+  quantile(elevation[elevation > 0], probs = seq(0, 1, 1 / 3))
+)
+pos_levels <- levels(cut(
+  model_df0$elevation[model_df0$elevation > 0],
+  breaks = pos_breaks,
+  include.lowest = TRUE
+))
+
+## summary table for figures and tables #####
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+cat("Generating summary tables and figures\n")
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+df_long0 <- model_df0 %>%
+  filter(!anomaly) %>%
+  dplyr::select(
+    date,
+    time,
+    site_name,
+    coord_id,
+    elevation,
+    dist_coast,
+    capacity,
+    tech_typ,
+    p_group3,
+    norm_potential,
+    any_of(est_cols)
+  ) %>%
+  mutate(
+    hour = hour(time),
+    elevation = pmax(0, elevation),
+    p_group3 = factor(p_group3, levels = c("low", "mid", "high")),
+    dist_coast_g4 = cut(
+      dist_coast,
+      breaks = quantile(dist_coast, probs = seq(0, 1, 0.25)),
+      include.lowest = TRUE
+    ),
+    elevation_g4 = ifelse(
+      elevation == 0,
+      "0",
+      as.character(
+        cut(
+          elevation,
+          breaks = pos_breaks,
+          include.lowest = TRUE,
+          # labels = c("Low", "Mid", "High")
+        )
+      )
+    ),
+    elevation_g4 = factor(
+      elevation_g4,
+      levels = c("0", pos_levels)
+    )
+  ) %>%
+  pivot_longer(
+    cols = any_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  ) %>%
+  mutate(
+    estimate = pmin(1, pmax(0, estimate)), # clipping estimates to [0, 1]
+    err = estimate - norm_potential,
+    p_group3 = forcats::fct_rev(p_group3),
+    model = factor(model, levels = est_cols, labels = mod_labels)
+  )
+
+df_long0 %>%
+  ggplot() +
+  geom_density(
+    aes(x = err, fill = model),
+    alpha = 0.5
+  ) +
+  facet_wrap(~model, scales = "free_y") +
+  theme_minimal() +
+  labs(
+    title = "Error distribution by model",
+    x = "Error (model estimate - observed)",
+    y = "Density",
+    fill = "Model"
+  ) +
+  # coord_cartesian(xlim = c(-0.25, 0.25)) +
+  theme(legend.position = "none") #+
+# scale_fill_manual(values = pal_lancet()(n_models))
+# scale_fill_manual(blues9)
+
+ggsave(
+  sprintf(
+    "fig/%s/error_distribution_by_model_%s_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 6,
+  height = 4
+)
+
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    # MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    model = mod_labels[model]
+  ) %>%
+  arrange(desc(RMSE))
+metrics_table
+write.csv(
+  metrics_table,
+  sprintf(
+    "summaries/%s/calib_metrics_%s_%s.csv",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  row.names = FALSE
+)
+
+## 3.2 aggregated time series version ####
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(time, model) %>%
+  summarise(
+    across(
+      c(norm_potential, estimate),
+      ~ sum(. * capacity) / sum(capacity)
+    )
+  ) %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    model = mod_labels[model]
+  ) %>%
+  arrange(desc(RMSE))
+metrics_table
+write.csv(
+  metrics_table,
+  sprintf(
+    "summaries/%s/calib_metrics_%s_%s_gb.csv",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  row.names = FALSE
+)
+
+df_long0 %>%
+  group_by(time, model) %>%
+  summarise(
+    across(
+      c(norm_potential, estimate),
+      ~ sum(. * capacity) / sum(capacity)
+    )
+  ) %>%
+  mutate(
+    err = estimate - norm_potential,
+    # model = factor(model, levels = est_cols, labels = mod_labels)
+  ) %>%
+  group_by(model) %>%
+  ggplot() +
+  geom_density(
+    aes(x = err, fill = model),
+    alpha = 0.5
+  ) +
+  facet_wrap(~model, scales = "free_y") +
+  theme_minimal() +
+  labs(
+    title = "Error distribution by model",
+    x = "Error (model estimate - observed)",
+    y = "Density",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") #+
+# scale_fill_manual(values = pal_lancet()(n_models))
+
+ggsave(
+  sprintf(
+    "fig/%s/error_distribution_by_model_%s_%s_gb.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 6,
+  height = 4
+)
+
+## 3.3 error distribution by covariates ####
+### 3.3.1 by tech type #####
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(tech_typ, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  # mutate(model = mod_labels[model]) %>%
+  arrange(tech_typ, desc(RMSE))
+metrics_table
+write.csv(
+  metrics_table,
+  sprintf(
+    "summaries/%s/calib_metrics_%s_%s_tech.csv",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  row.names = FALSE
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(err, tech_typ, fill = model),
+    alpha = 0.5,
+    scale = 1
+  ) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by technology type",
+    x = "Error (model estimate - observed)",
+    y = "Technology Type",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") #+
+# scale_fill_manual(values = pal_lancet()(n_models))
+
+ggsave(
+  sprintf(
+    "fig/%s/error_distribution_by_tech_type_%s_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 6,
+  height = 4
+)
+
+### 3.3.2 by regime #####
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(p_group3, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(p_group3, desc(RMSE))
+metrics_table
+
+write.csv(
+  metrics_table,
+  sprintf(
+    "summaries/%s/calib_metrics_%s_%s_regime.csv",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  row.names = FALSE
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(err, p_group3, fill = model),
+    alpha = 0.5,
+    scale = 1
+  ) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by regime",
+    x = "Error (model estimate - observed)",
+    y = "Regime",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") #+
+# scale_fill_manual(values = pal_lancet()(n_models))
+ggsave(
+  sprintf(
+    "fig/%s/error_distribution_by_regime_%s_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 6,
+  height = 4
+)
+
+
+#### 3.3.3 by hour of day #####
+df_long0 %>%
+  mutate(hour = factor(hour, levels = 0:23)) %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(x = err, y = hour, fill = model),
+    alpha = 0.5
+  ) +
+  facet_wrap(~model) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by hour of day",
+    x = "Error (model estimate - observed)",
+    y = "Hour of day",
+    fill = "Model"
+  ) +
+  theme(legend.position = "none") +
+  coord_cartesian(xlim = c(-0.5, 0.5)) #+
+# scale_fill_manual(values = pal_lancet()(n_models))
+
+ggsave(
+  sprintf(
+    "fig/%s/error_distribution_by_hourA_%s_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 12,
+  height = 8
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(hour, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(model = mod_labels[model]) %>%
+  arrange(hour, desc(RMSE)) %>%
+  ggplot(aes(hour, RMSE, col = model, group = model)) +
+  geom_line() +
+  theme_minimal() +
+  labs(
+    title = "Model performance by hour of day",
+    x = "Hour of day",
+    y = "RMSE",
+    col = "Model"
+  ) #+
+# scale_color_manual(values = pal_lancet()(n_models))
+
+ggsave(
+  sprintf(
+    "fig/%s/model_performance_by_hourS_%s_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 6,
+  height = 4
+)
+
+
+#### 3.3.4 by distance to coast #####
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(dist_coast_g4, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(dist_coast_g4, desc(RMSE))
+metrics_table
+
+write.csv(
+  metrics_table,
+  sprintf(
+    "summaries/%s/calib_metrics_%s_%s_dist_coast.csv",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  row.names = FALSE
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(err, dist_coast_g4, fill = model),
+    alpha = 0.5,
+    scale = 1
+  ) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by distance to coast",
+    x = "Error (model estimate - observed)",
+    y = "Distance to Coast",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") #+
+# scale_fill_manual(values = pal_lancet()(n_models))
+ggsave(
+  sprintf(
+    "fig/%s/error_distribution_by_dist_coast_%s_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 6,
+  height = 4
+)
+
+
+#### 3.3.5 by elevation #####
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(elevation_g4, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(elevation_g4, desc(RMSE))
+metrics_table
+
+write.csv(
+  metrics_table,
+  sprintf(
+    "summaries/%s/calib_metrics_%s_%s_elevation.csv",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  row.names = FALSE
+)
+
+df_long0 %>%
+  st_drop_geometry() %>%
+  ggplot() +
+  geom_density_ridges(
+    aes(err, elevation_g4, fill = model),
+    alpha = 0.5,
+    scale = 1
+  ) +
+  theme_ridges() +
+  labs(
+    title = "Error distribution by elevation",
+    x = "Error (model estimate - observed)",
+    y = "Elevation",
+    fill = "Model"
+  ) +
+  theme(legend.position = "bottom") # +
+# scale_fill_manual(values = pal_lancet()(n_models))
+ggsave(
+  sprintf(
+    "fig/%s/error_distribution_by_elevation_%s_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 6,
+  height = 4
+)
+
+
+## 3.4 time series plots #####
+
+### 3.4.1 aggregated time series version #####
+mod_labels2 <- c(mod_labels, "norm_potential" = "Observed")
+model_df_ts <- model_df0 %>%
+  dplyr::select(
+    time,
+    site_name,
+    tech_typ,
+    norm_potential,
+    capacity,
+    ws_h,
+    any_of(est_cols)
+  ) %>%
+  pivot_longer(
+    cols = any_of(c("norm_potential", est_cols)),
+    names_to = "model",
+    values_to = "estimate"
+  ) %>%
+  mutate(
+    estimate = pmin(1, pmax(0, estimate)), # clipping estimates to [0, 1]
+  )
+
+model_df_ts %>%
+  ggplot() +
+  geom_line(
+    aes(time, estimate, group = site_name),
+    alpha = 0.5,
+    col = "gray50"
+  ) +
+  geom_line(
+    data = model_df_ts %>%
+      group_by(time, model) %>%
+      summarise(
+        power = sum(estimate * capacity) / sum(capacity),
+        .groups = "drop"
+      ),
+    aes(time, power, col = "capacity weighted avg."),
+    lwd = 1
+  ) +
+  geom_line(
+    data = model_df_ts %>%
+      group_by(time, model) %>%
+      summarise(power = mean(estimate), .groups = "drop"),
+    aes(time, power, col = "simple avg."),
+    lwd = 1
+  ) +
+  theme_minimal() +
+  facet_wrap(~model, ncol = 3, labeller = as_labeller(mod_labels2)) +
+  scale_x_datetime(date_labels = "%H:%M") +
+  labs(
+    title = sprintf("Power estimates Time Series %s", d0),
+    x = "Time",
+    y = "Generation (% of capacity)",
+    col = ""
+  ) +
+  scale_color_manual(
+    values = c("capacity weighted avg." = "blue", "simple avg." = "red")
+  ) +
+  theme(legend.position = "bottom")
+ggsave(
+  sprintf(
+    "fig/%s/power_estimates_time_series_%s_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 10,
+  height = 6
+)
+
+### 3.4.2 some locations time series ####
+
+set.seed(1)
+sample_sites <- model_df0 %>%
+  group_by(tech_typ) %>%
+  distinct(site_name) %>%
+  slice_sample(n = 2) %>%
+  pull(site_name)
+sample_sites
+
+model_df_ts %>%
+  filter(site_name %in% sample_sites) %>%
+  mutate(model = mod_labels2[model]) %>%
+  ggplot() +
+  geom_line(
+    aes(time, estimate, group = model, col = model),
+    # alpha = 0.5
+  ) +
+  theme_minimal() +
+  facet_wrap(
+    ~ sprintf(
+      "%s (%s)",
+      site_name,
+      gsub("Wind", "", tech_typ) %>% trimws()
+    ),
+    ncol = 2
+  ) +
+  scale_x_datetime(date_labels = "%H:%M") +
+  labs(
+    title = sprintf("Power estimates Time Series %s", d0),
+    x = "Time",
+    y = "Generation (% of capacity)",
+    col = ""
+  ) +
+  # scale_fill_manual(values = pal_lancet()(n_models)) +
+  theme(legend.position = "bottom")
+ggsave(
+  sprintf(
+    "fig/%s/power_estimates_time_series_%s_sampWF_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 10,
+  height = 6
+)
+
+
+### 3.4.3 aggregated error time series version ####
+model_df_ts2 <- model_df0 %>%
+  dplyr::select(
+    time,
+    site_name,
+    tech_typ,
+    norm_potential,
+    capacity,
+    ws_h,
+    any_of(est_cols)
+  ) %>%
+  mutate(across(
+    any_of(est_cols),
+    ~ . - norm_potential
+  )) %>%
+  pivot_longer(
+    cols = any_of(est_cols),
+    names_to = "model",
+    values_to = "error"
+  )
+model_df_ts2 %>%
+  ggplot() +
+  geom_line(
+    aes(time, error, group = site_name),
+    alpha = 0.5,
+    col = "gray50"
+  ) +
+  geom_line(
+    data = model_df_ts2 %>%
+      group_by(time, model) %>%
+      summarise(
+        error = sum(error * capacity, na.rm = TRUE) /
+          sum(capacity, na.rm = TRUE),
+        .groups = "drop"
+      ),
+    aes(time, error, col = "capacity weighted avg."),
+    lwd = 1
+  ) +
+  geom_line(
+    data = model_df_ts2 %>%
+      group_by(time, model) %>%
+      summarise(error = mean(error, na.rm = TRUE), .groups = "drop"),
+    aes(time, error, col = "simple avg."),
+    lwd = 1
+  ) +
+  theme_minimal() +
+  facet_wrap(~model, ncol = 3, labeller = as_labeller(mod_labels)) +
+  scale_x_datetime(date_labels = "%H:%M") +
+  labs(
+    title = sprintf("Estimation Error Time Series %s", d0),
+    x = "Time",
+    y = "Error (% of capacity)",
+    col = ""
+  ) +
+  scale_color_manual(
+    values = c("capacity weighted avg." = "blue", "simple avg." = "red")
+  ) +
+  theme(legend.position = "bottom")
+ggsave(
+  sprintf(
+    "fig/%s/power_estimates_error_time_series_%s_%s.pdf",
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  width = 10,
+  height = 6
+)
+
+endtime <- Sys.time()
+
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+cat("Finished model fitting process\n")
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+
+rm(
+  bru0,
+  bruar1,
+  bruar2,
+  bru1d,
+  brulm,
+  brulmbeta,
+  brulmt,
+  qqmod,
+  model_AIC0,
+  model_AIC0_agg
+)
+gc()
+
+timediff <- difftime(endtime, starttime, units = "auto")
+
+cat(sprintf(
+  "Time taken for model fitting: %.2f %s\n",
+  timediff,
+  units(timediff)
+))
