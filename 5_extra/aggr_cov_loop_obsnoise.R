@@ -1,4 +1,20 @@
 # loop of field simulation, aggregation and coverage calculation ####
+
+local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
+
+if (local_run) {
+  cat("Running in local mode\n")
+} else {
+  cat("Running in cluster mode\n")
+}
+
+require(parallel)
+
+if (!local_run) {
+  .libPaths(temp_lib)
+}
+
+
 # new tutorial in inlabru ####
 require(dplyr)
 library(INLA)
@@ -6,8 +22,15 @@ library(inlabru)
 library(fmesher)
 library(mgcv)
 library(ggplot2)
-require(patchwork)
+# require(patchwork)
 require(sf)
+
+source("aux_funct.R")
+mc <- available_cores() - ifelse(local_run, 2, 0)
+inla_core_option <- "%d:1"
+cat("Setting INLA to use", mc, "cores\n")
+inla.setOption(num.threads = sprintf(inla_core_option, mc))
+
 theme_set(theme_bw())
 
 set.seed(2026)
