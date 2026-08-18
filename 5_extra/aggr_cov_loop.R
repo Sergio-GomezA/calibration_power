@@ -7,6 +7,22 @@ if (local_run) {
 } else {
   cat("Running in cluster mode\n")
 }
+# Get task ID and others from command-line arguments
+args <- commandArgs(trailingOnly = TRUE)
+
+n <- 150
+N <- 100
+oos_perc <- 0.2
+
+if (length(args) > 0) {
+  n <- as.numeric(args[1])
+}
+if (length(args) > 1) {
+  N <- as.numeric(args[2])
+}
+if (length(args) > 2) {
+  oos_perc <- as.numeric(args[3])
+}
 
 require(parallel)
 
@@ -35,9 +51,6 @@ inla.setOption(num.threads = sprintf(inla_core_option, mc))
 theme_set(theme_bw())
 
 set.seed(2026)
-n <- 150
-N <- 100
-oos_perc <- 0.2
 
 bnd <- spoly(
   data.frame(
