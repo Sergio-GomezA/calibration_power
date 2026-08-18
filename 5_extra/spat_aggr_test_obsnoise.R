@@ -58,6 +58,7 @@ matern_fine <-
 true_range <- 4
 true_sigma <- 2
 extra_noise <- 1
+true_intercept <- 2
 true_Q <- inla.spde.precision(
   matern_fine,
   theta = log(c(true_range, true_sigma))
@@ -71,7 +72,7 @@ ggplot() +
 ## generating samples from model ####
 
 myseed <- trunc(abs(rnorm(1)) * 10000)
-true_field <- inla.qsample(1, true_Q, seed = myseed)[, 1]
+true_field <- inla.qsample(1, true_Q, seed = myseed)[, 1] + true_intercept
 
 truth <- expand.grid(
   easting = seq(0, 10, length = 100),
@@ -234,7 +235,7 @@ range.plot <- plot(spde.range) +
   theme_bw()
 var.plot <- plot(spde.var) +
   geom_vline(
-    xintercept = (true_sigma^2),
+    xintercept = (true_sigma^2 + extra_noise^2),
     col = "red",
     linetype = "dashed"
   ) +
