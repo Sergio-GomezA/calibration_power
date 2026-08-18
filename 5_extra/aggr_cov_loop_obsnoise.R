@@ -33,6 +33,7 @@ cat("Setting INLA to use", mc, "cores\n")
 inla.setOption(num.threads = sprintf(inla_core_option, mc))
 
 theme_set(theme_bw())
+prefix <- "wnoise"
 
 set.seed(2026)
 n <- 150
@@ -125,7 +126,7 @@ check_agg_cov <- function(n) {
       below_upr = observed <= upr,
       in_ci = above_lwr & below_upr
     )
-
+  coverage <- mean(mydata$in_ci)
   grab_prec_name <- fit$.args$control.family[[1]]$hyper[[
     "theta1"
   ]]$output.name %>%
@@ -178,21 +179,12 @@ check_agg_cov <- function(n) {
         st_drop_geometry()
     ) %>%
     mutate(
-      above_lwr = observed >= q0.025,
-      below_upr = observed <= q0.975,
-      in_ci = above_lwr & below_upr
+      above_lwr_noise = observed >= q0.025,
+      below_upr_noise = observed <= q0.975,
+      in_ci_noise = above_lwr_noise & below_upr_noise
     )
 
-  coverage_loc <- sum(
-    mydata$observed >= mydata$q0.025 &
-      mydata$observed <= mydata$q0.975
-  ) /
-    n
-  # calculate aggregate coverage
-  # aggr_samples <- samp_loc %>%
-  #   as.data.frame() %>%
-  #   summarise_all(sum) %>%
-  #   t()
+  coverage_loc <- mean(mydata$in_ci_noise)
 
   aggr_samples <- lapply(
     seq_along(samp_loc),
@@ -217,7 +209,8 @@ check_agg_cov <- function(n) {
       data.frame(
         observed = sum(mydata$observed),
         fit = sum(mydata$fit),
-        cov_loc = coverage_loc
+        cov_loc = coverage_loc,
+        cov_nonoise = coverage
       )
     )
 }
@@ -247,11 +240,12 @@ cat(sprintf(" done (%d failed)\n", n_failed))
 coverage_results %>%
   summarise(
     cov_loc = mean(cov_loc),
+    cov_nonoise = mean(cov_nonoise),
     cov_aggr = mean(observed >= q0.025 & observed <= q0.975)
   )
 
 write.csv(
   coverage_results,
-  file = sprintf("5_extra/coverage_results_sim_n%d.csv", n),
+  file = sprintf("5_extra/coverage_results_sim_%s_n%d.csv", prefix, n),
   row.names = FALSE
 )
