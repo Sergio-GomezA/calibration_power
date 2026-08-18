@@ -11,6 +11,7 @@ if (local_run) {
 require(parallel)
 
 if (!local_run) {
+  temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   .libPaths(temp_lib)
 }
 
