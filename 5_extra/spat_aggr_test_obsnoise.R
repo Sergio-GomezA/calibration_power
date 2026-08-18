@@ -9,7 +9,7 @@ require(patchwork)
 require(sf)
 
 theme_set(theme_bw())
-
+prefix <- "wnoise"
 set.seed(2026)
 n <- 150
 
@@ -90,7 +90,8 @@ pl_truth <- ggplot() +
 pl_truth + csc
 ggsave(
   sprintf(
-    "fig/testing/sim_field_range%d_sd%s.pdf",
+    "fig/testing/%s_sim_field_range%d_sd%s.pdf",
+    prefix,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -199,7 +200,8 @@ csc <- colsc(truth$field, pred$mean, pred$sample)
 
 ggsave(
   sprintf(
-    "fig/testing/est_field_range%d_sd%s.pdf",
+    "fig/testing/%s_est_field_range%d_sd%s.pdf",
+    prefix,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -230,7 +232,8 @@ var.plot <- plot(spde.var) +
 (range.plot / var.plot / int.plot)
 ggsave(
   sprintf(
-    "fig/testing/est_hyper_range%d_sd%s.pdf",
+    "fig/testing/%s_est_hyper_range%d_sd%s.pdf",
+    prefix,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -297,7 +300,8 @@ gupper95 <- ggplot() +
 
 ggsave(
   sprintf(
-    "fig/testing/est_field_range%d_sd%s_ci.pdf",
+    "fig/testing/%s_est_field_range%d_sd%s_ci.pdf",
+    prefix,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -368,10 +372,62 @@ mydata <- samp_df %>%
       st_drop_geometry()
   ) %>%
   mutate(
-    above_lwr = observed >= q0.025,
-    below_upr = observed <= q0.975,
-    in_ci = above_lwr & below_upr
+    above_lwr_noise = observed >= q0.025,
+    below_upr_noise = observed <= q0.975,
+    in_ci_noise = above_lwr_noise & below_upr_noise
   )
+
+# plot field again with updated in_ci variable
+
+coverage_noise <- sum(
+  mydata$in_ci_noise
+) /
+  n
+pl_truth <- ggplot() +
+  gg(truth, aes(fill = field), geom = "tile") +
+  ggtitle("True field")
+pl_posterior_mean <- ggplot() +
+  gg(pred, geom = "tile") +
+  gg(bnd, alpha = 0) +
+  ggtitle("Post. mean")
+pl_posterior_sample <- ggplot() +
+  gg(pred, aes(fill = sample), geom = "tile") +
+  gg(bnd, alpha = 0) +
+  ggtitle("Post. sample")
+
+# Common colour scale for the truth and estimate:
+csc <- colsc(truth$field, pred$mean, pred$sample)
+updated_points <- geom_sf(
+  data = mydata,
+  aes(geometry = geometry, col = in_ci_noise),
+  inherit.aes = FALSE,
+  size = 0.5
+)
+(pl_truth +
+  updated_points +
+  csc +
+  labs(fill = "") |
+  pl_posterior_mean +
+    updated_points +
+    csc +
+    labs(fill = "") |
+  pl_posterior_sample +
+    updated_points +
+    csc +
+    labs(fill = "")) +
+  plot_layout(ncol = 3, guides = "collect") &
+  theme(legend.position = "right")
+
+ggsave(
+  sprintf(
+    "fig/testing/%s_est_field_range%d_sd%s.pdf",
+    prefix,
+    true_range,
+    sub("\\.", "_", sprintf("%.2f", true_sigma))
+  ),
+  width = 12,
+  height = 4
+)
 
 # mydata <-
 #   bind_cols(
@@ -432,14 +488,3 @@ aggr_samples <- lapply(
       cov_loc = coverage_loc
     )
   )
-
-# aggr_samples %>%
-#   quantile(probs = c(0.025, 0.5, 0.975)) %>%
-#   t() %>%
-#   as.data.frame() %>%
-#   setNames(c("q0.025", "median", "q0.975")) %>%
-#   bind_cols(
-#     data.frame(
-#       observed = sum(mydata$observed)
-#     )
-#   )
