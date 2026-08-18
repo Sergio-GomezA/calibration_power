@@ -222,7 +222,14 @@ ggsave(
   height = 4
 )
 
-int.plot <- plot(fit, "Intercept")
+int.plot <- plot(fit, "Intercept") +
+  geom_vline(
+    xintercept = true_intercept,
+    col = "red",
+    linetype = "dashed"
+  ) +
+  labs(title = "Intercept posterior", x = "Intercept", y = "Density") +
+  theme_bw()
 spde.range <- spde.posterior(fit, "field", what = "range")
 spde.var <- spde.posterior(fit, "field", what = "variance")
 range.plot <- plot(spde.range) +
