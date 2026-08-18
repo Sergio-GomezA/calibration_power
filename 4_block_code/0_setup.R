@@ -13,9 +13,9 @@ prec_init <- log(200) # for u
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
 fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
-n.days.before <- 10
+n.days.before <- 3
 n.days.before.heavy <- 3
-batch_name <- "batch2025"
+batch_name <- "batch2025simtest"
 
 task_prefix <- "spaceoos"
 save_models <- FALSE
@@ -97,6 +97,14 @@ if (local_run) {
   driver <- "GeoJSON"
   .libPaths(temp_lib)
 }
+
+if (!dir.exists(file.path("fig", batch_name))) {
+  dir.create(file.path("fig", batch_name), recursive = TRUE)
+}
+if (!dir.exists(file.path("summaries", batch_name))) {
+  dir.create(file.path("summaries", batch_name), recursive = TRUE)
+}
+
 
 require(tidyverse)
 require(sf)
