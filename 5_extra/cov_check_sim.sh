@@ -17,6 +17,5 @@ source /etc/profile.d/modules.sh
 module load R/4.5
 
 # Run resolution code
-Rscript 5_extra/aggr_cov_loop_obsnoise.R 
-# file name/ day id/ mesh edge length / recreate files / 
-# rerun st model / days in traning samp / batch folder / save models
+Rscript 5_extra/aggr_cov_loop_obsnoise.R 500 100 0.2
+# nloc / n simulations / oos percentage

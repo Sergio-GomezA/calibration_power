@@ -14,7 +14,22 @@ if (!local_run) {
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   .libPaths(temp_lib)
 }
+# Get task ID and others from command-line arguments
+args <- commandArgs(trailingOnly = TRUE)
 
+n <- 150
+N <- 100
+oos_perc <- 0.2
+
+if (length(args) > 0) {
+  n <- as.numeric(args[1])
+}
+if (length(args) > 1) {
+  N <- as.numeric(args[2])
+}
+if (length(args) > 2) {
+  oos_perc <- as.numeric(args[3])
+}
 
 # new tutorial in inlabru ####
 require(dplyr)
@@ -36,9 +51,6 @@ theme_set(theme_bw())
 prefix <- "wnoise"
 
 set.seed(2026)
-n <- 150
-N <- 100
-oos_perc <- 0.2
 
 bnd <- spoly(
   data.frame(
