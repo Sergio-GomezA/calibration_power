@@ -266,6 +266,8 @@ csc <- colsc(
 # calculate 95% CI coverage ####
 
 coverage <- mean(mydata$in_ci, na.rm = TRUE)
+coverage_is <- mean(mydata$in_ci[!mydata$oos], na.rm = TRUE)
+coverage_oos <- mean(mydata$in_ci[mydata$oos], na.rm = TRUE)
 
 gmedian <- ggplot() +
   gg(pred["median"], geom = "tile") +
@@ -387,11 +389,19 @@ mydata %>%
 
 ## compare with observed data
 
-coverage_loc <- sum(
+coverage_loc <- mean(
   mydata$observed >= mydata$q0.025 &
     mydata$observed <= mydata$q0.975
-) /
-  n
+)
+coverage_loc_is <- mean(
+  mydata$observed[!mydata$oos] >= mydata$q0.025[!mydata$oos] &
+    mydata$observed[!mydata$oos] <= mydata$q0.975[!mydata$oos]
+)
+coverage_loc_oos <- mean(
+  mydata$observed[mydata$oos] >= mydata$q0.025[mydata$oos] &
+    mydata$observed[mydata$oos] <= mydata$q0.975[mydata$oos]
+)
+
 
 aggr_samples <- samp_loc %>%
   as.data.frame() %>%
@@ -407,6 +417,8 @@ aggr_samples %>%
     data.frame(
       observed = sum(mydata$observed),
       fit = sum(mydata$fit),
-      coverage_loc = coverage_loc
+      coverage_loc = coverage_loc,
+      coverage_loc_is = coverage_loc_is,
+      coverage_loc_oos = coverage_loc_oos
     )
   )

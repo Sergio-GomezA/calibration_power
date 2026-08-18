@@ -152,6 +152,8 @@ check_agg_cov <- function(n) {
       in_ci = above_lwr & below_upr
     )
   coverage <- mean(mydata$in_ci)
+  coverage_is <- mean(mydata$in_ci[!mydata$oos])
+  coverage_oos <- mean(mydata$in_ci[mydata$oos])
   grab_prec_name <- fit$.args$control.family[[1]]$hyper[[
     "theta1"
   ]]$output.name %>%
@@ -209,7 +211,9 @@ check_agg_cov <- function(n) {
       in_ci_noise = above_lwr_noise & below_upr_noise
     )
 
-  coverage_loc <- mean(mydata$in_ci_noise)
+  coverage_noise <- mean(mydata$in_ci_noise)
+  coverage_noise_is <- mean(mydata$in_ci_noise[!mydata$oos])
+  coverage_noise_oos <- mean(mydata$in_ci_noise[mydata$oos])
 
   aggr_samples <- lapply(
     seq_along(samp_loc),
@@ -234,8 +238,12 @@ check_agg_cov <- function(n) {
       data.frame(
         observed = sum(mydata$observed),
         fit = sum(mydata$fit),
-        cov_loc = coverage_loc,
-        cov_nonoise = coverage
+        cov_nonoise = coverage,
+        cov_nonoise_is = coverage_is,
+        cov_nonoise_oos = coverage_oos,
+        cov_noise = coverage_noise,
+        cov_noise_is = coverage_noise_is,
+        cov_noise_oos = coverage_noise_oos
       )
     )
 }
