@@ -12,6 +12,7 @@ theme_set(theme_bw())
 prefix <- "wnoise"
 set.seed(2026)
 n <- 150
+oos_perc <- 0.2
 
 colsc <- function(...) {
   scale_fill_gradientn(
@@ -106,7 +107,12 @@ ggsave(
 mydata <- sf::st_as_sf(
   data.frame(easting = runif(n, 0, 10), northing = runif(n, 0, 10)),
   coords = c("easting", "northing")
-)
+) %>%
+  mutate(
+    oos = FALSE
+  )
+mydata$oos[sample(nrow(mydata), round(oos_perc * nrow(mydata)))] <- TRUE
+n_fit <- sum(!mydata$oos)
 mydata$observed <-
   fm_evaluate(
     mesh_fine,
@@ -140,13 +146,18 @@ matern <-
   inla.spde2.pcmatern(mesh, prior.sigma = c(10, 0.01), prior.range = c(1, 0.01))
 
 cmp <- observed ~ field(geometry, model = matern) + Intercept(1)
-fit <- bru(cmp, mydata, family = "gaussian")
+fit <- bru(cmp, mydata %>% filter(!oos), family = "gaussian")
 summary(fit)
 
 # summaries from model fit
-mydata$fit <- fit$summary.fitted.values$mean[1:n]
-mydata$lwr <- fit$summary.fitted.values$`0.025quant`[1:n]
-mydata$upr <- fit$summary.fitted.values$`0.975quant`[1:n]
+pred_on_fulldf <- predict(
+  fit,
+  mydata,
+  ~ field + Intercept
+)
+mydata$fit <- pred_on_fulldf$mean
+mydata$lwr <- pred_on_fulldf$`q0.025`
+mydata$upr <- pred_on_fulldf$`q0.975`
 
 mydata <- mydata %>%
   mutate(
@@ -226,7 +237,7 @@ var.plot <- plot(spde.var) +
     col = "red",
     linetype = "dashed"
   ) +
-  labs(title = "Variance posterior", x = "Log variance", y = "Density") +
+  labs(title = "Variance posterior", x = "Variance", y = "Density") +
   theme_bw()
 
 (range.plot / var.plot / int.plot)
@@ -249,10 +260,7 @@ csc <- colsc(
 
 # calculate 95% CI coverage ####
 
-coverage <- sum(
-  mydata$in_ci
-) /
-  n
+coverage <- mean(mydata$in_ci, na.rm = TRUE)
 
 gmedian <- ggplot() +
   gg(pred["median"], geom = "tile") +
@@ -379,10 +387,8 @@ mydata_2 <- samp_df %>%
 
 # plot field again with updated in_ci variable
 
-coverage_noise <- sum(
-  mydata_2$in_ci_noise
-) /
-  n
+coverage_noise <- mean(mydata_2$in_ci_noise)
+
 pl_truth <- ggplot() +
   gg(truth, aes(fill = field), geom = "tile") +
   ggtitle("True field")

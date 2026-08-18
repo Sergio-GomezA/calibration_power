@@ -38,6 +38,7 @@ prefix <- "wnoise"
 set.seed(2026)
 n <- 150
 N <- 100
+oos_perc <- 0.2
 
 bnd <- spoly(
   data.frame(
@@ -87,7 +88,12 @@ check_agg_cov <- function(n) {
   mydata <- sf::st_as_sf(
     data.frame(easting = runif(n, 0, 10), northing = runif(n, 0, 10)),
     coords = c("easting", "northing")
-  )
+  ) %>%
+    mutate(
+      oos = FALSE
+    )
+  mydata$oos[sample(nrow(mydata), round(oos_perc * nrow(mydata)))] <- TRUE
+  n_fit <- sum(!mydata$oos)
   mydata$observed <-
     fm_evaluate(
       mesh_fine,
@@ -112,13 +118,18 @@ check_agg_cov <- function(n) {
     )
 
   cmp <- observed ~ field(geometry, model = matern) + Intercept(1)
-  fit <- bru(cmp, mydata, family = "gaussian")
+  fit <- bru(cmp, mydata %>% filter(!oos), family = "gaussian")
   summary(fit)
 
   # summaries from model fit
-  mydata$fit <- fit$summary.fitted.values$mean[1:n]
-  mydata$lwr <- fit$summary.fitted.values$`0.025quant`[1:n]
-  mydata$upr <- fit$summary.fitted.values$`0.975quant`[1:n]
+  pred_on_fulldf <- predict(
+    fit,
+    mydata,
+    ~ field + Intercept
+  )
+  mydata$fit <- pred_on_fulldf$mean
+  mydata$lwr <- pred_on_fulldf$`q0.025`
+  mydata$upr <- pred_on_fulldf$`q0.975`
 
   mydata <- mydata %>%
     mutate(
@@ -246,6 +257,11 @@ coverage_results %>%
 
 write.csv(
   coverage_results,
-  file = sprintf("5_extra/coverage_results_sim_%s_n%d.csv", prefix, n),
+  file = sprintf(
+    "5_extra/coverage_results_%s_nloc%d_sim%d.csv",
+    prefix,
+    n,
+    N
+  ),
   row.names = FALSE
 )
