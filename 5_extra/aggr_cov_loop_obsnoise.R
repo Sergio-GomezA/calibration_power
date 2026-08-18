@@ -226,7 +226,7 @@ check_agg_cov <- function(n) {
 cat("Progress: ")
 n_failed <- 0
 # debug(check_agg_cov)
-coverage_results <- lapply(1:4, function(i) {
+coverage_results <- lapply(1:N, function(i) {
   if (i %in% round(seq(1, N, length.out = 50))) {
     cat("-")
     flush.console()
