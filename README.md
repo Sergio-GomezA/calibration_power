@@ -299,7 +299,8 @@ CRPS
 - [ ] annual review draft
 - [ ] Annual review form
 - [ ] collapsing uncertainty in GMRF
-  - [ ] simple example with no collapse
+  - [x] simple example with no collapse
+  - [ ] add unseen locations
   - [ ] simulation from any model that is collapsing
   - [ ] make simple example collapse
 - [ ] new batch
