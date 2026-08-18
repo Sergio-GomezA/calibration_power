@@ -272,8 +272,7 @@ cat(sprintf(" done (%d failed)\n", n_failed))
 
 coverage_results %>%
   summarise(
-    cov_loc = mean(cov_loc),
-    cov_nonoise = mean(cov_nonoise),
+    across(matches("cov_"), mean, na.rm = TRUE),
     cov_aggr = mean(observed >= q0.025 & observed <= q0.975)
   )
 
