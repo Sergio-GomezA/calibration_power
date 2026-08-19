@@ -18,7 +18,7 @@ n.days.before.heavy <- 3
 batch_name <- "batch2025simtest"
 
 task_prefix <- "spaceoos"
-save_models <- TRUE
+save_models <- FALSE
 save_samples <- FALSE
 
 rerun_samples <- TRUE
