@@ -641,7 +641,13 @@ aggr_samples <- lapply(
     )
   ) %>%
   mutate(
-    aggr_in_ci = ifelse(observed >= q0.025 & observed <= q0.975, 1, 0)
+    aggr_in_ci = ifelse(observed >= q0.025 & observed <= q0.975, 1, 0),
+    shapiro_p = norm_test$p.value,
+    normality = ifelse(
+      norm_test$p.value < 0.05,
+      "not normal",
+      "maybe normal"
+    )
   )
 aggr_samples
 write.csv(
