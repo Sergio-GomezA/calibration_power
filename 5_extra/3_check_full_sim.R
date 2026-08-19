@@ -1,7 +1,13 @@
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+cat("Running spatial aggregation and coverage check for one Elexon time\n")
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
 # true data frame
 prefixfull <- "elexon_flpsim"
-time_sel <- wf_df_frag$time %>% max()
-
+time_sel <- wf_df_frag$time %>% max() + hours(13)
 extension <- ifelse(local_run, local_ext, cluster_ext)
 df_pattern <- sprintf("^cal_aggr_test_df_.*_%s\\.%s$", d0_tag, extension)
 files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
