@@ -651,6 +651,12 @@ aggr_samples_fsim <- lapply(
         observed_unweighted <= q0.975_unweighted,
       1,
       0
+    ),
+    shapiro_p = norm_test$p.value,
+    normality = ifelse(
+      norm_test$p.value < 0.05,
+      "not normal",
+      "maybe normal"
     )
   )
 aggr_samples_fsim
