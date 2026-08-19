@@ -37,9 +37,23 @@ cat(
 )
 # 1. data preparation ####
 
+# generating sample days for 3nd round of modelling
+# set.seed(2)
+# # sample 1 day per regime
+# sampled_days_df <- gb_day_df %>%
+#   filter(date >= "2025-01-01") %>%
+#   group_by(p_group3) %>%
+#   slice_sample(n = 50)
+
+# write.csv(
+#   sampled_days_df,
+#   file = "data/sample_days_df_25_n150.csv",
+#   row.names = FALSE
+# )
+
 cat("Preparing data for model fitting\n")
 
-sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
+sampled_days_df <- read.csv("data/sample_days_df_25_n150.csv") %>%
   mutate(date = as.Date(date))
 
 sampled_days <- sampled_days_df %>%
