@@ -6,7 +6,7 @@ cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
 # true data frame
-prefixfull <- "elexon_flpsim"
+prefixfull <- "elex1H"
 time_sel <- wf_df_frag$time %>% max() + hours(13)
 extension <- ifelse(local_run, local_ext, cluster_ext)
 df_pattern <- sprintf("^cal_aggr_test_df_.*_%s\\.%s$", d0_tag, extension)
