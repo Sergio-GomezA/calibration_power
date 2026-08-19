@@ -16,9 +16,9 @@ require(patchwork)
 
 source('5_extra/1_fit_forAggTest.R')
 
-prefix <- "wnoise"
+prefix <- "elexon"
 set.seed(2026)
-n <- 150
+n <- 147
 oos_perc <- 0.2
 
 colsc <- function(...) {
@@ -34,26 +34,19 @@ colscB <- function(...) {
   )
 }
 
-bnd <- spoly(
-  data.frame(
-    easting = c(0, 10, 10, 0),
-    northing = c(0, 0, 10, 10)
-  ),
-  format = "sf"
-)
+bndsim <- bnd[[2]] %>% st_as_sf()
 ## For fmesher 0.3.0:
 ##   mesh_fine <- fm_mesh_2d_inla(boundary = bnd, max.edge = 0.2)
 ## For fmesher >= 0.4.0:
-edgeA <- 0.25
+edgeA <- bru0$summary.hyperpar["Range for st_field", "mean"] / 5
 edgeB <- edgeA * 1.25
 mesh_fine <- fm_mesh_2d(
-  loc = fm_hexagon_lattice(bnd, edge_len = edgeA),
-  boundary = bnd,
+  loc = fm_hexagon_lattice(bndsim, edge_len = edgeA),
+  boundary = bndsim,
   max.edge = edgeB
 )
-ggplot() +
-  geom_fm(data = mesh_fine)
-
+# ggplot() +
+#   geom_fm(data = mesh_fine)
 
 # Note: the priors here will not be used in estimation
 matern_fine <-
@@ -62,30 +55,41 @@ matern_fine <-
     prior.sigma = c(1, 0.01),
     prior.range = c(1, 0.01)
   )
-true_range <- 4
-true_sigma <- 2
-extra_noise <- 1
-true_intercept <- 2
+true_range <- round(bru0$summary.hyperpar["Range for st_field", "mean"], 0)
+true_sigma <- round(bru0$summary.hyperpar["Stdev for st_field", "mean"], 0)
+extra_noise <- 1 * 0
+true_intercept <- 0
 true_Q <- inla.spde.precision(
   matern_fine,
   theta = log(c(true_range, true_sigma))
 )
 ## plot sd field ####
 true_sd <- diag(inla.qinv(true_Q))^0.5
-ggplot() +
-  gg(mesh_fine, color = true_sd) +
-  coord_equal()
+# ggplot() +
+#   gg(mesh_fine, color = true_sd) +
+#   coord_equal()
 
 ## generating samples from model ####
 
 myseed <- trunc(abs(rnorm(1)) * 10000)
 true_field <- inla.qsample(1, true_Q, seed = myseed)[, 1] + true_intercept
 
+bb <- sf::st_bbox(bndsim)
+
 truth <- expand.grid(
-  easting = seq(0, 10, length = 100),
-  northing = seq(0, 10, length = 100)
+  easting = seq(bb["xmin"], bb["xmax"], length.out = 100),
+  northing = seq(bb["ymin"], bb["ymax"], length.out = 100)
 )
-truth <- sf::st_as_sf(truth, coords = c("easting", "northing"))
+# Convert grid points to sf
+truth <- sf::st_as_sf(
+  truth,
+  coords = c("easting", "northing"),
+  crs = sf::st_crs(bndsim)
+)
+
+# Keep only points inside the polygon
+truth <- truth[sf::st_within(truth, bndsim, sparse = FALSE), ]
+
 truth$field <- fm_evaluate(
   mesh_fine,
   loc = truth,
@@ -112,22 +116,30 @@ ggsave(
 ## Or with another colour scale:
 
 # multiplot(pl_truth, pl_truth + csc, cols = 2)
+coord_list_fname <- "data/coord_list.csv"
 
-mydata <- sf::st_as_sf(
-  data.frame(easting = runif(n, 0, 10), northing = runif(n, 0, 10)),
-  coords = c("easting", "northing")
-) %>%
-  mutate(
-    oos = FALSE
-  )
-mydata$oos[sample(nrow(mydata), round(oos_perc * nrow(mydata)))] <- TRUE
+cat("Loading existing coordinate list\n")
+coord_list <- read.csv(coord_list_fname)
+
+sample_loc_fname <- "data/coord_list_wloc.csv"
+cat("Loading existing coordinate list with location names\n")
+loc_cat <- read.csv(sample_loc_fname) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  st_transform(crs = st_crs(27700))
+loc_cat <- loc_cat %>%
+  st_geometry() %>%
+  (\(g) g / 1000)() %>%
+  st_set_geometry(loc_cat, .)
+
+mydata <- loc_cat %>%
+  mutate(oos = !sampled)
+
 n_fit <- sum(!mydata$oos)
-mydata$observed <-
-  fm_evaluate(
-    mesh_fine,
-    loc = mydata,
-    field = true_field
-  ) +
+mydata$observed <- fm_evaluate(
+  mesh_fine,
+  loc = mydata,
+  field = true_field
+) +
   rnorm(n, sd = extra_noise)
 cscB <- colscB(truth$field)
 ggplot() +
@@ -142,17 +154,31 @@ ggplot() +
 ##     max.edge = 0.5
 ##  )
 ## For fmesher >= 0.4.0
+if (mesh_edge_par <= 20) {
+  max_n <- c(900, 300)
+} else {
+  max_n <- c(900, 150)
+}
+
+hex_0 <- fm_hexagon_lattice(bnd[[1]], edge_len = edge_target)
 mesh <- fm_mesh_2d(
-  loc = fm_hexagon_lattice(bnd, edge_len = edgeA * 2),
+  # loc = loc_unique,
+  loc = hex_0,
   boundary = bnd,
-  max.edge = edgeB * 2
+  # max.edge = c(100, 150), # km
+  min.angle = 30,
+  # offset = -0.2,
+  cutoff = edge_target / 2,
+  max.n.strict = max_n
 )
 ggplot() +
   geom_fm(data = mesh)
 
-
-matern <-
-  inla.spde2.pcmatern(mesh, prior.sigma = c(10, 0.01), prior.range = c(1, 0.01))
+matern <- inla.spde2.pcmatern(
+  mesh,
+  prior.sigma = c(1, 0.01),
+  prior.range = c(1, 0.01)
+)
 
 cmp <- observed ~ field(geometry, model = matern) + Intercept(1)
 fit <- bru(cmp, mydata %>% filter(!oos), family = "gaussian")
@@ -191,12 +217,12 @@ pred$sample <- samp[, 1]
 
 pl_posterior_mean <- ggplot() +
   gg(pred, geom = "tile") +
-  gg(bnd, alpha = 0) +
+  gg(bndsim, alpha = 0) +
   geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
   ggtitle("Post. mean")
 pl_posterior_sample <- ggplot() +
   gg(pred, aes(fill = sample), geom = "tile") +
-  gg(bnd, alpha = 0) +
+  gg(bndsim, alpha = 0) +
   geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
   ggtitle("Post. sample")
 
@@ -414,11 +440,11 @@ pl_truth <- ggplot() +
   ggtitle("True field")
 pl_posterior_mean <- ggplot() +
   gg(pred, geom = "tile") +
-  gg(bnd, alpha = 0) +
+  gg(bnd[[2]] %>% st_as_sf(), alpha = 0) +
   ggtitle("Post. mean")
 pl_posterior_sample <- ggplot() +
   gg(pred, aes(fill = sample), geom = "tile") +
-  gg(bnd, alpha = 0) +
+  gg(bnd[[2]] %>% st_as_sf(), alpha = 0) +
   ggtitle("Post. sample")
 
 # Common colour scale for the truth and estimate:
