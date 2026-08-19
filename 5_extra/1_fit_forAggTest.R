@@ -1807,18 +1807,18 @@ cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
 
-rm(
-  bru0,
-  bruar1,
-  bruar2,
-  bru1d,
-  brulm,
-  brulmbeta,
-  brulmt,
-  qqmod,
-  model_AIC0,
-  model_AIC0_agg
-)
+# rm(
+#   bru0,
+#   bruar1,
+#   bruar2,
+#   bru1d,
+#   brulm,
+#   brulmbeta,
+#   brulmt,
+#   qqmod,
+#   model_AIC0,
+#   model_AIC0_agg
+# )
 gc()
 
 timediff <- difftime(endtime, starttime, units = "auto")
