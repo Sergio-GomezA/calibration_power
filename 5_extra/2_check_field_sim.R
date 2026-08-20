@@ -485,7 +485,7 @@ var_samples <- samp_df %>%
   # ungroup() %>%
   # summarise(mean_var_samples = mean(var_samples)) %>%
   pull(var_samples)
-var_observed <- true_df %>%
+var_observed <- mydata %>%
   summarise(var_observed = var(observed)) %>%
   pull(var_observed)
 cat("Mean variance of samples:", var_samples, "\n")
