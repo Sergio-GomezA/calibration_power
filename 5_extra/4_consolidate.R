@@ -14,7 +14,8 @@ elexsim_df <- lapply(
     )
   }
 ) %>%
-  bind_rows()
+  bind_rows() %>%
+  filter(!is.na(var_samples)) # remove cases where no samples were generated
 
 elex1H_files <- list.files(
   file.path("summaries", batch_name),
@@ -30,7 +31,8 @@ elex1H_df <- lapply(
     )
   }
 ) %>%
-  bind_rows()
+  bind_rows() %>%
+  filter(!is.na(variance_samples)) # remove cases where no samples were generated
 
 
 elexsim_df %>%
