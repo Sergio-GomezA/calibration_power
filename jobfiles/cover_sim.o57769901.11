@@ -1,0 +1,211 @@
+Running in cluster mode
+Setting INLA to use 8 cores
+-------------------------------------------------------------------------------------------------
+Running model fitting
+-------------------------------------------------------------------------------------------------
+Preparing data for model fitting
+Loading existing GB daily summary
+Calibration data file already exists for this day. Loading existing data.
+Number of unique locations: 115 
+Number of records in the dataset: 8241 
+Building spatial mesh
+Loading existing mesh
+-------------------------------------------------------------------------------------------------
+Fitting bru lm model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Fitting spatiotemporal model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Fitting LM model
+-------------------------------------------------------------------------------------------------
+Start:  AIC=-34236.47
+norm_potential ~ norm_power_est0
+
+                      Df Sum of Sq    RSS    AIC
++ poly(elevation, 3)   3    7.4792 81.779 -34903
++ poly(ws_h_wmean, 3)  3    4.7313 84.527 -34649
++ poly(dist_coast, 2)  2    3.2335 86.025 -34516
++ tech_typ             1    2.6027 86.655 -34462
+<none>                             89.258 -34236
+
+Step:  AIC=-34903.01
+norm_potential ~ norm_power_est0 + poly(elevation, 3)
+
+                      Df Sum of Sq    RSS    AIC
++ poly(ws_h_wmean, 3)  3    3.1881 78.591 -35203
++ poly(dist_coast, 2)  2    0.5402 81.239 -34950
+<none>                             81.779 -34903
++ tech_typ             1    0.0015 81.777 -34901
+- poly(elevation, 3)   3    7.4792 89.258 -34236
+
+Step:  AIC=-35202.6
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3)
+
+                      Df Sum of Sq    RSS    AIC
++ poly(dist_coast, 2)  2    0.9557 77.635 -35293
+<none>                             78.591 -35203
++ tech_typ             1    0.0018 78.589 -35201
+- poly(ws_h_wmean, 3)  3    3.1881 81.779 -34903
+- poly(elevation, 3)   3    5.9360 84.527 -34649
+
+Step:  AIC=-35292.63
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2)
+
+                      Df Sum of Sq    RSS    AIC
++ tech_typ             1    0.0321 77.603 -35294
+<none>                             77.635 -35293
+- poly(dist_coast, 2)  2    0.9557 78.591 -35203
+- poly(elevation, 3)   3    3.3072 80.942 -34978
+- poly(ws_h_wmean, 3)  3    3.6036 81.239 -34950
+
+Step:  AIC=-35293.81
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2) + tech_typ
+
+                               Df Sum of Sq    RSS    AIC
++ tech_typ:poly(ws_h_wmean, 3)  3    2.1111 75.492 -35500
++ tech_typ:poly(dist_coast, 2)  2    0.4022 77.201 -35330
+<none>                                      77.603 -35294
+- tech_typ                      1    0.0321 77.635 -35293
++ tech_typ:poly(elevation, 3)   1    0.0050 77.598 -35292
++ tech_typ:norm_power_est0      1    0.0000 77.603 -35292
+- poly(dist_coast, 2)           2    0.9860 78.589 -35201
+- poly(elevation, 3)            3    1.6581 79.261 -35137
+- poly(ws_h_wmean, 3)           3    3.6194 81.222 -34949
+
+Step:  AIC=-35499.77
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2) + tech_typ + poly(ws_h_wmean, 3):tech_typ
+
+                               Df Sum of Sq    RSS    AIC
++ tech_typ:norm_power_est0      1   0.57846 74.913 -35557
++ tech_typ:poly(dist_coast, 2)  2   0.47488 75.017 -35544
+<none>                                      75.492 -35500
++ tech_typ:poly(elevation, 3)   1   0.00808 75.484 -35499
+- poly(dist_coast, 2)           2   0.90388 76.396 -35412
+- poly(elevation, 3)            3   1.65653 77.148 -35339
+- poly(ws_h_wmean, 3):tech_typ  3   2.11111 77.603 -35294
+
+Step:  AIC=-35556.88
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2) + tech_typ + poly(ws_h_wmean, 3):tech_typ + 
+    norm_power_est0:tech_typ
+
+                               Df Sum of Sq    RSS    AIC
++ tech_typ:poly(dist_coast, 2)  2   0.52881 74.385 -35607
+<none>                                      74.913 -35557
++ tech_typ:poly(elevation, 3)   1   0.00061 74.913 -35555
+- norm_power_est0:tech_typ      1   0.57846 75.492 -35500
+- poly(dist_coast, 2)           2   1.02648 75.940 -35456
+- poly(elevation, 3)            3   1.42759 76.341 -35418
+- poly(ws_h_wmean, 3):tech_typ  3   2.68955 77.603 -35292
+
+Step:  AIC=-35607.32
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2) + tech_typ + poly(ws_h_wmean, 3):tech_typ + 
+    norm_power_est0:tech_typ + poly(dist_coast, 2):tech_typ
+
+                               Df Sum of Sq    RSS    AIC
++ tech_typ:poly(elevation, 3)   1   0.02625 74.358 -35608
+<none>                                      74.385 -35607
+- poly(dist_coast, 2):tech_typ  2   0.52881 74.913 -35557
+- norm_power_est0:tech_typ      1   0.63239 75.017 -35544
+- poly(elevation, 3)            3   1.01842 75.403 -35509
+- poly(ws_h_wmean, 3):tech_typ  3   2.81094 77.195 -35328
+
+Step:  AIC=-35608.03
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2) + tech_typ + poly(ws_h_wmean, 3):tech_typ + 
+    norm_power_est0:tech_typ + poly(dist_coast, 2):tech_typ + 
+    poly(elevation, 3):tech_typ
+
+                               Df Sum of Sq    RSS    AIC
+<none>                                      74.358 -35608
+- poly(elevation, 3):tech_typ   1   0.02625 74.385 -35607
+- poly(dist_coast, 2):tech_typ  2   0.55445 74.913 -35555
+- norm_power_est0:tech_typ      1   0.65194 75.010 -35543
+- poly(ws_h_wmean, 3):tech_typ  3   2.82950 77.188 -35327
+-------------------------------------------------------------------------------------------------
+Fitting GB aggregated LM
+-------------------------------------------------------------------------------------------------
+Start:  AIC=-585522
+norm_potential ~ norm_power_est0
+
+                      Df Sum of Sq    RSS     AIC
++ poly(ws_h_wmean, 3)  3    249.72 524.03 -631003
++ tech_typ             1    170.07 603.67 -614491
+<none>                             773.74 -585522
+
+Step:  AIC=-631003.2
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3)
+
+                      Df Sum of Sq    RSS     AIC
++ tech_typ             1    172.59 351.44 -677633
+<none>                             524.03 -631003
+- poly(ws_h_wmean, 3)  3    249.72 773.74 -585522
+
+Step:  AIC=-677632.6
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3) + tech_typ
+
+                               Df Sum of Sq    RSS     AIC
++ tech_typ:poly(ws_h_wmean, 3)  3    48.889 302.55 -695111
++ tech_typ:norm_power_est0      1    13.342 338.10 -682148
+<none>                                      351.44 -677633
+- tech_typ                      1   172.585 524.03 -631003
+- poly(ws_h_wmean, 3)           3   252.235 603.67 -614491
+
+Step:  AIC=-695110.7
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3) + tech_typ + 
+    poly(ws_h_wmean, 3):tech_typ
+
+                               Df Sum of Sq    RSS     AIC
++ tech_typ:norm_power_est0      1     0.585 301.97 -695335
+<none>                                      302.55 -695111
+- poly(ws_h_wmean, 3):tech_typ  3    48.889 351.44 -677633
+
+Step:  AIC=-695334.8
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3) + tech_typ + 
+    poly(ws_h_wmean, 3):tech_typ + norm_power_est0:tech_typ
+
+                               Df Sum of Sq    RSS     AIC
+<none>                                      301.97 -695335
+- norm_power_est0:tech_typ      1     0.585 302.55 -695111
+- poly(ws_h_wmean, 3):tech_typ  3    36.133 338.10 -682148
+-------------------------------------------------------------------------------------------------
+Fitting quantile mapping model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Generating summary tables and figures
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Finished model fitting process
+-------------------------------------------------------------------------------------------------
+Time taken for model fitting: 10.19 mins
+-------------------------------------------------------------------------------------------------
+Running spatial aggregation and coverage check for a simulated field
+-------------------------------------------------------------------------------------------------
+Loading existing coordinate list
+Loading existing coordinate list with location names
+Shapiro-Wilk normality test p-value:  0.1917385 
+Residuals could be normally distributed.
+Mean variance of samples: 0.1257048 
+Variance of observed data: 0.1302237 
+-------------------------------------------------------------------------------------------------
+Running spatial aggregation and coverage check for one Elexon time
+-------------------------------------------------------------------------------------------------
+Calibration data file already exists for this day. Loading existing data.
+Number of unique locations: 142 
+Number of records in the dataset: 142 
+-------------------------------------------------------------------------------------------------
+Fitting spatiotemporal model
+-------------------------------------------------------------------------------------------------
+Shapiro-Wilk normality test p-value:  1.974593e-05 
+Residuals are not normally distributed.
+Mean variance of samples: 0.02793938 
+Variance of observed data: 0.02230548 
+Variance of aggregated samples: 0.0001620802 
+Variance of unweighted aggregated samples: 5.784229e-05 
+Total time taken:  12.76  minutes
