@@ -1,0 +1,20 @@
+ =========================================================================================== 
+
+    R 4.5 loaded. Built with with Intel MKL and Java 22 support    
+    Built-in TIDYVERSE and spatial analysis packages: sf, sp 
+      
+  ==============================================================================================
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Error in library(INLA) : there is no package called ‘INLA’
+Execution halted

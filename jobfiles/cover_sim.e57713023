@@ -1,0 +1,197 @@
+ =========================================================================================== 
+
+    R 4.5 loaded. Built with with Intel MKL and Java 22 support    
+    Built-in TIDYVERSE and spatial analysis packages: sf, sp 
+      
+  ==============================================================================================
+Loading required package: parallel
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: Matrix
+Loading required package: fmesher
+Loading required package: nlme
+
+Attaching package: ‘nlme’
+
+The following object is masked from ‘package:dplyr’:
+
+    collapse
+
+This is mgcv 1.9-4. For overview type '?mgcv'.
+Loading required package: sf
+Linking to GEOS 3.13.1, GDAL 3.10.3, PROJ 9.6.0; sf_use_s2() is TRUE
+Loading required package: data.table
+
+Attaching package: ‘data.table’
+
+The following object is masked from ‘package:inlabru’:
+
+    like
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+Loading required package: tidyr
+
+Attaching package: ‘tidyr’
+
+The following objects are masked from ‘package:Matrix’:
+
+    expand, pack, unpack
+
+Loading required package: ggsci
+Loading required package: terra
+terra 1.9.27
+
+Attaching package: ‘terra’
+
+The following object is masked from ‘package:tidyr’:
+
+    extract
+
+The following object is masked from ‘package:data.table’:
+
+    shift
+
+Loading required package: fst
+Loading required package: stringr
+Loading required package: httr
+Loading required package: jsonlite
+Loading required package: arrow
+
+Attaching package: ‘arrow’
+
+The following object is masked from ‘package:terra’:
+
+    buffer
+
+The following object is masked from ‘package:utils’:
+
+    timestamp
+
+Loading required package: geosphere
+inla.mkl: pre-opt.c:662: GMRFLib_preopt_init: Assertion `g->n == gen_len_At' failed.
+inla.mkl: pre-opt.c:662: GMRFLib_preopt_init: Assertion `g->n == gen_len_At' failed.
+Warning in bru_log_warn(paste0("iinla: Problem in inla:\n", result)) :
+  iinla: Problem in inla:
+Error in inla.core.safe(formula = formula, family = family, contrasts = contrasts,  : 
+  The inla-program exited with an error. Unless you interupted it yourself, please rerun with verbose=TRUE and check the output carefully.
+  If this does not help, please contact the developers at <help@r-inla.org>.
+The inla program failed and the maximum number of tries has been reached.
+iinla: Problem in inla:
+1: lapply(1:N, function(i) { if (i %in% round(seq(1, N, length.out = 50))) {  [...]
+2: mutate(., aggr_in_ci = ifelse(observed >= q0.025 & observed <= q0.975, 1, 0))
+3: bind_rows(.)
+4: list2(...)
+5: lapply(1:N, function(i) { if (i %in% round(seq(1, N, length.out = 50))) {  [...]
+6: FUN(X[[i]], ...)
+7: tryCatch(check_agg_cov(n), error = function(e) { n_failed <<- n_failed + 1 [...]
+8: tryCatchList(expr, classes, parentenv, handlers)
+9: tryCatchOne(expr, names, parentenv, handlers[[1L]])
+10: doTryCatch(return(expr), name, parentenv, handler)
+11: check_agg_cov(n)
+12: bru(c [... truncated]
+iinla: Giving up and returning last successfully obtained result for diagnostic purposes.
+Warning in bru_log_warn(paste0("iinla: Problem in inla:\n", result)) :
+  iinla: Problem in inla:
+Error in inla.core.safe(formula = formula, family = family, contrasts = contrasts,  : 
+  The inla-program exited with an error. Unless you interupted it yourself, please rerun with verbose=TRUE and check the output carefully.
+  If this does not help, please contact the developers at <help@r-inla.org>.
+The inla program failed and the maximum number of tries has been reached.
+iinla: Problem in inla:
+1: lapply(1:N, function(i) { if (i %in% round(seq(1, N, length.out = 50))) {  [...]
+2: mutate(., aggr_in_ci = ifelse(observed >= q0.025 & observed <= q0.975, 1, 0))
+3: bind_rows(.)
+4: list2(...)
+5: lapply(1:N, function(i) { if (i %in% round(seq(1, N, length.out = 50))) {  [...]
+6: FUN(X[[i]], ...)
+7: tryCatch(check_agg_cov(n), error = function(e) { n_failed <<- n_failed + 1 [...]
+8: tryCatchList(expr, classes, parentenv, handlers)
+9: tryCatchOne(expr, names, parentenv, handlers[[1L]])
+10: doTryCatch(return(expr), name, parentenv, handler)
+11: check_agg_cov(n)
+12: bru(c [... truncated]
+iinla: Giving up and returning last successfully obtained result for diagnostic purposes.
+Warning in bru_log_warn(paste0("iinla: Problem in inla:\n", result)) :
+  iinla: Problem in inla:
+Error in inla.core.safe(formula = formula, family = family, contrasts = contrasts,  : 
+  The inla-program exited with an error. Unless you interupted it yourself, please rerun with verbose=TRUE and check the output carefully.
+  If this does not help, please contact the developers at <help@r-inla.org>.
+The inla program failed and the maximum number of tries has been reached.
+iinla: Problem in inla:
+1: lapply(1:N, function(i) { if (i %in% round(seq(1, N, length.out = 50))) {  [...]
+2: mutate(., aggr_in_ci = ifelse(observed >= q0.025 & observed <= q0.975, 1, 0))
+3: bind_rows(.)
+4: list2(...)
+5: lapply(1:N, function(i) { if (i %in% round(seq(1, N, length.out = 50))) {  [...]
+6: FUN(X[[i]], ...)
+7: tryCatch(check_agg_cov(n), error = function(e) { n_failed <<- n_failed + 1 [...]
+8: tryCatchList(expr, classes, parentenv, handlers)
+9: tryCatchOne(expr, names, parentenv, handlers[[1L]])
+10: doTryCatch(return(expr), name, parentenv, handler)
+11: check_agg_cov(n)
+12: bru(c [... truncated]
+iinla: Giving up and returning last successfully obtained result for diagnostic purposes.
+Warning in bru_log_warn(paste0("iinla: Problem in inla:\n", result)) :
+  iinla: Problem in inla:
+Error in inla.core.safe(formula = formula, family = family, contrasts = contrasts,  : 
+  The inla-program exited with an error. Unless you interupted it yourself, please rerun with verbose=TRUE and check the output carefully.
+  If this does not help, please contact the developers at <help@r-inla.org>.
+The inla program failed and the maximum number of tries has been reached.
+iinla: Problem in inla:
+1: lapply(1:N, function(i) { if (i %in% round(seq(1, N, length.out = 50))) {  [...]
+2: mutate(., aggr_in_ci = ifelse(observed >= q0.025 & observed <= q0.975, 1, 0))
+3: bind_rows(.)
+4: list2(...)
+5: lapply(1:N, function(i) { if (i %in% round(seq(1, N, length.out = 50))) {  [...]
+6: FUN(X[[i]], ...)
+7: tryCatch(check_agg_cov(n), error = function(e) { n_failed <<- n_failed + 1 [...]
+8: tryCatchList(expr, classes, parentenv, handlers)
+9: tryCatchOne(expr, names, parentenv, handlers[[1L]])
+10: doTryCatch(return(expr), name, parentenv, handler)
+11: check_agg_cov(n)
+12: bru(c [... truncated]
+iinla: Giving up and returning last successfully obtained result for diagnostic purposes.
+Warning in bru_log_warn(paste0("iinla: Problem in inla:\n", result)) :
+  iinla: Problem in inla:
+Error in inla.core.safe(formula = formula, family = family, contrasts = contrasts,  : 
+  The inla-program exited with an error. Unless you interupted it yourself, please rerun with verbose=TRUE and check the output carefully.
+  If this does not help, please contact the developers at <help@r-inla.org>.
+The inla program failed and the maximum number of tries has been reached.
+iinla: Problem in inla:
+1: lapply(1:N, function(i) { if (i %in% round(seq(1, N, length.out = 50))) {  [...]
+2: mutate(., aggr_in_ci = ifelse(observed >= q0.025 & observed <= q0.975, 1, 0))
+3: bind_rows(.)
+4: list2(...)
+5: lapply(1:N, function(i) { if (i %in% round(seq(1, N, length.out = 50))) {  [...]
+6: FUN(X[[i]], ...)
+7: tryCatch(check_agg_cov(n), error = function(e) { n_failed <<- n_failed + 1 [...]
+8: tryCatchList(expr, classes, parentenv, handlers)
+9: tryCatchOne(expr, names, parentenv, handlers[[1L]])
+10: doTryCatch(return(expr), name, parentenv, handler)
+11: check_agg_cov(n)
+12: bru(c [... truncated]
+iinla: Giving up and returning last successfully obtained result for diagnostic purposes.
+Warning message:
+There was 1 warning in `summarise()`.
+ℹ In argument: `across(matches("cov_"), mean, na.rm = TRUE)`.
+Caused by warning:
+! The `...` argument of `across()` is deprecated as of dplyr 1.1.0.
+Supply arguments directly to `.fns` through an anonymous function instead.
+
+  # Previously
+  across(a:b, mean, na.rm = TRUE)
+
+  # Now
+  across(a:b, \(x) mean(x, na.rm = TRUE)) 

@@ -1,0 +1,18 @@
+Running in cluster mode
+Setting INLA to use 24 cores
+-------------------------------------------------------------------------------------------------
+Running model fitting
+-------------------------------------------------------------------------------------------------
+Preparing data for model fitting
+GB daily summary file not found, creating new summary
+No existing calibration data file found for this day. Preparing new data.
+Loading existing coordinate list
+Converting coordinates to km
+Number of unique locations: 116 
+Number of records in the dataset: 27619 
+Building spatial mesh
+Mesh file not found, building new mesh
+Assessing spatial mesh
+-------------------------------------------------------------------------------------------------
+Fitting bru lm model
+-------------------------------------------------------------------------------------------------

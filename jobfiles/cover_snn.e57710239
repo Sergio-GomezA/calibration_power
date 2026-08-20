@@ -1,0 +1,83 @@
+ =========================================================================================== 
+
+    R 4.5 loaded. Built with with Intel MKL and Java 22 support    
+    Built-in TIDYVERSE and spatial analysis packages: sf, sp 
+      
+  ==============================================================================================
+Loading required package: parallel
+Loading required package: dplyr
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+Loading required package: Matrix
+Loading required package: fmesher
+Loading required package: nlme
+
+Attaching package: ‘nlme’
+
+The following object is masked from ‘package:dplyr’:
+
+    collapse
+
+This is mgcv 1.9-4. For overview type '?mgcv'.
+Loading required package: sf
+Linking to GEOS 3.13.1, GDAL 3.10.3, PROJ 9.6.0; sf_use_s2() is TRUE
+Loading required package: data.table
+
+Attaching package: ‘data.table’
+
+The following object is masked from ‘package:inlabru’:
+
+    like
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+Loading required package: tidyr
+
+Attaching package: ‘tidyr’
+
+The following objects are masked from ‘package:Matrix’:
+
+    expand, pack, unpack
+
+Loading required package: ggsci
+Loading required package: terra
+terra 1.9.27
+
+Attaching package: ‘terra’
+
+The following object is masked from ‘package:tidyr’:
+
+    extract
+
+The following object is masked from ‘package:data.table’:
+
+    shift
+
+Loading required package: fst
+Loading required package: stringr
+Loading required package: httr
+Loading required package: jsonlite
+Loading required package: arrow
+
+Attaching package: ‘arrow’
+
+The following object is masked from ‘package:terra’:
+
+    buffer
+
+The following object is masked from ‘package:utils’:
+
+    timestamp
+
+Loading required package: geosphere

@@ -1,0 +1,303 @@
+Running in cluster mode
+Setting INLA to use 24 cores
+-------------------------------------------------------------------------------------------------
+Running model fitting
+-------------------------------------------------------------------------------------------------
+Preparing data for model fitting
+GB daily summary file not found, creating new summary
+No existing calibration data file found for this day. Preparing new data.
+Loading existing coordinate list
+Converting coordinates to km
+Number of unique locations: 116 
+Number of records in the dataset: 27619 
+Building spatial mesh
+Mesh file not found, building new mesh
+Assessing spatial mesh
+-------------------------------------------------------------------------------------------------
+Fitting bru lm model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Fitting bru lmbeta model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Fitting bru lm t model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Fitting ar1 model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Fitting ar2 model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Fitting LM+hour model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Fitting spatiotemporal model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Fitting LM model
+-------------------------------------------------------------------------------------------------
+Start:  AIC=-93819.93
+norm_potential ~ norm_power_est0
+
+                      Df Sum of Sq    RSS    AIC
++ poly(elevation, 3)   3    32.786 502.39 -95365
++ poly(ws_h_wmean, 3)  3    25.162 510.01 -94995
++ poly(dist_coast, 2)  2    21.455 513.72 -94820
++ tech_typ             1     7.436 527.74 -94161
+<none>                             535.17 -93820
+
+Step:  AIC=-95364.62
+norm_potential ~ norm_power_est0 + poly(elevation, 3)
+
+                      Df Sum of Sq    RSS    AIC
++ poly(ws_h_wmean, 3)  3    29.305 473.08 -96833
++ poly(dist_coast, 2)  2     5.098 497.29 -95611
++ tech_typ             1     0.306 502.08 -95378
+<none>                             502.39 -95365
+- poly(elevation, 3)   3    32.786 535.17 -93820
+
+Step:  AIC=-96832.86
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3)
+
+                      Df Sum of Sq    RSS    AIC
++ poly(dist_coast, 2)  2     7.185 465.90 -97204
++ tech_typ             1     0.270 472.81 -96845
+<none>                             473.08 -96833
+- poly(ws_h_wmean, 3)  3    29.305 502.39 -95365
+- poly(elevation, 3)   3    36.929 510.01 -94995
+
+Step:  AIC=-97204.24
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2)
+
+                      Df Sum of Sq    RSS    AIC
++ tech_typ             1    1.3741 464.52 -97275
+<none>                             465.90 -97204
+- poly(dist_coast, 2)  2    7.1847 473.08 -96833
+- poly(elevation, 3)   3   17.7471 483.65 -96293
+- poly(ws_h_wmean, 3)  3   31.3917 497.29 -95611
+
+Step:  AIC=-97274.69
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2) + tech_typ
+
+                               Df Sum of Sq    RSS    AIC
++ tech_typ:poly(dist_coast, 2)  2    5.9519 458.57 -97587
++ tech_typ:poly(ws_h_wmean, 3)  3    4.9398 459.58 -97531
++ tech_typ:norm_power_est0      1    0.2389 464.29 -97285
++ tech_typ:poly(elevation, 3)   1    0.0417 464.48 -97275
+<none>                                      464.52 -97275
+- tech_typ                      1    1.3741 465.90 -97204
+- poly(dist_coast, 2)           2    8.2886 472.81 -96845
+- poly(elevation, 3)            3    9.7476 474.27 -96771
+- poly(ws_h_wmean, 3)           3   31.5613 496.09 -95668
+
+Step:  AIC=-97587
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2) + tech_typ + poly(dist_coast, 2):tech_typ
+
+                               Df Sum of Sq    RSS    AIC
++ tech_typ:poly(ws_h_wmean, 3)  3     4.450 454.12 -97820
++ tech_typ:norm_power_est0      1     0.166 458.41 -97594
++ tech_typ:poly(elevation, 3)   1     0.166 458.41 -97594
+<none>                                      458.57 -97587
+- poly(dist_coast, 2):tech_typ  2     5.952 464.52 -97275
+- poly(elevation, 3)            3     6.420 464.99 -97252
+- poly(ws_h_wmean, 3)           3    34.106 492.68 -95833
+
+Step:  AIC=-97820.22
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2) + tech_typ + poly(dist_coast, 2):tech_typ + 
+    poly(ws_h_wmean, 3):tech_typ
+
+                               Df Sum of Sq    RSS    AIC
++ tech_typ:poly(elevation, 3)   1    0.1684 453.95 -97827
++ tech_typ:norm_power_est0      1    0.0714 454.05 -97822
+<none>                                      454.12 -97820
+- poly(ws_h_wmean, 3):tech_typ  3    4.4505 458.57 -97587
+- poly(dist_coast, 2):tech_typ  2    5.4625 459.58 -97531
+- poly(elevation, 3)            3    6.7879 460.91 -97462
+
+Step:  AIC=-97827.32
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2) + tech_typ + poly(dist_coast, 2):tech_typ + 
+    poly(ws_h_wmean, 3):tech_typ + poly(elevation, 3):tech_typ
+
+                               Df Sum of Sq    RSS    AIC
++ tech_typ:norm_power_est0      1    0.0753 453.88 -97829
+<none>                                      453.95 -97827
+- poly(elevation, 3):tech_typ   1    0.1684 454.12 -97820
+- poly(ws_h_wmean, 3):tech_typ  3    4.4528 458.41 -97594
+- poly(dist_coast, 2):tech_typ  2    5.6009 459.55 -97531
+
+Step:  AIC=-97829.39
+norm_potential ~ norm_power_est0 + poly(elevation, 3) + poly(ws_h_wmean, 
+    3) + poly(dist_coast, 2) + tech_typ + poly(dist_coast, 2):tech_typ + 
+    poly(ws_h_wmean, 3):tech_typ + poly(elevation, 3):tech_typ + 
+    norm_power_est0:tech_typ
+
+                               Df Sum of Sq    RSS    AIC
+<none>                                      453.88 -97829
+- norm_power_est0:tech_typ      1    0.0753 453.95 -97827
+- poly(elevation, 3):tech_typ   1    0.1723 454.05 -97822
+- poly(ws_h_wmean, 3):tech_typ  3    4.3710 458.25 -97600
+- poly(dist_coast, 2):tech_typ  2    5.6579 459.54 -97530
+-------------------------------------------------------------------------------------------------
+Fitting GB aggregated LM
+-------------------------------------------------------------------------------------------------
+Start:  AIC=-585522
+norm_potential ~ norm_power_est0
+
+                      Df Sum of Sq    RSS     AIC
++ poly(ws_h_wmean, 3)  3    249.72 524.03 -631003
++ tech_typ             1    170.07 603.67 -614491
+<none>                             773.74 -585522
+
+Step:  AIC=-631003.2
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3)
+
+                      Df Sum of Sq    RSS     AIC
++ tech_typ             1    172.59 351.44 -677633
+<none>                             524.03 -631003
+- poly(ws_h_wmean, 3)  3    249.72 773.74 -585522
+
+Step:  AIC=-677632.6
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3) + tech_typ
+
+                               Df Sum of Sq    RSS     AIC
++ tech_typ:poly(ws_h_wmean, 3)  3    48.889 302.55 -695111
++ tech_typ:norm_power_est0      1    13.342 338.10 -682148
+<none>                                      351.44 -677633
+- tech_typ                      1   172.585 524.03 -631003
+- poly(ws_h_wmean, 3)           3   252.235 603.67 -614491
+
+Step:  AIC=-695110.7
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3) + tech_typ + 
+    poly(ws_h_wmean, 3):tech_typ
+
+                               Df Sum of Sq    RSS     AIC
++ tech_typ:norm_power_est0      1     0.585 301.97 -695335
+<none>                                      302.55 -695111
+- poly(ws_h_wmean, 3):tech_typ  3    48.889 351.44 -677633
+
+Step:  AIC=-695334.8
+norm_potential ~ norm_power_est0 + poly(ws_h_wmean, 3) + tech_typ + 
+    poly(ws_h_wmean, 3):tech_typ + norm_power_est0:tech_typ
+
+                               Df Sum of Sq    RSS     AIC
+<none>                                      301.97 -695335
+- norm_power_est0:tech_typ      1     0.585 302.55 -695111
+- poly(ws_h_wmean, 3):tech_typ  3    36.133 338.10 -682148
+-------------------------------------------------------------------------------------------------
+Fitting quantile mapping model
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Generating summary tables and figures
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Finished model fitting process
+-------------------------------------------------------------------------------------------------
+Time taken for model fitting: 13.02 mins
+-------------------------------------------------------------------------------------------------
+Running validation for out-of-sample temporal prediction
+-------------------------------------------------------------------------------------------------
+Running in cluster mode
+-------------------------------------------------------------------------------------------------
+ Running validation for day: 2025-07-05  (tag: 250705 )
+override_objects: TRUE 
+rerun_samples: TRUE 
+-------------------------------------------------------------------------------------------------
+Traning sample length for assessment and figures: 1 day before 2025-07-05 
+Prediction next 72 hours after 2025-07-05 
+-------------------------------------------------------------------------------------------------
+Warning: The following models are missing from the model path:
+ st0_m1, st0_m0 
+GB daily summary file found, but override_objects is TRUE. Recreating summary
+Loading existing coordinate list
+Override_objects is TRUE. Preparing new calibration data for this day.
+Converting coordinates to km
+Number of unique locations: 115 
+Number of records in the dataset: 11010 
+-------------------------------------------------------------------------------------------------
+Prediction band summary file found, but rerun_samples is TRUE. Recreating summary
+-------------------------------------------------------------------------------------------------
+Processing model: ST model coarser 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using Precision_for_the_Gaussian_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Processing model: LM+hour model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using Precision_for_the_Gaussian_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Processing model: LM beta model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using precision_parameter_for_the_beta_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Processing model: AR1 model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using Precision_for_the_Gaussian_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Processing model: LM t model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using precision_for_the_student_t_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Processing model: LM bru model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using Precision_for_the_Gaussian_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Finished whole process
+-------------------------------------------------------------------------------------------------
+Time taken for time-based out-of-sample validation: 41.77 mins
+-------------------------------------------------------------------------------------------------
+Running validation for out-of-sample spatial prediction
+-------------------------------------------------------------------------------------------------
+Running in cluster mode
+-------------------------------------------------------------------------------------------------
+ Running validation for day: 2025-07-05  (tag: 250705 )
+override_objects: TRUE 
+rerun_samples: TRUE 
+-------------------------------------------------------------------------------------------------
+Traning sample length for assessment and figures: 10 days before 2025-07-05 
+Prediction next 72 hours after 2025-07-05 
+-------------------------------------------------------------------------------------------------
+Warning: The following models are missing from the model path:
+ st0_m1, st0_m0 
+GB daily summary file found, but override_objects is TRUE. Recreating summary
+Loading existing coordinate list
+Override_objects is TRUE. Preparing new calibration data for this day.
+Converting coordinates to km
+Number of unique locations: 29 
+Number of records in the dataset: 8927 
+-------------------------------------------------------------------------------------------------
+Prediction band summary file found, but rerun_samples is TRUE. Recreating summary
+-------------------------------------------------------------------------------------------------
+Processing model: ST model coarser 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using Precision_for_the_Gaussian_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Processing model: LM+hour model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using Precision_for_the_Gaussian_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Processing model: LM beta model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using precision_parameter_for_the_beta_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Processing model: AR1 model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using Precision_for_the_Gaussian_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Processing model: LM t model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using precision_for_the_student_t_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Processing model: LM bru model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using Precision_for_the_Gaussian_observations for sampling.
+-------------------------------------------------------------------------------------------------
+Finished whole process
+-------------------------------------------------------------------------------------------------
+Time taken for spatial out-of-sample validation: 34.20 mins
+Total time taken:  89.3  minutes

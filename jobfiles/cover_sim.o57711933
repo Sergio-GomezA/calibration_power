@@ -1,0 +1,17 @@
+Running in cluster mode
+Setting INLA to use 8 cores
+Progress: ---------
+ *** inla.core.safe:  The inla program failed, but will rerun in case better initial values may help. try=1/1 
+-
+ *** inla.core.safe:  The inla program failed, but will rerun in case better initial values may help. try=1/1 
+---
+ *** inla.core.safe:  The inla program failed, but will rerun in case better initial values may help. try=1/1 
+----------
+ *** inla.core.safe:  The inla program failed, but will rerun in case better initial values may help. try=1/1 
+-----------
+ *** inla.core.safe:  The inla program failed, but will rerun in case better initial values may help. try=1/1 
+---------------- done (5 failed)
+  cov_nonoise cov_nonoise_is cov_nonoise_oos cov_noise cov_noise_is
+1   0.7942359      0.8134359       0.7174359 0.9835282    0.9934103
+  cov_noise_oos cov_aggr
+1         0.944        1

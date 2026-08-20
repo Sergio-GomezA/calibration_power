@@ -1,0 +1,5 @@
+Running in cluster mode
+Setting INLA to use 4 cores
+Progress: -------------------------------------------------- done (0 failed)
+  cov_loc cov_aggr
+1  0.9118        1
