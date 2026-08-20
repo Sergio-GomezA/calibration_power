@@ -478,6 +478,19 @@ samp_df <- lapply(
 ) %>%
   bind_rows()
 
+# variance of samples vs variance of observations check
+var_samples <- samp_df %>%
+  # group_by(geometry) %>%
+  summarise(var_samples = var(fit)) %>%
+  # ungroup() %>%
+  # summarise(mean_var_samples = mean(var_samples)) %>%
+  pull(var_samples)
+var_observed <- true_df %>%
+  summarise(var_observed = var(observed)) %>%
+  pull(var_observed)
+cat("Mean variance of samples:", var_samples, "\n")
+cat("Variance of observed data:", var_observed, "\n")
+
 mydata_2 <- samp_df %>%
   group_by(geometry) %>%
   summarise(
@@ -626,12 +639,13 @@ aggr_samples <- lapply(
     date = d0,
     q0.025 = quantile(fit, probs = 0.025),
     median = quantile(fit, probs = 0.5),
-    q0.975 = quantile(fit, probs = 0.975)
+    q0.975 = quantile(fit, probs = 0.975),
+    fit = mean(fit)
   ) %>%
   bind_cols(
     data.frame(
       observed = mean(mydata_2$observed),
-      fit = mean(mydata_2$fit),
+      # fit = mean(mydata_2$fit),
       cov_nonoise = coverage,
       cov_nonoise_is = coverage_is,
       cov_nonoise_oos = coverage_oos,
@@ -641,6 +655,8 @@ aggr_samples <- lapply(
     )
   ) %>%
   mutate(
+    variance_samples = var_samples,
+    variance_observed = var_observed,
     aggr_in_ci = ifelse(observed >= q0.025 & observed <= q0.975, 1, 0),
     shapiro_p = norm_test$p.value,
     normality = ifelse(
