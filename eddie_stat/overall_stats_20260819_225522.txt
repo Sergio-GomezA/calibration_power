@@ -1,0 +1,10 @@
+CLUSTER QUEUE                   CQLOAD   USED    RES  AVAIL  TOTAL aoACDS  cdsuE  
+--------------------------------------------------------------------------------
+eddie                             0.55   9220      0   3539  13816      0   1064 
+gpu                               0.14    322      0   1000   1408      0     96 
+gpu_new                           -NA-      0      0      0      0      0      0 
+igmm_long                         0.06    349      0   2979   3328      0      0 
+roslin                            -NA-      0      0      0      0      0      0 
+staging                           0.03      1      0     79     80      0      0 
+test                              0.00      0      0    256    256      0      0 
+test_new                          0.00      0      0    256    256      0      0 
