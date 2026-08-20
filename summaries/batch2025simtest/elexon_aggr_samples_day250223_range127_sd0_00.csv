@@ -1,0 +1,2 @@
+"date","q0.025","median","q0.975","fit","observed","cov_nonoise","cov_nonoise_is","cov_nonoise_oos","cov_noise","cov_noise_is","cov_noise_oos","variance_samples","variance_observed","aggr_in_ci","shapiro_p","normality"
+2025-02-23,0.0213650078347647,0.0325623940152947,0.0443921820370535,0.0325017912241364,0.0327678113217334,0.850340136054422,0.863247863247863,0.8,0.993197278911565,1,0.966666666666667,0.0275541273706294,0.0268901105702012,1,0.5717738020898,"maybe normal"
