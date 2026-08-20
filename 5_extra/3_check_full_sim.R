@@ -604,12 +604,12 @@ aggr_samples_fsim <- lapply(
         by = c("coord_id", "time_id")
       ) %>%
       summarise(
+        fit_unweighted = mean(fit),
+        observed_unweighted = mean(observed),
+        norm_power_est0_unweighted = mean(norm_power_est0),
         fit = sum(fit * capacity) / sum(capacity),
         observed = sum(observed * capacity) / sum(capacity),
         norm_power_est0 = sum(norm_power_est0 * capacity) / sum(capacity),
-        fit_unweighted = mean(fit),
-        observed_unweighted = mean(observed),
-        norm_power_est0_unweighted = mean(norm_power_est0)
       ) %>%
       mutate(sim = s)
   }
@@ -619,18 +619,18 @@ aggr_samples_fsim <- lapply(
     date = d0,
     variance = var(fit),
     variance_unweighted = var(fit_unweighted),
-    fit = mean(fit),
-    observed = mean(observed),
-    norm_power_est0 = mean(norm_power_est0),
     q0.025 = quantile(fit, probs = 0.025),
     median = quantile(fit, probs = 0.5),
     q0.975 = quantile(fit, probs = 0.975),
-    fit_unweighted = mean(fit_unweighted),
-    observed_unweighted = mean(observed_unweighted),
-    norm_power_est0_unweighted = mean(norm_power_est0_unweighted),
+    fit = mean(fit),
+    observed = mean(observed),
+    norm_power_est0 = mean(norm_power_est0),
     q0.025_unweighted = quantile(fit_unweighted, probs = 0.025),
     median_unweighted = quantile(fit_unweighted, probs = 0.5),
-    q0.975_unweighted = quantile(fit_unweighted, probs = 0.975)
+    q0.975_unweighted = quantile(fit_unweighted, probs = 0.975),
+    fit_unweighted = mean(fit_unweighted),
+    observed_unweighted = mean(observed_unweighted),
+    norm_power_est0_unweighted = mean(norm_power_est0_unweighted)
   ) %>%
   bind_cols(
     data.frame(
@@ -645,6 +645,8 @@ aggr_samples_fsim <- lapply(
     )
   ) %>%
   mutate(
+    variance_samples = var_samples,
+    variance_observed = var_observed,
     aggr_in_ci = ifelse(observed >= q0.025 & observed <= q0.975, 1, 0),
     aggr_in_ci_unweighted = ifelse(
       observed_unweighted >= q0.025_unweighted &
