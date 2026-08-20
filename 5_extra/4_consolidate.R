@@ -33,6 +33,14 @@ elex1H_df <- lapply(
   bind_rows()
 
 
+elexsim_df %>%
+  summarise(
+    aggr_in_ci = mean(aggr_in_ci)
+  )
+elex1H_df %>%
+  summarise(
+    aggr_in_ci = mean(aggr_in_ci)
+  )
 # plot figures ####
 
 ## scatter plot of posterior mean vs observed data with error bars
@@ -49,7 +57,7 @@ elexsim_df %>%
     # width = 0.1,
     alpha = 0.5
   ) +
-  geom_point(aes(fit, observed, color = aggr_in_ci)) +
+  geom_point(aes(fit, observed, color = factor(aggr_in_ci))) +
   labs(x = "Posterior mean", y = "Simulated from model fit")
 
 ### elex1H model
@@ -63,7 +71,7 @@ elex1H_df %>%
     # width = 0.1,
     alpha = 0.5
   ) +
-  geom_point(aes(fit, observed, color = aggr_in_ci)) +
+  geom_point(aes(fit, observed, color = factor(aggr_in_ci))) +
   labs(x = "Posterior mean", y = "Observed data")
 
 
