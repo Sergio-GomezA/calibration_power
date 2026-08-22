@@ -292,7 +292,8 @@ if (!override_objects && length(files_found) > 0) {
     st_set_geometry(wf_df_frag, .)
 
   wf_df_fname <- sprintf(
-    "data/calibration_df_%s_%s.%s",
+    "data/%s/calibration_df_%s_%s.%s",
+    batch_name,
     "base",
     d0_tag,
     extension
@@ -1054,7 +1055,8 @@ model_df0 <- wf_df_frag %>%
   )
 
 model_df_fname <- sprintf(
-  "data/calibration_df_%s_%s.%s",
+  "data/%s/calibration_df_%s_%s.%s",
+  batch_name,
   mesh_label,
   d0_tag,
   extension
