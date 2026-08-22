@@ -59,8 +59,17 @@ elexsim_df %>%
     # width = 0.1,
     alpha = 0.5
   ) +
-  geom_point(aes(fit, observed, color = factor(aggr_in_ci))) +
-  labs(x = "Posterior mean", y = "Simulated from model fit")
+  geom_point(aes(fit, observed, color = (as.logical(aggr_in_ci)))) +
+  labs(x = "Posterior mean", y = "Simulated from model fit", col = "In CI") +
+  theme(legend.position = "bottom") +
+  scale_color_manual(
+    values = c("TRUE" = blues9[7], "FALSE" = "darkred"),
+  )
+ggsave(
+  file.path("fig", batch_name, sprintf("%s_aggr_cov_scatter.pdf", prefix)),
+  width = 6,
+  height = 6
+)
 
 ### elex1H model
 
@@ -73,48 +82,89 @@ elex1H_df %>%
     # width = 0.1,
     alpha = 0.5
   ) +
-  geom_point(aes(fit, observed, color = factor(aggr_in_ci))) +
-  labs(x = "Posterior mean", y = "Observed data")
-
+  geom_point(aes(fit, observed, color = as.logical(aggr_in_ci))) +
+  labs(x = "Posterior mean", y = "Observed data", col = "In CI") +
+  scale_color_manual(
+    values = c("TRUE" = blues9[7], "FALSE" = "darkred"),
+  ) +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1))
+ggsave(
+  file.path("fig", batch_name, sprintf("%s_aggr_cov_scatter.pdf", prefixfull)),
+  width = 6,
+  height = 6
+)
 
 ## coverage simulations vs real data
 
+# elexsim_df %>%
+#   pivot_longer(
+#     cols = c(cov_nonoise_oos, cov_noise_oos),
+#     names_to = "coverage_type",
+#     values_to = "coverage"
+#   ) %>%
+#   mutate(
+#     coverage_type = factor(
+#       coverage_type,
+#       levels = c("cov_nonoise_oos", "cov_noise_oos"),
+#       labels = c("latent", "latent + obs noise")
+#     )
+#   ) %>%
+#   ggplot() +
+#   geom_boxplot(aes(x = coverage_type, y = coverage)) +
+#   geom_hline(yintercept = 0.95, linetype = "dashed", color = "red") +
+#   labs(x = "Coverage type", y = "Coverage probability")
+
+# elex1H_df %>%
+#   pivot_longer(
+#     cols = c(cov_nonoise_oos, cov_noise_oos),
+#     names_to = "coverage_type",
+#     values_to = "coverage"
+#   ) %>%
+#   mutate(
+#     coverage_type = factor(
+#       coverage_type,
+#       levels = c("cov_nonoise_oos", "cov_noise_oos"),
+#       labels = c("latent", "latent + obs noise")
+#     )
+#   ) %>%
+#   ggplot() +
+#   geom_boxplot(aes(x = coverage_type, y = coverage)) +
+#   geom_hline(yintercept = 0.95, linetype = "dashed", color = "red") +
+#   labs(x = "Coverage type", y = "Coverage probability")
+
 elexsim_df %>%
-  pivot_longer(
-    cols = c(cov_nonoise_oos, cov_noise_oos),
-    names_to = "coverage_type",
-    values_to = "coverage"
+  dplyr::select(aggr_in_ci, cov_noise_oos) %>%
+  mutate(
+    type = "simulation"
+  ) %>%
+  bind_rows(
+    elex1H_df %>%
+      dplyr::select(aggr_in_ci, cov_noise_oos) %>%
+      mutate(
+        type = "real data"
+      )
   ) %>%
   mutate(
-    coverage_type = factor(
-      coverage_type,
-      levels = c("cov_nonoise_oos", "cov_noise_oos"),
-      labels = c("latent", "latent + obs noise")
-    )
+    aggr_in_ci = as.logical(aggr_in_ci)
   ) %>%
   ggplot() +
-  geom_boxplot(aes(x = coverage_type, y = coverage)) +
+  geom_boxplot(aes(x = aggr_in_ci, y = cov_noise_oos, fill = type)) +
   geom_hline(yintercept = 0.95, linetype = "dashed", color = "red") +
-  labs(x = "Coverage type", y = "Coverage probability")
+  labs(
+    x = "Aggregated in CI",
+    y = "Coverage probability (WF level)",
+    fill = "Data type"
+  ) +
+  scale_fill_manual(
+    values = c("simulation" = blues9[7], "real data" = blues9[5])
+  ) +
+  theme(legend.position = "bottom")
 
-
-elex1H_df %>%
-  pivot_longer(
-    cols = c(cov_nonoise_oos, cov_noise_oos),
-    names_to = "coverage_type",
-    values_to = "coverage"
-  ) %>%
-  mutate(
-    coverage_type = factor(
-      coverage_type,
-      levels = c("cov_nonoise_oos", "cov_noise_oos"),
-      labels = c("latent", "latent + obs noise")
-    )
-  ) %>%
-  ggplot() +
-  geom_boxplot(aes(x = coverage_type, y = coverage)) +
-  geom_hline(yintercept = 0.95, linetype = "dashed", color = "red") +
-  labs(x = "Coverage type", y = "Coverage probability")
+ggsave(
+  file.path("fig", batch_name, sprintf("%s_WF_coverage_boxplot.pdf", prefix)),
+  width = 6,
+  height = 6
+)
 
 
 # coverage by normality test
@@ -158,3 +208,39 @@ elex1H_df %>%
   geom_hline(yintercept = 0.95, linetype = "dashed", color = "red") +
   facet_wrap(~normality) +
   labs(x = "Coverage type", y = "Coverage probability")
+
+
+## variance of samples vs variance of observed data
+
+elexsim_df %>%
+  ggplot(aes(x = variance_samples, y = variance_observed)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  geom_point(col = blues9[7]) +
+  labs(x = "Variance of samples", y = "Variance of observed data")
+
+elex1H_df %>%
+  ggplot(aes(x = variance_samples, y = variance_observed)) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  geom_point(
+    aes(col = as.logical(aggr_in_ci)),
+    # col = blues9[7]
+    alpha = 0.5
+  ) +
+  labs(
+    x = "Variance of samples",
+    y = "Variance of observed data",
+    col = "Aggregated in CI"
+  ) +
+  theme(legend.position = "bottom") +
+  scale_color_manual(
+    values = c("TRUE" = blues9[7], "FALSE" = "darkred"),
+  )
+ggsave(
+  file.path(
+    "fig",
+    batch_name,
+    sprintf("%s_WF_variance_scatter.pdf", prefixfull)
+  ),
+  width = 6,
+  height = 6
+)
