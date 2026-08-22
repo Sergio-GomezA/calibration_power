@@ -104,7 +104,9 @@ if (!dir.exists(file.path("fig", batch_name))) {
 if (!dir.exists(file.path("summaries", batch_name))) {
   dir.create(file.path("summaries", batch_name), recursive = TRUE)
 }
-
+if (!dir.exists(file.path("data", batch_name))) {
+  dir.create(file.path("data", batch_name), recursive = TRUE)
+}
 
 require(tidyverse)
 require(sf)
