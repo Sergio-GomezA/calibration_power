@@ -6,6 +6,7 @@ cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
 
+start_time <- Sys.time()
 
 # model fit only one hour
 
@@ -485,4 +486,12 @@ cat(
   "Variance of unweighted aggregated samples:",
   aggr_samples_fsim$variance_unweighted,
   "\n"
+)
+
+
+end_time <- Sys.time()
+cat(
+  "Time taken to check aggregation coverage for real data: ",
+  round(difftime(end_time, start_time, units = "mins"), 2),
+  " minutes\n"
 )

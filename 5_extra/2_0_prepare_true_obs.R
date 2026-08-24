@@ -6,6 +6,8 @@ cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
 
+start_time <- Sys.time()
+
 # true data frame
 prefixfull <- "elex1H"
 # time_sel <- wf_df_frag$time %>% max() + hours(1)
@@ -205,3 +207,11 @@ if (!override_objects && length(files_found) > 0) {
 cat("Number of unique locations:", nrow(true_df %>% distinct(x, y)), "\n")
 n <- nrow(true_df)
 cat("Number of records in the dataset:", n, "\n")
+
+
+end_time <- Sys.time()
+cat(
+  "Time taken to prepare true observations: ",
+  round(difftime(end_time, start_time, units = "mins"), 2),
+  " minutes\n"
+)

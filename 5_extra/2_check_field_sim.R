@@ -6,6 +6,8 @@ cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
 
+start_time <- Sys.time()
+
 prefix <- "elexon"
 set.seed(2026)
 n <- nrow(true_df)
@@ -832,4 +834,12 @@ write.csv(
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
   row.names = FALSE
+)
+
+
+end_time <- Sys.time()
+cat(
+  "Time taken to check aggregation coverage of simulations: ",
+  round(difftime(end_time, start_time, units = "mins"), 2),
+  " minutes\n"
 )
