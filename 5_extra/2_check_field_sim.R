@@ -514,11 +514,11 @@ ggsave(
   height = 6
 )
 
-csc <- colsc(
-  pred[["median"]],
-  pred[["q0.025"]],
-  pred[["q0.975"]]
-) ## Common colour scale from SpatialPixelsDataFrame
+# csc <- colsc(
+#   pred[["median"]],
+#   pred[["q0.025"]],
+#   pred[["q0.975"]]
+# ) ## Common colour scale from SpatialPixelsDataFrame
 
 # calculate 95% CI coverage ####
 
@@ -625,6 +625,8 @@ samp_df <- lapply(
   function(s) {
     data.frame(
       geometry = samp_loc[[s]]$geometry,
+      coord_id = samp_loc[[s]]$coord_id,
+      time_id = samp_loc[[s]]$time_id,
       fit0 = samp_loc[[s]]$lin_pred,
       fit = samp_loc[[s]]$lin_pred_noise,
       lwr = samp_loc[[s]]$lwr,
@@ -649,15 +651,16 @@ cat("Mean variance of samples:", var_samples, "\n")
 cat("Variance of observed data:", var_observed, "\n")
 
 mydata_2 <- samp_df %>%
-  group_by(geometry) %>%
+  group_by(geometry, coord_id, time_id) %>%
   summarise(
     q0.025 = quantile(fit, probs = 0.025),
     median = quantile(fit, probs = 0.5),
     q0.975 = quantile(fit, probs = 0.975)
   ) %>%
-  bind_cols(
+  left_join(
     mydata %>%
-      st_drop_geometry()
+      st_drop_geometry(),
+    by = c("coord_id", "time_id")
   ) %>%
   mutate(
     above_lwr_noise = observed >= q0.025,
@@ -760,7 +763,7 @@ mydata_2 %>%
   geom_errorbar(
     aes(x = fit, ymin = q0.025, ymax = q0.975),
     col = "blue",
-    alpha = 0.5
+    alpha = 0.2
   ) +
   geom_point(aes(fit, observed, color = in_ci_noise)) +
   labs(x = "Posterior mean", y = "Observed data")

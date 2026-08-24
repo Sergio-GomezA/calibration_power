@@ -325,15 +325,16 @@ cat("Mean variance of samples:", var_samples, "\n")
 cat("Variance of observed data:", var_observed, "\n")
 
 true_df2 <- samp_df %>%
-  group_by(geometry) %>%
+  group_by(geometry, coord_id, time_id) %>%
   summarise(
     q0.025 = quantile(fit, probs = 0.025),
     median = quantile(fit, probs = 0.5),
     q0.975 = quantile(fit, probs = 0.975)
   ) %>%
-  bind_cols(
+  left_join(
     true_df %>%
-      st_drop_geometry()
+      st_drop_geometry(),
+    by = c("coord_id", "time_id")
   ) %>%
   mutate(
     above_lwr_noise = observed >= q0.025,
