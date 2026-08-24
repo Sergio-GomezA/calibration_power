@@ -265,7 +265,7 @@ gb_fig_df %>%
   )
 
 ggsave(
-  sprintf("fig/%s/GB_fit_scatter_oos.pdf", batch_name),
+  sprintf("fig/%s/GB_fit_scatter_oos.png", batch_name),
   width = 10,
   height = 6,
   dpi = 300
@@ -583,7 +583,7 @@ gb_fig_df %>%
   )
 
 ggsave(
-  sprintf("fig/%s/GB_fit_scatter_oos_space.pdf", batch_name),
+  sprintf("fig/%s/GB_fit_scatter_oos_space.png", batch_name),
   width = 10,
   height = 6,
   dpi = 300
