@@ -81,10 +81,11 @@ if (!file.exists(gb_day_df_fname) || override_objects) {
     summarise(
       across(
         c(norm_power_est0, norm_potential),
-        ~ sum(. * capacity) / sum(capacity),
+        ~ sum(. * capacity) / sum(capacity)
       ),
       across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
-      across(c(capacity), mean)
+      across(c(capacity), mean),
+      .groups = "drop_last"
     ) %>%
     summarise(
       across(
