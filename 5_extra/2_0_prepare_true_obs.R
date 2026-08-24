@@ -166,7 +166,7 @@ if (!override_objects && length(files_found) > 0) {
       norm_potential_orig = norm_potential,
       norm_potential = ifelse(anomaly, NA, norm_potential)
     ) %>%
-    filter(!is.na(anomaly))
+    filter(!anomaly)
 
   x <- true_df$pow_group %>% unique() %>% sort()
   min_jump <- min(diff(sort(x))) / diff(range(x))
