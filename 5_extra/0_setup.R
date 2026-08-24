@@ -5,9 +5,9 @@
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 ## 0.1 global parameter #####
-day_id <- 2
+day_id <- 102
 mesh_edge_par <- 50 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- FALSE
+override_objects <- TRUE
 re_run_st <- FALSE
 prec_init <- log(200) # for u
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
@@ -15,7 +15,7 @@ fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
 n.days.before <- 3
 n.days.before.heavy <- 3
-batch_name <- "batch2025simtest"
+batch_name <- "batch2025simtest2"
 
 task_prefix <- "spaceoos"
 save_models <- FALSE
@@ -36,6 +36,9 @@ n.hours.space <- 72
 cluster_ext <- "rds" # "geojson" previously
 
 pow_threshold <- 0.05
+
+tol <- 0.05
+norm_dist_tol <- 0.3
 
 if (local_run) {
   cat("Running in local mode\n")

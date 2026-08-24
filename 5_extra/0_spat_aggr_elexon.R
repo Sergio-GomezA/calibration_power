@@ -16,6 +16,8 @@ require(patchwork)
 
 source('5_extra/1_fit_forAggTest.R')
 
+source('5_extra/2_0_prepare_true_obs.R')
+
 source('5_extra/2_check_field_sim.R')
 
 source('5_extra/3_check_full_sim.R')
