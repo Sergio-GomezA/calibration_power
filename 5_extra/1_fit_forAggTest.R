@@ -1231,9 +1231,9 @@ metrics_table <- df_long0 %>%
   summarise(
     across(
       c(norm_potential, estimate),
-      ~ sum(. * capacity) / sum(capacity),
-      .groups = "drop"
-    )
+      ~ sum(. * capacity) / sum(capacity)
+    ),
+    .groups = "drop"
   ) %>%
   group_by(model) %>%
   summarise(
@@ -1269,9 +1269,9 @@ df_long0 %>%
   summarise(
     across(
       c(norm_potential, estimate),
-      ~ sum(. * capacity) / sum(capacity),
-      .groups = "drop"
-    )
+      ~ sum(. * capacity) / sum(capacity)
+    ),
+    .groups = "drop"
   ) %>%
   mutate(
     err = estimate - norm_potential,
