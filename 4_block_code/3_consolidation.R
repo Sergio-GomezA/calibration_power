@@ -1019,7 +1019,7 @@ p <- pit_df %>%
   scale_color_manual(values = cols)
 p
 ggsave(
-  filename = sprintf("fig/%s/pit_diagram.pdf", batch_name),
+  filename = sprintf("fig/%s/pit_diagram.png", batch_name),
   width = 6,
   height = 4,
   # dpi = 300
