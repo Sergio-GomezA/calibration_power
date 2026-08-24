@@ -81,7 +81,7 @@ if (!file.exists(gb_day_df_fname) || override_objects) {
     summarise(
       across(
         c(norm_power_est0, norm_potential),
-        ~ sum(. * capacity) / sum(capacity)
+        ~ sum(. * capacity) / sum(capacity),
       ),
       across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
       across(c(capacity), mean)
@@ -1230,7 +1230,8 @@ metrics_table <- df_long0 %>%
   summarise(
     across(
       c(norm_potential, estimate),
-      ~ sum(. * capacity) / sum(capacity)
+      ~ sum(. * capacity) / sum(capacity),
+      groups = "drop"
     )
   ) %>%
   group_by(model) %>%
@@ -1267,14 +1268,15 @@ df_long0 %>%
   summarise(
     across(
       c(norm_potential, estimate),
-      ~ sum(. * capacity) / sum(capacity)
+      ~ sum(. * capacity) / sum(capacity),
+      .groups = "drop"
     )
   ) %>%
   mutate(
     err = estimate - norm_potential,
     # model = factor(model, levels = est_cols, labels = mod_labels)
   ) %>%
-  group_by(model) %>%
+  # group_by(model) %>%
   ggplot() +
   geom_density(
     aes(x = err, fill = model),
