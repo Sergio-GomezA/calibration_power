@@ -1232,7 +1232,7 @@ metrics_table <- df_long0 %>%
     across(
       c(norm_potential, estimate),
       ~ sum(. * capacity) / sum(capacity),
-      groups = "drop"
+      .groups = "drop"
     )
   ) %>%
   group_by(model) %>%
