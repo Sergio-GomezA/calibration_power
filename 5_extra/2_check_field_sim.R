@@ -183,8 +183,8 @@ simulating_obs <- generate(
 #   )
 simulating_obs[[1]] %>%
   left_join(
-    mydata %>% dplyr::select(coord_id, norm_potential, anomaly),
-    by = "coord_id"
+    mydata %>% dplyr::select(coord_id, time_id, norm_potential, anomaly),
+    by = c("coord_id", "time_id")
   ) %>%
   ggplot() +
   geom_hex(
@@ -202,7 +202,7 @@ simulating_obs[[1]] %>%
   labs(
     x = "Simulated observed data",
     y = "True normalised potential",
-    col = "Anomaly"
+    # col = "Anomaly"
   )
 ggsave(
   sprintf(
@@ -220,9 +220,9 @@ mydata <- left_join(
   mydata %>% dplyr::select(-observed),
   simulating_obs[[1]] %>%
     st_drop_geometry() %>%
-    dplyr::select(coord_id, lin_pred_noise) %>%
+    dplyr::select(coord_id, time_id, lin_pred_noise) %>%
     rename(observed = lin_pred_noise),
-  by = "coord_id"
+  by = c("coord_id", "time_id")
 )
 # plot(mydata$observed, mydata$norm_potential)
 # mydata$observed <- fm_evaluate(
