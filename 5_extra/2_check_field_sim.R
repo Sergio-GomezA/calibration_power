@@ -8,7 +8,7 @@ cat(
 
 prefix <- "elexon"
 set.seed(2026)
-n <- 147
+n <- nrow(true_df)
 oos_perc <- 0.2
 
 colsc <- function(...) {
@@ -49,8 +49,9 @@ matern_fine <-
   )
 true_range <- round(range_estimate, 0)
 true_sigma <- round(sigma_estimate, 0)
-extra_noise <- 1 * 0
-true_intercept <- 0
+extra_noise <- 1 /
+  sqrt(bru0$summary.hyperpar["Precision for the Gaussian observations", "mean"])
+true_intercept <- bru0$summary.fixed["Intercept", "mean"]
 true_Q <- inla.spde.precision(
   matern_fine,
   theta = log(c(range_estimate, sigma_estimate))
@@ -90,25 +91,22 @@ truth$field <- fm_evaluate(
 
 color_name <- "RdGy"
 csc <- colsc(truth$field)
-pl_truth <- ggplot() +
-  gg(truth, aes(fill = field), geom = "tile") +
-  ggtitle("True field")
-pl_truth + csc
-ggsave(
-  sprintf(
-    "fig/%s/%s_sim_field_range%d_sd%s.pdf",
-    batch_name,
-    prefix,
-    true_range,
-    sub("\\.", "_", sprintf("%.2f", true_sigma))
-  ),
-  width = 4,
-  height = 4
-)
+# pl_truth <- ggplot() +
+#   gg(truth, aes(fill = field), geom = "tile") +
+#   ggtitle("True field")
+# pl_truth + csc
+# ggsave(
+#   sprintf(
+#     "fig/%s/%s_sim_field_range%d_sd%s.pdf",
+#     batch_name,
+#     prefix,
+#     true_range,
+#     sub("\\.", "_", sprintf("%.2f", true_sigma))
+#   ),
+#   width = 4,
+#   height = 4
+# )
 
-## Or with another colour scale:
-
-# multiplot(pl_truth, pl_truth + csc, cols = 2)
 coord_list_fname <- "data/coord_list.csv"
 
 cat("Loading existing coordinate list\n")
@@ -124,20 +122,120 @@ loc_cat <- loc_cat %>%
   (\(g) g / 1000)() %>%
   st_set_geometry(loc_cat, .)
 
-mydata <- loc_cat %>%
-  mutate(oos = !sampled)
+mydata <-
+  true_df %>%
+  left_join(
+    loc_cat %>%
+      dplyr::select(coord_id, short_name) %>%
+      st_drop_geometry(),
+    by = c("coord_id" = "coord_id")
+  )
+
+# mutate(oos = !sampled)
 
 n_fit <- sum(!mydata$oos)
-mydata$observed <- fm_evaluate(
-  mesh_fine,
-  loc = mydata,
-  field = true_field
-) +
-  rnorm(n, sd = extra_noise)
-cscB <- colscB(truth$field)
+# predict a random sample from bru0 model at mydata locations
+the_formula_str <- get_bru_formula(bru0)
+grab_prec_name <- bru0$.args$control.family[[1]]$hyper[[
+  "theta1"
+]]$output.name %>%
+  gsub("[ -]+", "_", .) %>%
+  as.character()
+
+the_formula_wnoise_str <- sprintf(
+  "~ data.frame(
+    geometry = geometry,
+    coord_id = coord_id,
+    time_id = time_id,
+    lin_pred = (%s),
+    prec = %s,
+    lin_pred_noise = rnorm(n, mean = (%s), sd = (%s))
+  )",
+  the_formula_str,
+  grab_prec_name,
+  the_formula_str,
+  extra_noise
+)
+the_formula <- as.formula(the_formula_wnoise_str)
+simulating_obs <- generate(
+  bru0,
+  true_df,
+  the_formula,
+  n.samples = 1
+)
+# simulating_obs[[1]] %>%
+#   left_join(
+#     mydata %>% dplyr::select(coord_id, norm_potential, anomaly),
+#     by = "coord_id"
+#   ) %>%
+#   ggplot() +
+#   geom_point(
+#     aes(x = lin_pred, y = norm_potential, col = anomaly),
+#     alpha = 0.1
+#   ) +
+#   scale_color_manual(values = c("TRUE" = "darkred", "FALSE" = blues9[7])) +
+#   labs(
+#     x = "Simulated observed data",
+#     y = "True normalised potential",
+#     col = "Anomaly"
+#   )
+simulating_obs[[1]] %>%
+  left_join(
+    mydata %>% dplyr::select(coord_id, norm_potential, anomaly),
+    by = "coord_id"
+  ) %>%
+  ggplot() +
+  geom_hex(
+    aes(x = lin_pred, y = norm_potential),
+    bins = 50,
+    # color = "grey50",
+    # fill = blues9[5],
+    alpha = 0.5
+  ) +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  labs(
+    x = "Simulated observed data",
+    y = "True normalised potential",
+    col = "Anomaly"
+  )
+ggsave(
+  sprintf(
+    "fig/%s/%s_sim_obs_vs_true_range%d_sd%s.pdf",
+    batch_name,
+    prefix,
+    true_range,
+    sub("\\.", "_", sprintf("%.2f", true_sigma))
+  ),
+  width = 4,
+  height = 4
+)
+
+mydata <- left_join(
+  mydata %>% dplyr::select(-observed),
+  simulating_obs[[1]] %>%
+    st_drop_geometry() %>%
+    dplyr::select(coord_id, lin_pred_noise) %>%
+    rename(observed = lin_pred_noise),
+  by = "coord_id"
+)
+# plot(mydata$observed, mydata$norm_potential)
+# mydata$observed <- fm_evaluate(
+#   mesh_fine,
+#   loc = mydata,
+#   field = true_field
+# ) +
+#   rnorm(n, sd = extra_noise)
+cscB <- colscB(mydata$observed)
+
 ggplot() +
+  geom_sf(data = uk_map, fill = NA, color = "black") +
   gg(mydata, aes(col = observed)) +
-  cscB
+  cscB +
+  geom_sf(data = bndsim, alpha = 0)
 
 
 ## Estimating the field ####
@@ -173,13 +271,67 @@ matern <- inla.spde2.pcmatern(
   prior.range = c(1, 0.01)
 )
 
-cmp <- observed ~ field(geometry, model = matern) + Intercept(1)
-fit <- bru(cmp, mydata %>% filter(!oos), family = "gaussian")
+spde <- INLA::inla.spde2.pcmatern(
+  mesh = wf.mesh,
+  prior.range = c(50, 0.5), # P(range < 100 km)=0.5
+  prior.sigma = c(0.2, 0.5) # P(sd > 0.2)=0.5
+)
+
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+  norm_power_est0 +
+  # power_correction(
+  #   pow_group,
+  #   model = "rw2",
+  #   # replicate = tech_typ,
+  #   constr = TRUE
+  # ) + # smooth correction power
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
+  st_field(
+    geometry,
+    model = spde
+    # group = time_id,
+    # control.group = list(model = "ar1")
+  )
+
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+cat("Fitting spatiotemporal model on simulated data\n")
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+
+# cmp <- observed ~ field(geometry, model = matern) + Intercept(1)
+fit <- bru(
+  components = components0,
+  formula = norm_potential ~ Intercept +
+    norm_power_est0 +
+    # power_correction +
+    d_coast +
+    elev +
+    wind +
+    st_field,
+  family = "gaussian",
+  data = true_df %>%
+    filter(oos == FALSE),
+  options = base_bru_options
+)
 summary(fit)
 
 # residuals
-fitted <- fit$summary.fitted.values$mean[1:nrow(mydata)]
-residuals <- fitted - mydata$observed
+fitted <- fit$summary.fitted.values$mean[1:n_fit]
+residuals <- fitted - mydata$observed[mydata$oos == FALSE]
 # residuals diagnostics
 
 ggplot() +
@@ -248,10 +400,11 @@ cat(ifelse(
   "Residuals could be normally distributed.\n"
 ))
 # summaries from model fit
+
 pred_on_fulldf <- predict(
   fit,
   mydata,
-  ~ field + Intercept
+  as.formula(sprintf("~ %s", the_formula_str)),
 )
 mydata$fit <- pred_on_fulldf$mean
 mydata$lwr <- pred_on_fulldf$`q0.025`
@@ -264,60 +417,60 @@ mydata <- mydata %>%
     in_ci = above_lwr & below_upr
   )
 
-pix <- fm_pixels(mesh, dims = c(200, 200))
-pred <- predict(
-  fit,
-  pix,
-  ~ field + Intercept
-)
-samp <- generate(
-  fit,
-  pix,
-  ~ field + Intercept,
-  n.samples = 1
-)
-pred$sample <- samp[, 1]
-
-pl_posterior_mean <- ggplot() +
-  gg(pred, geom = "tile") +
-  gg(bndsim, alpha = 0) +
-  geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
-  ggtitle("Post. mean")
-pl_posterior_sample <- ggplot() +
-  gg(pred, aes(fill = sample), geom = "tile") +
-  gg(bndsim, alpha = 0) +
-  geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
-  ggtitle("Post. sample")
-
-# Common colour scale for the truth and estimate:
-csc <- colsc(truth$field, pred$mean, pred$sample)
-# est_plot <- multiplot(
-#   pl_truth + csc + labels(fill = ""),
-#   pl_posterior_mean + csc,
-#   pl_posterior_sample + csc,
-#   cols = 3
+# pix <- fm_pixels(mesh, dims = c(200, 200))
+# pred <- predict(
+#   fit,
+#   pix,
+#   ~ field + Intercept
 # )
+# samp <- generate(
+#   fit,
+#   pix,
+#   ~ field + Intercept,
+#   n.samples = 1
+# )
+# pred$sample <- samp[, 1]
 
-(pl_truth +
-  geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
-  csc +
-  labs(fill = "") |
-  pl_posterior_mean + csc + labs(fill = "") |
-  pl_posterior_sample + csc + labs(fill = "")) +
-  plot_layout(ncol = 3, guides = "collect") &
-  theme(legend.position = "right")
+# pl_posterior_mean <- ggplot() +
+#   gg(pred, geom = "tile") +
+#   gg(bndsim, alpha = 0) +
+#   geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
+#   ggtitle("Post. mean")
+# pl_posterior_sample <- ggplot() +
+#   gg(pred, aes(fill = sample), geom = "tile") +
+#   gg(bndsim, alpha = 0) +
+#   geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
+#   ggtitle("Post. sample")
 
-ggsave(
-  sprintf(
-    "fig/%s/%s_est_field_range%d_sd%s.pdf",
-    batch_name,
-    prefix,
-    true_range,
-    sub("\\.", "_", sprintf("%.2f", true_sigma))
-  ),
-  width = 12,
-  height = 4
-)
+# # Common colour scale for the truth and estimate:
+# csc <- colsc(truth$field, pred$mean, pred$sample)
+# # est_plot <- multiplot(
+# #   pl_truth + csc + labels(fill = ""),
+# #   pl_posterior_mean + csc,
+# #   pl_posterior_sample + csc,
+# #   cols = 3
+# # )
+
+# (pl_truth +
+#   geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
+#   csc +
+#   labs(fill = "") |
+#   pl_posterior_mean + csc + labs(fill = "") |
+#   pl_posterior_sample + csc + labs(fill = "")) +
+#   plot_layout(ncol = 3, guides = "collect") &
+#   theme(legend.position = "right")
+
+# ggsave(
+#   sprintf(
+#     "fig/%s/%s_est_field_range%d_sd%s.pdf",
+#     batch_name,
+#     prefix,
+#     true_range,
+#     sub("\\.", "_", sprintf("%.2f", true_sigma))
+#   ),
+#   width = 12,
+#   height = 4
+# )
 
 int.plot <- plot(fit, "Intercept") +
   geom_vline(
@@ -327,11 +480,11 @@ int.plot <- plot(fit, "Intercept") +
   ) +
   labs(title = "Intercept posterior", x = "Intercept", y = "Density") +
   theme_bw()
-spde.range <- spde.posterior(fit, "field", what = "range")
-spde.var <- spde.posterior(fit, "field", what = "variance")
+spde.range <- spde.posterior(fit, "st_field", what = "range")
+spde.var <- spde.posterior(fit, "st_field", what = "variance")
 range.plot <- plot(spde.range) +
   geom_vline(
-    xintercept = true_range,
+    xintercept = range_estimate,
     col = "red",
     linetype = "dashed"
   ) +
@@ -339,7 +492,7 @@ range.plot <- plot(spde.range) +
   theme_bw()
 var.plot <- plot(spde.var) +
   geom_vline(
-    xintercept = (true_sigma^2 + extra_noise^2),
+    xintercept = (sigma_estimate^2 + extra_noise^2),
     col = "red",
     linetype = "dashed"
   ) +
@@ -371,93 +524,94 @@ coverage <- mean(mydata$in_ci, na.rm = TRUE)
 coverage_is <- mean(mydata$in_ci[!mydata$oos], na.rm = TRUE)
 coverage_oos <- mean(mydata$in_ci[mydata$oos], na.rm = TRUE)
 
-gmedian <- ggplot() +
-  gg(pred["median"], geom = "tile") +
-  csc +
-  # gg(mesh) +
-  geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
-  labs(title = "Posterior median", fill = "") +
-  annotate(
-    "text",
-    x = 5,
-    y = 10.3,
-    label = sprintf("Coverage: %.2f", coverage),
-    size = 4
-  )
-glower95 <- ggplot() +
-  gg(pred["q0.025"], geom = "tile") +
-  csc +
-  geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
-  labs(title = "Posterior 2.5%", fill = "") +
-  annotate(
-    "text",
-    x = 5,
-    y = 10.3,
-    label = sprintf("Coverage: %.2f", coverage),
-    size = 4
-  )
-gupper95 <- ggplot() +
-  gg(pred["q0.975"], geom = "tile") +
-  csc +
-  geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
-  labs(title = "Posterior 97.5%", fill = "") +
-  annotate(
-    "text",
-    x = 5,
-    y = 10.3,
-    label = sprintf("Coverage: %.2f", coverage),
-    size = 4
-  )
+# gmedian <- ggplot() +
+#   gg(pred["median"], geom = "tile") +
+#   csc +
+#   # gg(mesh) +
+#   geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
+#   labs(title = "Posterior median", fill = "") +
+#   annotate(
+#     "text",
+#     x = 5,
+#     y = 10.3,
+#     label = sprintf("Coverage: %.2f", coverage),
+#     size = 4
+#   )
+# glower95 <- ggplot() +
+#   gg(pred["q0.025"], geom = "tile") +
+#   csc +
+#   geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
+#   labs(title = "Posterior 2.5%", fill = "") +
+#   annotate(
+#     "text",
+#     x = 5,
+#     y = 10.3,
+#     label = sprintf("Coverage: %.2f", coverage),
+#     size = 4
+#   )
+# gupper95 <- ggplot() +
+#   gg(pred["q0.975"], geom = "tile") +
+#   csc +
+#   geom_sf(data = mydata, aes(col = in_ci), inherit.aes = FALSE, size = 0.5) +
+#   labs(title = "Posterior 97.5%", fill = "") +
+#   annotate(
+#     "text",
+#     x = 5,
+#     y = 10.3,
+#     label = sprintf("Coverage: %.2f", coverage),
+#     size = 4
+#   )
 
-(gmedian |
-  glower95 |
-  gupper95) +
-  plot_layout(ncol = 3, guides = "collect") &
-  theme(legend.position = "right")
+# (gmedian |
+#   glower95 |
+#   gupper95) +
+#   plot_layout(ncol = 3, guides = "collect") &
+#   theme(legend.position = "right")
 
-ggsave(
-  sprintf(
-    "fig/%s/%s_est_field_range%d_sd%s_ci.pdf",
-    batch_name,
-    prefix,
-    true_range,
-    sub("\\.", "_", sprintf("%.2f", true_sigma))
-  ),
-  width = 12,
-  height = 4
-)
+# ggsave(
+#   sprintf(
+#     "fig/%s/%s_est_field_range%d_sd%s_ci.pdf",
+#     batch_name,
+#     prefix,
+#     true_range,
+#     sub("\\.", "_", sprintf("%.2f", true_sigma))
+#   ),
+#   width = 12,
+#   height = 4
+# )
 
 # samples for aggregation ####
 
-grab_prec_name <- fit$.args$control.family[[1]]$hyper[[
-  "theta1"
-]]$output.name %>%
-  gsub("[ -]+", "_", .) %>%
-  as.character()
+# grab_prec_name <- fit$.args$control.family[[1]]$hyper[[
+#   "theta1"
+# ]]$output.name %>%
+#   gsub("[ -]+", "_", .) %>%
+#   as.character()
 
-# samp_loc <- generate(
-#   fit,
-#   mydata,
-#   ~ field + Intercept,
-#   n.samples = 1000
-# )
+the_formula_wnoise_str <- as.formula(sprintf(
+  "~ data.frame(
+    geometry = geometry,
+    coord_id = coord_id,
+    time_id = time_id,
+    lin_pred = (%s),
+    prec = %s,
+    lin_pred_noise = rnorm(n, mean = (%s), sd = 1/sqrt((%s))),
+    lwr = qnorm(0.025, mean = (%s), sd = 1/sqrt((%s))),
+    upr = qnorm(0.975, mean = (%s), sd = 1/sqrt((%s)))
+  )",
+  the_formula_str,
+  grab_prec_name,
+  the_formula_str,
+  grab_prec_name,
+  the_formula_str,
+  grab_prec_name,
+  the_formula_str,
+  grab_prec_name
+))
 samp_loc <- generate(
   fit,
   mydata,
-  as.formula(sprintf(
-    "~ data.frame(
-    geometry = geometry,
-    lin_pred = field + Intercept,
-    prec = %s,
-    lin_pred_noise = rnorm(n, mean = field + Intercept, sd = 1/sqrt((%s))),
-    lwr = qnorm(0.025, mean = field + Intercept, sd = 1/sqrt((%s))),
-    upr = qnorm(0.975, mean = field + Intercept, sd = 1/sqrt((%s)))
-  )",
-    grab_prec_name,
-    grab_prec_name,
-    grab_prec_name,
-    grab_prec_name
-  )),
+  the_formula_wnoise_str,
   n.samples = 1000
 )
 # samp_loc[[1]]
@@ -469,6 +623,7 @@ samp_df <- lapply(
   function(s) {
     data.frame(
       geometry = samp_loc[[s]]$geometry,
+      fit0 = samp_loc[[s]]$lin_pred,
       fit = samp_loc[[s]]$lin_pred_noise,
       lwr = samp_loc[[s]]$lwr,
       upr = samp_loc[[s]]$upr
@@ -481,12 +636,12 @@ samp_df <- lapply(
 # variance of samples vs variance of observations check
 var_samples <- samp_df %>%
   # group_by(geometry) %>%
-  summarise(var_samples = var(fit)) %>%
+  summarise(var_samples = var(fit, na.rm = TRUE)) %>%
   # ungroup() %>%
   # summarise(mean_var_samples = mean(var_samples)) %>%
   pull(var_samples)
 var_observed <- mydata %>%
-  summarise(var_observed = var(observed)) %>%
+  summarise(var_observed = var(observed, na.rm = TRUE)) %>%
   pull(var_observed)
 cat("Mean variance of samples:", var_samples, "\n")
 cat("Variance of observed data:", var_observed, "\n")
@@ -514,52 +669,52 @@ coverage_noise <- mean(mydata_2$in_ci_noise)
 coverage_noise_is <- mean(mydata_2$in_ci_noise[!mydata_2$oos])
 coverage_noise_oos <- mean(mydata_2$in_ci_noise[mydata_2$oos])
 
-pl_truth <- ggplot() +
-  gg(truth, aes(fill = field), geom = "tile") +
-  ggtitle("True field")
-pl_posterior_mean <- ggplot() +
-  gg(pred, geom = "tile") +
-  gg(bnd[[2]] %>% st_as_sf(), alpha = 0) +
-  ggtitle("Post. mean")
-pl_posterior_sample <- ggplot() +
-  gg(pred, aes(fill = sample), geom = "tile") +
-  gg(bnd[[2]] %>% st_as_sf(), alpha = 0) +
-  ggtitle("Post. sample")
+# pl_truth <- ggplot() +
+#   gg(truth, aes(fill = field), geom = "tile") +
+#   ggtitle("True field")
+# pl_posterior_mean <- ggplot() +
+#   gg(pred, geom = "tile") +
+#   gg(bnd[[2]] %>% st_as_sf(), alpha = 0) +
+#   ggtitle("Post. mean")
+# pl_posterior_sample <- ggplot() +
+#   gg(pred, aes(fill = sample), geom = "tile") +
+#   gg(bnd[[2]] %>% st_as_sf(), alpha = 0) +
+#   ggtitle("Post. sample")
 
-# Common colour scale for the truth and estimate:
-csc <- colsc(truth$field, pred$mean, pred$sample)
-updated_points <- geom_sf(
-  data = mydata_2,
-  aes(geometry = geometry, col = in_ci_noise),
-  inherit.aes = FALSE,
-  size = 0.5
-)
-(pl_truth +
-  updated_points +
-  csc +
-  labs(fill = "") |
-  pl_posterior_mean +
-    updated_points +
-    csc +
-    labs(fill = "") |
-  pl_posterior_sample +
-    updated_points +
-    csc +
-    labs(fill = "")) +
-  plot_layout(ncol = 3, guides = "collect") &
-  theme(legend.position = "right")
+# # Common colour scale for the truth and estimate:
+# csc <- colsc(truth$field, pred$mean, pred$sample)
+# updated_points <- geom_sf(
+#   data = mydata_2,
+#   aes(geometry = geometry, col = in_ci_noise),
+#   inherit.aes = FALSE,
+#   size = 0.5
+# )
+# (pl_truth +
+#   updated_points +
+#   csc +
+#   labs(fill = "") |
+#   pl_posterior_mean +
+#     updated_points +
+#     csc +
+#     labs(fill = "") |
+#   pl_posterior_sample +
+#     updated_points +
+#     csc +
+#     labs(fill = "")) +
+#   plot_layout(ncol = 3, guides = "collect") &
+#   theme(legend.position = "right")
 
-ggsave(
-  sprintf(
-    "fig/%s/%s_est_field_range%d_sd%s.pdf",
-    batch_name,
-    prefix,
-    true_range,
-    sub("\\.", "_", sprintf("%.2f", true_sigma))
-  ),
-  width = 12,
-  height = 4
-)
+# ggsave(
+#   sprintf(
+#     "fig/%s/%s_est_field_range%d_sd%s.pdf",
+#     batch_name,
+#     prefix,
+#     true_range,
+#     sub("\\.", "_", sprintf("%.2f", true_sigma))
+#   ),
+#   width = 12,
+#   height = 4
+# )
 
 # mydata <-
 #   bind_cols(
