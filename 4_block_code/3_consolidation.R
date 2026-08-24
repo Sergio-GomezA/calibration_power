@@ -268,7 +268,7 @@ ggsave(
   sprintf("fig/%s/GB_fit_scatter_oos.png", batch_name),
   width = 10,
   height = 6,
-  dpi = 300
+  dpi = 100
 )
 
 wf_fig_df %>%
@@ -308,10 +308,10 @@ wf_fig_df %>%
   )
 # scales::show_col(blues9)
 ggsave(
-  sprintf("fig/%s/WF_fit_scatter_oos.pdf", batch_name),
+  sprintf("fig/%s/WF_fit_scatter_oos.png", batch_name),
   width = 10,
   height = 6,
-  dpi = 300
+  dpi = 100
 )
 
 
@@ -586,7 +586,7 @@ ggsave(
   sprintf("fig/%s/GB_fit_scatter_oos_space.png", batch_name),
   width = 10,
   height = 6,
-  dpi = 300
+  dpi = 100
 )
 
 wf_fig_df %>%
@@ -619,10 +619,10 @@ wf_fig_df %>%
   )
 
 ggsave(
-  sprintf("fig/%s/WF_fit_scatter_oos_space.pdf", batch_name),
+  sprintf("fig/%s/WF_fit_scatter_oos_space.png", batch_name),
   width = 10,
   height = 6,
-  dpi = 300
+  dpi = 100
 )
 
 
@@ -886,6 +886,9 @@ rel_df <- cov_gbl %>%
   group_by(model, nominal) %>%
   summarise(empirical = mean(empirical, na.rm = TRUE), .groups = "drop")
 # rel_df$model %>% unique()
+
+nrel_mods <- rel_df$model %>% unique() %>% length()
+cols <- scales::hue_pal()(nrel_mods)
 rel_df %>%
   ggplot(aes(x = nominal, y = empirical, col = model)) +
   geom_line() +
@@ -1022,7 +1025,7 @@ ggsave(
   filename = sprintf("fig/%s/pit_diagram.png", batch_name),
   width = 6,
   height = 4,
-  # dpi = 300
+  dpi = 100
 )
 # Scores table ####
 # CRPS LogScore Energy Brie
