@@ -1,5 +1,6 @@
 # read output data ####
-
+prefix <- "elexon"
+prefixfull <- "elex1H"
 elexsim_files <- list.files(
   file.path("summaries", batch_name),
   pattern = sprintf("^%s_aggr.*\\.%s$", prefix, "csv")
@@ -14,8 +15,8 @@ elexsim_df <- lapply(
     )
   }
 ) %>%
-  bind_rows() %>%
-  filter(!is.na(var_samples)) # remove cases where no samples were generated
+  bind_rows() # %>%
+# filter(!is.na(var_samples)) # remove cases where no samples were generated
 
 elex1H_files <- list.files(
   file.path("summaries", batch_name),
@@ -31,9 +32,8 @@ elex1H_df <- lapply(
     )
   }
 ) %>%
-  bind_rows() %>%
-  filter(!is.na(variance_samples)) # remove cases where no samples were generated
-
+  bind_rows() # %>%
+# filter(!is.na(variance_samples)) # remove cases where no samples were generated
 
 elexsim_df %>%
   summarise(
