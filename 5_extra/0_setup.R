@@ -54,26 +54,34 @@ if (length(args) > 0) {
   day_id <- as.numeric(args[1])
 }
 if (length(args) > 1) {
-  mesh_edge_par <- as.numeric(args[2])
+  norm_dist_tol <- as.numeric(args[2])
+  batch_name <- sprintf(
+    "batchsim_tol%s",
+    sub("\\.", "_", sprintf("%.2f", norm_dist_tol))
+  )
 }
-if (length(args) > 2) {
-  override_objects <- as.logical(args[3])
-}
-if (length(args) > 3) {
-  re_run_st <- as.logical(args[4])
-}
-if (length(args) > 4) {
-  n.days.before <- as.numeric(args[5])
-}
-if (length(args) > 5) {
-  batch_name <- as.character(args[6])
-}
-if (length(args) > 6) {
-  save_models <- as.logical(args[7])
-}
-if (length(args) > 7) {
-  pow_threshold <- as.numeric(args[8])
-}
+
+# if (length(args) > 2) {
+#   mesh_edge_par <- as.numeric(args[3])
+# }
+# if (length(args) > 3) {
+#   override_objects <- as.logical(args[4])
+# }
+# if (length(args) > 4) {
+#   re_run_st <- as.logical(args[5])
+# }
+# if (length(args) > 5) {
+#   n.days.before <- as.numeric(args[6])
+# }
+# if (length(args) > 6) {
+#   batch_name <- as.character(args[7])
+# }
+# if (length(args) > 7) {
+#   save_models <- as.logical(args[8])
+# }
+# if (length(args) > 8) {
+#   save_samples <- as.logical(args[9])
+# }
 
 ## 0.2 libraries and paths ####
 require(parallel)

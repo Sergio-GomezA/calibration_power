@@ -17,5 +17,5 @@ source /etc/profile.d/modules.sh
 module load R/4.5
 
 # Run resolution code
-Rscript 5_extra/0_spat_aggr_elexon.R $SGE_TASK_ID
+Rscript 5_extra/0_spat_aggr_elexon.R $SGE_TASK_ID 0.3
 # nloc / n simulations / oos percentage
