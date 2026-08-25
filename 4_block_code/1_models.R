@@ -1367,13 +1367,14 @@ p_median <- ggplot() +
 p_median
 ggsave(
   sprintf(
-    "fig/%s/%s_spatial_field_median_%s.pdf",
+    "fig/%s/%s_spatial_field_median_%s.png",
     batch_name,
     mesh_label,
     d0_tag
   ),
   width = 10,
-  height = 6
+  height = 6,
+  dpi = 100
 )
 
 p_sd <- ggplot() +
@@ -1390,9 +1391,10 @@ p_sd <- ggplot() +
   theme_void()
 p_sd
 ggsave(
-  sprintf("fig/%s/%s_spatial_field_sd_%s.pdf", batch_name, mesh_label, d0_tag),
+  sprintf("fig/%s/%s_spatial_field_sd_%s.png", batch_name, mesh_label, d0_tag),
   width = 10,
-  height = 6
+  height = 6,
+  dpi = 100
 )
 
 
