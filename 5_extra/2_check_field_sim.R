@@ -221,7 +221,11 @@ mydata <- left_join(
   simulating_obs[[1]] %>%
     st_drop_geometry() %>%
     dplyr::select(coord_id, time_id, lin_pred_noise) %>%
-    rename(observed = lin_pred_noise),
+    rename(observed = lin_pred_noise) %>%
+    mutate(
+      # clip observed between zero and one
+      observed = pmin(1, pmax(0, observed))
+    ),
   by = c("coord_id", "time_id")
 )
 # plot(mydata$observed, mydata$norm_potential)
@@ -266,7 +270,8 @@ mesh <- fm_mesh_2d(
 )
 ggplot() +
   geom_fm(data = mesh)
-
+# ggplot() +
+#   geom_fm(data = wf.mesh)
 matern <- inla.spde2.pcmatern(
   mesh,
   prior.sigma = c(1, 0.01),
@@ -274,7 +279,7 @@ matern <- inla.spde2.pcmatern(
 )
 
 spde <- INLA::inla.spde2.pcmatern(
-  mesh = wf.mesh,
+  mesh = mesh,
   prior.range = c(50, 0.5), # P(range < 100 km)=0.5
   prior.sigma = c(0.2, 0.5) # P(sd > 0.2)=0.5
 )
@@ -317,7 +322,7 @@ cat(
 # cmp <- observed ~ field(geometry, model = matern) + Intercept(1)
 fit <- bru(
   components = components0,
-  formula = norm_potential ~ Intercept +
+  formula = observed ~ Intercept +
     norm_power_est0 +
     # power_correction +
     d_coast +
@@ -325,22 +330,41 @@ fit <- bru(
     wind +
     st_field,
   family = "gaussian",
-  data = true_df %>%
+  data = mydata %>%
     filter(oos == FALSE),
   options = base_bru_options
 )
 summary(fit)
 
+# fit$summary.fitted.values[1:n_fit + 1, ] %>% tail()
 # residuals
 fitted <- fit$summary.fitted.values$mean[1:n_fit]
-residuals <- fitted - mydata$observed[mydata$oos == FALSE]
-# residuals diagnostics
+residuals <- mydata$observed[mydata$oos == FALSE] - fitted
 
+# fitted vs observed
+mydata %>%
+  filter(oos == FALSE) %>%
+  ggplot() +
+  geom_point(aes(fitted, observed), col = blues9[7]) +
+  geom_abline(aes(intercept = 0, slope = 1), col = "darkred", lty = 2)
+ggsave(
+  sprintf(
+    "fig/%s/%s_fitted_vs_observed_range%d_sd%s.pdf",
+    batch_name,
+    prefix,
+    true_range,
+    sub("\\.", "_", sprintf("%.2f", true_sigma))
+  ),
+  width = 4,
+  height = 4
+)
+# residuals diagnostics
 ggplot() +
   geom_point(aes(x = fitted, y = residuals), color = blues9[7]) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
   labs(title = "Residuals vs Fitted", x = "Fitted", y = "Residuals") +
-  theme_minimal()
+  theme_minimal() +
+  coord_cartesian(ylim = c(-0.7, 0.7))
 ggsave(
   sprintf(
     "fig/%s/%s_residuals_vs_fitted_range%d_sd%s.pdf",
@@ -655,7 +679,8 @@ mydata_2 <- samp_df %>%
   summarise(
     q0.025 = quantile(fit, probs = 0.025),
     median = quantile(fit, probs = 0.5),
-    q0.975 = quantile(fit, probs = 0.975)
+    q0.975 = quantile(fit, probs = 0.975),
+    .groups = "drop_last"
   ) %>%
   left_join(
     mydata %>%

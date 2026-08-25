@@ -9,7 +9,7 @@ cat(
 start_time <- Sys.time()
 
 # model fit only one hour
-
+cat("Defining model components")
 ## 2.4 ST SPDE model ####
 spde <- INLA::inla.spde2.pcmatern(
   mesh = wf.mesh,
@@ -92,9 +92,28 @@ if (!file.exists(model_fname) || re_run_st) {
 ### summary and effect plots ####
 summary(bru1H)
 
+
 # residuals
-fitted <- bru1H$summary.fitted.values$mean[1:nrow(true_df)]
-residuals <- fitted - true_df$observed
+n_fit <- sum(!true_df$oos)
+fitted <- bru1H$summary.fitted.values$mean[1:n_fit]
+residuals <- true_df$observed[!true_df$oos] - fitted
+
+true_df %>%
+  filter(oos == FALSE) %>%
+  ggplot() +
+  geom_point(aes(fitted, norm_potential), col = blues9[7]) +
+  geom_abline(aes(intercept = 0, slope = 1), col = "darkred", lty = 2)
+ggsave(
+  sprintf(
+    "fig/%s/%s_fitted_vs_norm_potential_range%d_sd%s.pdf",
+    batch_name,
+    prefix,
+    true_range,
+    sub("\\.", "_", sprintf("%.2f", true_sigma))
+  ),
+  width = 4,
+  height = 4
+)
 # residuals diagnostics
 
 ggplot() +
@@ -221,6 +240,11 @@ true_df <- true_df %>%
     below_upr = observed <= upr,
     in_ci = above_lwr & below_upr
   )
+# calculate 95% CI coverage ####
+
+coverage <- mean(true_df$in_ci, na.rm = TRUE)
+coverage_is <- mean(true_df$in_ci[!true_df$oos], na.rm = TRUE)
+coverage_oos <- mean(true_df$in_ci[true_df$oos], na.rm = TRUE)
 
 # pix <- fm_pixels(mesh, dims = c(200, 200))
 # pred <- predict(
@@ -329,7 +353,8 @@ true_df2 <- samp_df %>%
   summarise(
     q0.025 = quantile(fit, probs = 0.025),
     median = quantile(fit, probs = 0.5),
-    q0.975 = quantile(fit, probs = 0.975)
+    q0.975 = quantile(fit, probs = 0.975),
+    .groups = "drop_last"
   ) %>%
   left_join(
     true_df %>%
