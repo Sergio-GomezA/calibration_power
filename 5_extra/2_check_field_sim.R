@@ -99,9 +99,10 @@ csc <- colsc(truth$field)
 # pl_truth + csc
 # ggsave(
 #   sprintf(
-#     "%s/fig/%s_sim_field_range%d_sd%s.pdf",
+#     "%s/fig/%s_sim_field_%s_range%d_sd%s.pdf",
 #     batch_name,
 #     prefix,
+#     d0_tag,
 #     true_range,
 #     sub("\\.", "_", sprintf("%.2f", true_sigma))
 #   ),
@@ -206,9 +207,10 @@ simulating_obs[[1]] %>%
   )
 ggsave(
   sprintf(
-    "%s/fig/%s_sim_obs_vs_true_range%d_sd%s.pdf",
+    "%s/fig/%s_sim_obs_vs_true_%s_range%d_sd%s.pdf",
     batch_name,
     prefix,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -349,9 +351,10 @@ mydata %>%
   geom_abline(aes(intercept = 0, slope = 1), col = "darkred", lty = 2)
 ggsave(
   sprintf(
-    "%s/fig/%s_fitted_vs_observed_range%d_sd%s.pdf",
+    "%s/fig/%s_fitted_vs_observed_%s_range%d_sd%s.pdf",
     batch_name,
     prefix,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -367,9 +370,10 @@ ggplot() +
   coord_cartesian(ylim = c(-0.7, 0.7))
 ggsave(
   sprintf(
-    "%s/fig/%s_residuals_vs_fitted_range%d_sd%s.pdf",
+    "%s/fig/%s_residuals_vs_fitted_%s_range%d_sd%s.pdf",
     batch_name,
     prefix,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -382,9 +386,10 @@ ggplot() +
   theme_minimal()
 ggsave(
   sprintf(
-    "%s/fig/%s_histogram_residuals_range%d_sd%s.pdf",
+    "%s/fig/%s_histogram_residuals_%s_range%d_sd%s.pdf",
     batch_name,
     prefix,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -402,9 +407,10 @@ ggplot() +
   theme_minimal()
 ggsave(
   sprintf(
-    "%s/fig/%s_qqplot_residuals_range%d_sd%s.pdf",
+    "%s/fig/%s_qqplot_residuals_%s_range%d_sd%s.pdf",
     batch_name,
     prefix,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -488,9 +494,10 @@ mydata <- mydata %>%
 
 # ggsave(
 #   sprintf(
-#     "%s/fig/%s_est_field_range%d_sd%s.pdf",
+#     "%s/fig/%s_est_field_%s_range%d_sd%s.pdf",
 #     batch_name,
 #     prefix,
+#     d0_tag,
 #     true_range,
 #     sub("\\.", "_", sprintf("%.2f", true_sigma))
 #   ),
@@ -528,9 +535,10 @@ var.plot <- plot(spde.var) +
 (range.plot / var.plot / int.plot)
 ggsave(
   sprintf(
-    "%s/fig/%s_est_hyper_range%d_sd%s.pdf",
+    "%s/fig/%s_est_hyper_%s_range%d_sd%s.pdf",
     batch_name,
     prefix,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -596,9 +604,10 @@ coverage_oos <- mean(mydata$in_ci[mydata$oos], na.rm = TRUE)
 
 # ggsave(
 #   sprintf(
-#     "%s/fig/%s_est_field_range%d_sd%s_ci.pdf",
+#     "%s/fig/%s_est_field_%s_range%d_sd%s_ci.pdf",
 #     batch_name,
 #     prefix,
+#     d0_tag,
 #     true_range,
 #     sub("\\.", "_", sprintf("%.2f", true_sigma))
 #   ),
@@ -736,9 +745,10 @@ coverage_noise_oos <- mean(mydata_2$in_ci_noise[mydata_2$oos])
 
 # ggsave(
 #   sprintf(
-#     "%s/fig/%s_est_field_range%d_sd%s.pdf",
+#     "%s/fig/%s_est_field_%s_range%d_sd%s.pdf",
 #     batch_name,
 #     prefix,
+#     d0_tag,
 #     true_range,
 #     sub("\\.", "_", sprintf("%.2f", true_sigma))
 #   ),
@@ -772,9 +782,10 @@ mydata_2 %>%
   labs(x = "Posterior mean", y = "Observed data")
 ggsave(
   sprintf(
-    "%s/fig/%s_scatter+error_range%d_sd%s_obs.pdf",
+    "%s/fig/%s_scatter+error_%s_range%d_sd%s_obs.pdf",
     batch_name,
     prefix,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -794,9 +805,10 @@ mydata_2 %>%
   labs(x = "Posterior mean", y = "Observed data")
 ggsave(
   sprintf(
-    "%s/fig/%s_scatter+obserror_range%d_sd%s_obs_noise.pdf",
+    "%s/fig/%s_scatter+obserror_%s_range%d_sd%s_obs_noise.pdf",
     batch_name,
     prefix,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),

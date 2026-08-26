@@ -1,7 +1,7 @@
 cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
-cat("Running spatial aggregation and coverage check for one Elexon time\n")
+cat("Running spatial aggregation and coverage check for observed Elexon data\n")
 cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
@@ -9,7 +9,7 @@ cat(
 start_time <- Sys.time()
 
 # model fit only one hour
-cat("Defining model components")
+cat("Defining model components\n")
 ## 2.4 ST SPDE model ####
 spde <- INLA::inla.spde2.pcmatern(
   mesh = wf.mesh,
@@ -89,11 +89,14 @@ if (!file.exists(model_fname) || re_run_st) {
   bru1H <- readRDS(model_fname)
 }
 
+cat("model fit completed\n")
+
 ### summary and effect plots ####
 summary(bru1H)
 
 
 # residuals
+cat("Residuals diagnostics\n")
 n_fit <- sum(!true_df$oos)
 fitted <- bru1H$summary.fitted.values$mean[1:n_fit]
 residuals <- true_df$observed[!true_df$oos] - fitted
@@ -105,9 +108,10 @@ true_df %>%
   geom_abline(aes(intercept = 0, slope = 1), col = "darkred", lty = 2)
 ggsave(
   sprintf(
-    "%s/fig/%s_fitted_vs_norm_potential_range%d_sd%s.pdf",
+    "%s/fig/%s_fitted_vs_norm_potential_%s_range%d_sd%s.pdf",
     batch_name,
-    prefix,
+    prefixfull,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -123,9 +127,10 @@ ggplot() +
   theme_minimal()
 ggsave(
   sprintf(
-    "%s/fig/%s_residuals_vs_fitted_range%d_sd%s.pdf",
+    "%s/fig/%s_residuals_vs_fitted_%s_range%d_sd%s.pdf",
     batch_name,
     prefixfull,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -138,9 +143,10 @@ ggplot() +
   theme_minimal()
 ggsave(
   sprintf(
-    "%s/fig/%s_histogram_residuals_range%d_sd%s.pdf",
+    "%s/fig/%s_histogram_residuals_%s_range%d_sd%s.pdf",
     batch_name,
     prefixfull,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -158,9 +164,10 @@ ggplot() +
   theme_minimal()
 ggsave(
   sprintf(
-    "%s/fig/%s_qqplot_residuals_range%d_sd%s.pdf",
+    "%s/fig/%s_qqplot_residuals_%s_range%d_sd%s.pdf",
     batch_name,
     prefixfull,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -183,6 +190,7 @@ cat(ifelse(
 
 
 # validate we recover estimates similar to original model fit
+cat("Checking hyperparameter estimates\n")
 int.plot <- plot(bru1H, "Intercept") +
   geom_vline(
     xintercept = true_intercept,
@@ -213,9 +221,10 @@ var.plot <- plot(spde.var) +
 (range.plot / var.plot / int.plot)
 ggsave(
   sprintf(
-    "%s/fig/%s_est_hyper_range%d_sd%s.pdf",
+    "%s/fig/%s_est_hyper_%s_range%d_sd%s.pdf",
     batch_name,
     prefixfull,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -241,7 +250,7 @@ true_df <- true_df %>%
     in_ci = above_lwr & below_upr
   )
 # calculate 95% CI coverage ####
-
+cat("Calculating 95% CI coverage without observation noise\n")
 coverage <- mean(true_df$in_ci, na.rm = TRUE)
 coverage_is <- mean(true_df$in_ci[!true_df$oos], na.rm = TRUE)
 coverage_oos <- mean(true_df$in_ci[true_df$oos], na.rm = TRUE)
@@ -278,7 +287,7 @@ coverage_oos <- mean(true_df$in_ci[true_df$oos], na.rm = TRUE)
 # aggregation
 
 # samples for aggregation ####
-
+cat("Generating samples with observation noise for aggregation\n")
 grab_prec_name <- bru1H$.args$control.family[[1]]$hyper[[
   "theta1"
 ]]$output.name %>%
@@ -336,6 +345,7 @@ samp_df <- lapply(
   bind_rows()
 
 # variance of samples vs variance of observations check
+cat("Variance of samples diagnostics\n")
 var_samples <- samp_df %>%
   # group_by(geometry) %>%
   summarise(var_samples = var(fit)) %>%
@@ -368,7 +378,7 @@ true_df2 <- samp_df %>%
   )
 
 # plot field again with updated in_ci variable
-
+cat("Checking coverage of 95% CI with observation noise\n")
 coverage_noise <- mean(true_df2$in_ci_noise)
 coverage_noise_is <- mean(true_df2$in_ci_noise[!true_df2$oos])
 coverage_noise_oos <- mean(true_df2$in_ci_noise[true_df2$oos])
@@ -386,9 +396,10 @@ true_df2 %>%
   labs(x = "Posterior mean", y = "Observed data")
 ggsave(
   sprintf(
-    "%s/fig/%s_scatter+error_range%d_sd%s_obs.pdf",
+    "%s/fig/%s_scatter+error_%s_range%d_sd%s_obs.pdf",
     batch_name,
     prefixfull,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -408,9 +419,10 @@ true_df2 %>%
   labs(x = "Posterior mean", y = "Observed data")
 ggsave(
   sprintf(
-    "%s/fig/%s_scatter+obserror_range%d_sd%s_obs_noise.pdf",
+    "%s/fig/%s_scatter+obserror_%s_range%d_sd%s_obs_noise.pdf",
     batch_name,
     prefixfull,
+    d0_tag,
     true_range,
     sub("\\.", "_", sprintf("%.2f", true_sigma))
   ),
@@ -419,6 +431,7 @@ ggsave(
 )
 
 ## aggregation ####
+cat("Aggregation summary for samples\n")
 aggr_samples_fsim <- lapply(
   seq_along(samp_loc),
   function(s) {
