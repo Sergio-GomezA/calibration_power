@@ -37,7 +37,7 @@ cluster_ext <- "rds" # "geojson" previously
 
 pow_threshold <- 0.05
 
-tol <- 0.05
+tol <- 0.02
 norm_dist_tol <- 0.3
 
 if (local_run) {

@@ -490,7 +490,8 @@ aggr_samples_fsim <- lapply(
       norm_test$p.value < 0.05,
       "not normal",
       "maybe normal"
-    )
+    ),
+    anomaly_perc = anomaly_perc
   )
 aggr_samples_fsim
 

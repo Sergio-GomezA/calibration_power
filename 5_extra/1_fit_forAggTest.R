@@ -239,8 +239,6 @@ if (!override_objects && length(files_found) > 0) {
   # p_quant3 <- quantile(gb_day_df$norm_power_est0, probs = cutprobs3)
   p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
 
-  tol <- 0.01
-  norm_dist_tol <- 0.50
   wf_df_frag <- wf_df_frag %>%
     mutate(
       anomaly = case_when(
@@ -278,6 +276,12 @@ if (!override_objects && length(files_found) > 0) {
       norm_potential_orig = norm_potential,
       norm_potential = ifelse(anomaly, NA, norm_potential)
     )
+
+  anomaly_perc <- mean(wf_df_frag$anomaly, na.rm = TRUE) * 100
+  cat(sprintf("Percentage of anomalies in the dataset: %.2f%%\n", anomaly_perc))
+
+  wf_df_frag <- wf_df_frag %>%
+    filter(!anomaly)
 
   x <- wf_df_frag$pow_group %>% unique() %>% sort()
   min_jump <- min(diff(sort(x))) / diff(range(x))

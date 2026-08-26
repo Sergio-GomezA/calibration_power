@@ -165,7 +165,12 @@ if (!override_objects && length(files_found) > 0) {
     mutate(
       norm_potential_orig = norm_potential,
       norm_potential = ifelse(anomaly, NA, norm_potential)
-    ) %>%
+    )
+
+  anomaly_perc <- mean(true_df$anomaly, na.rm = TRUE) * 100
+  cat(sprintf("Percentage of anomalies in the dataset: %.2f%%\n", anomaly_perc))
+
+  true_df <- true_df %>%
     filter(!anomaly)
 
   x <- true_df$pow_group %>% unique() %>% sort()
