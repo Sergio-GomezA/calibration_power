@@ -46,9 +46,6 @@ if (local_run) {
   cat("Running in cluster mode\n")
 }
 
-# Get task ID and others from command-line arguments
-args <- commandArgs(trailingOnly = TRUE)
-
 # Override defaults only if arguments are provided
 if (length(args) > 0) {
   day_id <- as.numeric(args[1])
@@ -61,6 +58,19 @@ if (length(args) > 1) {
   )
 }
 
+
+cat(
+  "Running with parameters:\n",
+  "day_id =",
+  day_id,
+  "\n",
+  "norm_dist_tol =",
+  norm_dist_tol,
+  "\n",
+  "batch_name =",
+  batch_name,
+  "\n"
+)
 # if (length(args) > 2) {
 #   mesh_edge_par <- as.numeric(args[3])
 # }
@@ -109,14 +119,14 @@ if (local_run) {
   .libPaths(temp_lib)
 }
 
-if (!dir.exists(file.path("fig", batch_name))) {
-  dir.create(file.path("fig", batch_name), recursive = TRUE)
+if (!dir.exists(file.path(batch_name, "fig"))) {
+  dir.create(file.path(batch_name, "fig"), recursive = TRUE)
 }
-if (!dir.exists(file.path("summaries", batch_name))) {
-  dir.create(file.path("summaries", batch_name), recursive = TRUE)
+if (!dir.exists(file.path(batch_name, "summaries"))) {
+  dir.create(file.path(batch_name, "summaries"), recursive = TRUE)
 }
-if (!dir.exists(file.path("data", batch_name))) {
-  dir.create(file.path("data", batch_name), recursive = TRUE)
+if (!dir.exists(file.path(batch_name, "data"))) {
+  dir.create(file.path(batch_name, "data"), recursive = TRUE)
 }
 
 require(tidyverse)
