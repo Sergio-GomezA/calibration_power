@@ -5,12 +5,13 @@ prefix <- "elexon"
 prefixfull <- "elex1H"
 tols <- c(0.3, 0.4, 0.5)
 batch_names <- paste0("batchsim_tol", gsub("\\.", "_", sprintf("%.2f", tols)))
+sim_path <- "~/Documents/elexon/sims"
 
 elexsim_files <- lapply(
   batch_names,
   function(batch_name) {
     list.files(
-      file.path("summaries", batch_name),
+      file.path(sim_path, batch_name, "summaries"),
       pattern = sprintf("^%s_aggr_samples.*\\.%s$", prefix, "csv")
     )
   }
@@ -26,7 +27,7 @@ elexsim_df <- lapply(
           elexsim_files[[i]],
           function(x) {
             read.csv(
-              file.path("summaries", batch_names[i], x),
+              file.path(batch_names[i], "summaries", x),
               stringsAsFactors = FALSE
             )
           }
@@ -44,7 +45,7 @@ elex1H_files <- lapply(
   batch_names,
   function(batch_name) {
     list.files(
-      file.path("summaries", batch_name),
+      file.path(batch_name, "summaries"),
       pattern = sprintf("^%s_.*\\.%s$", prefixfull, "csv")
     )
   }
@@ -59,7 +60,7 @@ elex1H_df <- lapply(
           elex1H_files[[i]],
           function(x) {
             read.csv(
-              file.path("summaries", batch_names[i], x),
+              file.path(batch_names[i], "summaries", x),
               stringsAsFactors = FALSE
             )
           }
