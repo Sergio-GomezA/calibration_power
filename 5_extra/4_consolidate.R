@@ -83,6 +83,14 @@ elex1H_df %>%
   summarise(
     aggr_in_ci = mean(aggr_in_ci)
   )
+
+
+elexsim_df %>%
+  group_by(anomaly_thres) %>%
+  summarise(
+    cov_noise_oos = mean(cov_noise_oos),
+    aggr_in_ci = mean(aggr_in_ci)
+  )
 # plot figures ####
 
 ## scatter plot of posterior mean vs observed data with error bars
@@ -173,6 +181,27 @@ elex1H_df %>%
 #   geom_boxplot(aes(x = coverage_type, y = coverage)) +
 #   geom_hline(yintercept = 0.95, linetype = "dashed", color = "red") +
 #   labs(x = "Coverage type", y = "Coverage probability")
+
+elexsim_df %>%
+  dplyr::select(aggr_in_ci, cov_noise_oos, anomaly_thres) %>%
+  mutate(
+    type = "simulation"
+  ) %>%
+  bind_rows(
+    elex1H_df %>%
+      dplyr::select(aggr_in_ci, cov_noise_oos, anomaly_thres) %>%
+      mutate(
+        type = "real data"
+      )
+  ) %>%
+  mutate(
+    aggr_in_ci = as.logical(aggr_in_ci),
+    anomaly_thres = factor(anomaly_thres, levels = tols)
+  ) %>%
+  ggplot() +
+  geom_boxplot(aes(x = anomaly_thres, y = cov_noise_oos)) +
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "red")
+
 
 elexsim_df %>%
   dplyr::select(aggr_in_ci, cov_noise_oos, anomaly_thres) %>%
