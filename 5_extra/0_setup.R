@@ -37,7 +37,7 @@ cluster_ext <- "rds" # "geojson" previously
 
 pow_threshold <- 0.05
 
-tol <- 0.02
+tol <- 0.01
 norm_dist_tol <- 0.3
 
 if (local_run) {
@@ -63,6 +63,9 @@ cat(
   "Running with parameters:\n",
   "day_id =",
   day_id,
+  "\n",
+  "tol to low generation above mid regime =",
+  tol,
   "\n",
   "norm_dist_tol =",
   norm_dist_tol,
