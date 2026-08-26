@@ -266,7 +266,7 @@ if (!override_objects && length(files_found) > 0) {
     coord_fixed(ratio = 1)
 
   ggsave(
-    sprintf("fig/%s/anomalies_%s.pdf", batch_name, d0_tag),
+    sprintf("%s/fig/anomalies_%s.pdf", batch_name, d0_tag),
     width = 4,
     height = 4.5
   )
@@ -293,7 +293,7 @@ if (!override_objects && length(files_found) > 0) {
     st_set_geometry(wf_df_frag, .)
 
   wf_df_fname <- sprintf(
-    "data/%s/calibration_df_%s_%s.%s",
+    "%s/data/calibration_df_%s_%s.%s",
     batch_name,
     "base",
     d0_tag,
@@ -599,7 +599,7 @@ for (effect in effect_names) {
     show.plot = TRUE
   )
   ggsave(
-    sprintf("fig/%s/%s_effect_%s_%s.pdf", batch_name, effect, mod_tag, d0_tag),
+    sprintf("%s/fig/%s_effect_%s_%s.pdf", batch_name, effect, mod_tag, d0_tag),
     width = 6,
     height = 4
   )
@@ -607,7 +607,7 @@ for (effect in effect_names) {
 
 plot.hyper.dens(brulm)
 ggsave(
-  sprintf("fig/%s/hyperparameters_%s_%s.pdf", batch_name, mod_tag, d0_tag),
+  sprintf("%s/fig/hyperparameters_%s_%s.pdf", batch_name, mod_tag, d0_tag),
   width = 6,
   height = 4
 )
@@ -719,7 +719,7 @@ for (effect in effect_names) {
   )
   ggsave(
     sprintf(
-      "fig/%s/%s_effect_%s_%s.pdf",
+      "%s/fig/%s_effect_%s_%s.pdf",
       batch_name,
       effect,
       mesh_label,
@@ -731,7 +731,7 @@ for (effect in effect_names) {
 }
 plot.hyper.dens(bru0)
 ggsave(
-  sprintf("fig/%s/hyperparameters_%s_%s.pdf", batch_name, mesh_label, d0_tag),
+  sprintf("%s/fig/hyperparameters_%s_%s.pdf", batch_name, mesh_label, d0_tag),
   width = 6,
   height = 4
 )
@@ -804,7 +804,7 @@ p_median <- ggplot() +
 p_median
 ggsave(
   sprintf(
-    "fig/%s/%s_spatial_field_median_%s.png",
+    "%s/fig/%s_spatial_field_median_%s.png",
     batch_name,
     mesh_label,
     d0_tag
@@ -828,7 +828,7 @@ p_sd <- ggplot() +
   theme_void()
 p_sd
 ggsave(
-  sprintf("fig/%s/%s_spatial_field_sd_%s.png", batch_name, mesh_label, d0_tag),
+  sprintf("%s/fig/%s_spatial_field_sd_%s.png", batch_name, mesh_label, d0_tag),
   width = 10,
   height = 6,
   dpi = 100
@@ -1009,7 +1009,7 @@ scores_df[[qm_fname]] <- data.frame(
 scores_df <- list_rbind(scores_df, names_to = "model")
 write.csv(
   scores_df,
-  file.path(sprintf("summaries/%s/model_scores_%s.csv", batch_name, d0_tag)),
+  file.path(sprintf("%s/summaries/model_scores_%s.csv", batch_name, d0_tag)),
   row.names = FALSE
 )
 pit_list <- list_rbind(pit_list, names_to = "model_code") %>%
@@ -1020,7 +1020,7 @@ pit_list <- list_rbind(pit_list, names_to = "model_code") %>%
 write.csv(
   pit_list,
   gzfile(
-    file.path(sprintf("summaries/%s/model_pit_%s.csv.gz", batch_name, d0_tag)),
+    file.path(sprintf("%s/summaries/model_pit_%s.csv.gz", batch_name, d0_tag)),
     "w"
   ),
   row.names = FALSE
@@ -1058,7 +1058,7 @@ model_df0 <- wf_df_frag %>%
   )
 
 model_df_fname <- sprintf(
-  "data/%s/calibration_df_%s_%s.%s",
+  "%s/data/calibration_df_%s_%s.%s",
   batch_name,
   mesh_label,
   d0_tag,
@@ -1186,7 +1186,7 @@ df_long0 %>%
 
 ggsave(
   sprintf(
-    "fig/%s/error_distribution_by_model_%s_%s.pdf",
+    "%s/fig/error_distribution_by_model_%s_%s.pdf",
     batch_name,
     mesh_label,
     d0_tag
@@ -1218,7 +1218,7 @@ metrics_table
 write.csv(
   metrics_table,
   sprintf(
-    "summaries/%s/calib_metrics_%s_%s.csv",
+    "%s/summaries/calib_metrics_%s_%s.csv",
     batch_name,
     mesh_label,
     d0_tag
@@ -1258,7 +1258,7 @@ metrics_table
 write.csv(
   metrics_table,
   sprintf(
-    "summaries/%s/calib_metrics_%s_%s_gb.csv",
+    "%s/summaries/calib_metrics_%s_%s_gb.csv",
     batch_name,
     mesh_label,
     d0_tag
@@ -1298,7 +1298,7 @@ df_long0 %>%
 
 ggsave(
   sprintf(
-    "fig/%s/error_distribution_by_model_%s_%s_gb.pdf",
+    "%s/fig/error_distribution_by_model_%s_%s_gb.pdf",
     batch_name,
     mesh_label,
     d0_tag
@@ -1330,7 +1330,7 @@ metrics_table
 write.csv(
   metrics_table,
   sprintf(
-    "summaries/%s/calib_metrics_%s_%s_tech.csv",
+    "%s/summaries/calib_metrics_%s_%s_tech.csv",
     batch_name,
     mesh_label,
     d0_tag
@@ -1358,7 +1358,7 @@ df_long0 %>%
 
 ggsave(
   sprintf(
-    "fig/%s/error_distribution_by_tech_type_%s_%s.pdf",
+    "%s/fig/error_distribution_by_tech_type_%s_%s.pdf",
     batch_name,
     mesh_label,
     d0_tag
@@ -1389,7 +1389,7 @@ metrics_table
 write.csv(
   metrics_table,
   sprintf(
-    "summaries/%s/calib_metrics_%s_%s_regime.csv",
+    "%s/summaries/calib_metrics_%s_%s_regime.csv",
     batch_name,
     mesh_label,
     d0_tag
@@ -1416,7 +1416,7 @@ df_long0 %>%
 # scale_fill_manual(values = pal_lancet()(n_models))
 ggsave(
   sprintf(
-    "fig/%s/error_distribution_by_regime_%s_%s.pdf",
+    "%s/fig/error_distribution_by_regime_%s_%s.pdf",
     batch_name,
     mesh_label,
     d0_tag
@@ -1449,7 +1449,7 @@ df_long0 %>%
 
 ggsave(
   sprintf(
-    "fig/%s/error_distribution_by_hourA_%s_%s.pdf",
+    "%s/fig/error_distribution_by_hourA_%s_%s.pdf",
     batch_name,
     mesh_label,
     d0_tag
@@ -1488,7 +1488,7 @@ df_long0 %>%
 
 ggsave(
   sprintf(
-    "fig/%s/model_performance_by_hourS_%s_%s.pdf",
+    "%s/fig/model_performance_by_hourS_%s_%s.pdf",
     batch_name,
     mesh_label,
     d0_tag
@@ -1520,7 +1520,7 @@ metrics_table
 write.csv(
   metrics_table,
   sprintf(
-    "summaries/%s/calib_metrics_%s_%s_dist_coast.csv",
+    "%s/summaries/calib_metrics_%s_%s_dist_coast.csv",
     batch_name,
     mesh_label,
     d0_tag
@@ -1547,7 +1547,7 @@ df_long0 %>%
 # scale_fill_manual(values = pal_lancet()(n_models))
 ggsave(
   sprintf(
-    "fig/%s/error_distribution_by_dist_coast_%s_%s.pdf",
+    "%s/fig/error_distribution_by_dist_coast_%s_%s.pdf",
     batch_name,
     mesh_label,
     d0_tag
@@ -1579,7 +1579,7 @@ metrics_table
 write.csv(
   metrics_table,
   sprintf(
-    "summaries/%s/calib_metrics_%s_%s_elevation.csv",
+    "%s/summaries/calib_metrics_%s_%s_elevation.csv",
     batch_name,
     mesh_label,
     d0_tag
@@ -1606,7 +1606,7 @@ df_long0 %>%
 # scale_fill_manual(values = pal_lancet()(n_models))
 ggsave(
   sprintf(
-    "fig/%s/error_distribution_by_elevation_%s_%s.pdf",
+    "%s/fig/error_distribution_by_elevation_%s_%s.pdf",
     batch_name,
     mesh_label,
     d0_tag
@@ -1678,7 +1678,7 @@ model_df_ts %>%
   theme(legend.position = "bottom")
 ggsave(
   sprintf(
-    "fig/%s/power_estimates_time_series_%s_%s.pdf",
+    "%s/fig/power_estimates_time_series_%s_%s.pdf",
     batch_name,
     mesh_label,
     d0_tag
@@ -1725,7 +1725,7 @@ model_df_ts %>%
   theme(legend.position = "bottom")
 ggsave(
   sprintf(
-    "fig/%s/power_estimates_time_series_%s_sampWF_%s.pdf",
+    "%s/fig/power_estimates_time_series_%s_sampWF_%s.pdf",
     batch_name,
     mesh_label,
     d0_tag
@@ -1795,7 +1795,7 @@ model_df_ts2 %>%
   theme(legend.position = "bottom")
 ggsave(
   sprintf(
-    "fig/%s/power_estimates_error_time_series_%s_%s.pdf",
+    "%s/fig/power_estimates_error_time_series_%s_%s.pdf",
     batch_name,
     mesh_label,
     d0_tag

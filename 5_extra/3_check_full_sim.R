@@ -105,7 +105,7 @@ true_df %>%
   geom_abline(aes(intercept = 0, slope = 1), col = "darkred", lty = 2)
 ggsave(
   sprintf(
-    "fig/%s/%s_fitted_vs_norm_potential_range%d_sd%s.pdf",
+    "%s/fig/%s_fitted_vs_norm_potential_range%d_sd%s.pdf",
     batch_name,
     prefix,
     true_range,
@@ -123,7 +123,7 @@ ggplot() +
   theme_minimal()
 ggsave(
   sprintf(
-    "fig/%s/%s_residuals_vs_fitted_range%d_sd%s.pdf",
+    "%s/fig/%s_residuals_vs_fitted_range%d_sd%s.pdf",
     batch_name,
     prefixfull,
     true_range,
@@ -138,7 +138,7 @@ ggplot() +
   theme_minimal()
 ggsave(
   sprintf(
-    "fig/%s/%s_histogram_residuals_range%d_sd%s.pdf",
+    "%s/fig/%s_histogram_residuals_range%d_sd%s.pdf",
     batch_name,
     prefixfull,
     true_range,
@@ -158,7 +158,7 @@ ggplot() +
   theme_minimal()
 ggsave(
   sprintf(
-    "fig/%s/%s_qqplot_residuals_range%d_sd%s.pdf",
+    "%s/fig/%s_qqplot_residuals_range%d_sd%s.pdf",
     batch_name,
     prefixfull,
     true_range,
@@ -213,7 +213,7 @@ var.plot <- plot(spde.var) +
 (range.plot / var.plot / int.plot)
 ggsave(
   sprintf(
-    "fig/%s/%s_est_hyper_range%d_sd%s.pdf",
+    "%s/fig/%s_est_hyper_range%d_sd%s.pdf",
     batch_name,
     prefixfull,
     true_range,
@@ -386,7 +386,7 @@ true_df2 %>%
   labs(x = "Posterior mean", y = "Observed data")
 ggsave(
   sprintf(
-    "fig/%s/%s_scatter+error_range%d_sd%s_obs.pdf",
+    "%s/fig/%s_scatter+error_range%d_sd%s_obs.pdf",
     batch_name,
     prefixfull,
     true_range,
@@ -408,7 +408,7 @@ true_df2 %>%
   labs(x = "Posterior mean", y = "Observed data")
 ggsave(
   sprintf(
-    "fig/%s/%s_scatter+obserror_range%d_sd%s_obs_noise.pdf",
+    "%s/fig/%s_scatter+obserror_range%d_sd%s_obs_noise.pdf",
     batch_name,
     prefixfull,
     true_range,
@@ -497,7 +497,7 @@ aggr_samples_fsim
 write.csv(
   aggr_samples_fsim,
   file = sprintf(
-    "summaries/%s/%s_aggr_samples_day%s_range%d_sd%s.csv",
+    "%s/summaries/%s_aggr_samples_day%s_range%d_sd%s.csv",
     batch_name,
     prefixfull,
     d0_tag,
