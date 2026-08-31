@@ -586,6 +586,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
   pred_band_summary <- lapply(
     seq_along(bru_df$fname),
     function(i) {
+      initime <- Sys.time()
       # debug(bru_ci_plot)
       cat(
         "-------------------------------------------------------------------------------------------------\n"
@@ -611,6 +612,14 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
           cat("Error message:", e$message, "\n")
           return(NULL)
         }
+      )
+      finaltime <- Sys.time()
+      cat(
+        "Time taken for sampling model",
+        bru_df$label[i],
+        ":",
+        round(difftime(finaltime, initime, units = "mins"), 2),
+        "minutes\n"
       )
       test
     }
