@@ -288,28 +288,30 @@ if (!override_objects && length(files_found) > 0) {
     (\(g) g / 1000)() %>%
     st_set_geometry(wf_df_frag, .)
 
-  wf_df_fname <- sprintf(
-    "data/calibration_df_%s_%s.%s",
-    "base",
-    d0_tag,
-    extension
-  )
-  if (extension == "geojson" & file.exists(wf_df_fname)) {
-    file.remove(wf_df_fname)
-  }
-  if (extension != "rds") {
-    st_write(
-      wf_df_frag,
-      wf_df_fname,
-      driver = driver,
-      append = FALSE,
-      quiet = TRUE
+  if (save_daily_files) {
+    wf_df_fname <- sprintf(
+      "data/calibration_df_%s_%s.%s",
+      "base",
+      d0_tag,
+      extension
     )
-  } else {
-    saveRDS(
-      wf_df_frag,
-      wf_df_fname
-    )
+    if (extension == "geojson" & file.exists(wf_df_fname)) {
+      file.remove(wf_df_fname)
+    }
+    if (extension != "rds") {
+      st_write(
+        wf_df_frag,
+        wf_df_fname,
+        driver = driver,
+        append = FALSE,
+        quiet = TRUE
+      )
+    } else {
+      saveRDS(
+        wf_df_frag,
+        wf_df_fname
+      )
+    }
   }
 }
 cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
@@ -403,100 +405,105 @@ if (!file.exists(mesh_fname) || override_objects) {
 }
 
 ### 1.2 mesh assessment #####
-mesh_assess_fname <- file.path(
-  extra_path,
-  "mesh_figs",
-  sprintf("spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag)
-)
-if (!file.exists(mesh_assess_fname) || override_objects) {
-  cat("Assessing spatial mesh\n")
-  mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70)
+if (perform_mesh_assess) {
+  mesh_assess_fname <- file.path(
+    extra_path,
+    "mesh_figs",
+    sprintf("spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag)
+  )
+  if (!file.exists(mesh_assess_fname) || override_objects) {
+    cat("Assessing spatial mesh\n")
+    mesh_assessment <- fm_assess(mesh = wf.mesh, spatial.range = 70)
 
-  ggplot() +
-    geom_sf(
-      data = mesh_assessment %>%
-        st_filter(., bndout),
-      aes(col = edge.len)
-    ) +
-    geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-    geom_sf(data = uk_map, fill = NA, color = "white") +
-    annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
-    theme_void() +
-    scale_color_viridis_c(option = "D")
-  ggsave(
-    file.path(
-      extra_path,
-      "mesh_figs",
-      sprintf("spatial_mesh_%s_assessment_edgelen_%s.pdf", mesh_label, d0_tag)
-    ),
-    width = 4,
-    height = 6
-  )
-  # sd.dev should be close to 1
-  ggplot() +
-    gg(
-      data = mesh_assessment %>%
-        st_filter(., bndout),
-      aes(col = sd.dev)
-    ) +
-    geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-    geom_sf(data = uk_map, fill = NA, color = "white") +
-    annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
-    theme_void() #+
-  # scale_color_viridis_c(option = "D")
-  ggsave(
-    file.path(
-      extra_path,
-      "mesh_figs",
-      sprintf("spatial_mesh_%s_assessment_sddev_%s.pdf", mesh_label, d0_tag)
-    ),
-    width = 4,
-    height = 6
-  )
+    ggplot() +
+      geom_sf(
+        data = mesh_assessment %>%
+          st_filter(., bndout),
+        aes(col = edge.len)
+      ) +
+      geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+      geom_sf(data = uk_map, fill = NA, color = "white") +
+      annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+      theme_void() +
+      scale_color_viridis_c(option = "D")
+    ggsave(
+      file.path(
+        extra_path,
+        "mesh_figs",
+        sprintf("spatial_mesh_%s_assessment_edgelen_%s.pdf", mesh_label, d0_tag)
+      ),
+      width = 4,
+      height = 6
+    )
+    # sd.dev should be close to 1
+    ggplot() +
+      gg(
+        data = mesh_assessment %>%
+          st_filter(., bndout),
+        aes(col = sd.dev)
+      ) +
+      geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+      geom_sf(data = uk_map, fill = NA, color = "white") +
+      annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+      theme_void() #+
+    # scale_color_viridis_c(option = "D")
+    ggsave(
+      file.path(
+        extra_path,
+        "mesh_figs",
+        sprintf("spatial_mesh_%s_assessment_sddev_%s.pdf", mesh_label, d0_tag)
+      ),
+      width = 4,
+      height = 6
+    )
 
-  ggplot() +
-    geom_sf(
-      data = mesh_assessment %>%
-        st_filter(., bndin),
-      aes(col = edge.len)
-    ) +
-    geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-    geom_sf(data = uk_map, fill = NA, color = "white") +
-    annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
-    theme_void() +
-    scale_color_viridis_c(option = "D")
-  ggsave(
-    file.path(
-      extra_path,
-      "mesh_figs",
-      sprintf("spatial_mesh_%s_assessment2_edgelen_%s.pdf", mesh_label, d0_tag)
-    ),
-    width = 4,
-    height = 6
-  )
-  # sd.dev should be close to 1
-  ggplot() +
-    gg(
-      data = mesh_assessment %>%
-        st_filter(., bndin),
-      aes(col = sd.dev)
-    ) +
-    geom_point(data = loc_unique, aes(x, y), color = "darkred") +
-    geom_sf(data = uk_map, fill = NA, color = "white") +
-    annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
-    theme_void() #+
-  # scale_color_viridis_c(option = "D")
-  ggsave(
-    file.path(
-      extra_path,
-      "mesh_figs",
-      sprintf("spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag)
-    ),
-    width = 4,
-    height = 6
-  )
+    ggplot() +
+      geom_sf(
+        data = mesh_assessment %>%
+          st_filter(., bndin),
+        aes(col = edge.len)
+      ) +
+      geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+      geom_sf(data = uk_map, fill = NA, color = "white") +
+      annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+      theme_void() +
+      scale_color_viridis_c(option = "D")
+    ggsave(
+      file.path(
+        extra_path,
+        "mesh_figs",
+        sprintf(
+          "spatial_mesh_%s_assessment2_edgelen_%s.pdf",
+          mesh_label,
+          d0_tag
+        )
+      ),
+      width = 4,
+      height = 6
+    )
+    # sd.dev should be close to 1
+    ggplot() +
+      gg(
+        data = mesh_assessment %>%
+          st_filter(., bndin),
+        aes(col = sd.dev)
+      ) +
+      geom_point(data = loc_unique, aes(x, y), color = "darkred") +
+      geom_sf(data = uk_map, fill = NA, color = "white") +
+      annotation_scale(location = "bl", width_hint = 0.25, plot_unit = "km") +
+      theme_void() #+
+    # scale_color_viridis_c(option = "D")
+    ggsave(
+      file.path(
+        extra_path,
+        "mesh_figs",
+        sprintf("spatial_mesh_%s_assessment2_sddev_%s.pdf", mesh_label, d0_tag)
+      ),
+      width = 4,
+      height = 6
+    )
+  }
 }
-
 # 2. Model fitting ####
 ## 2.0 bru lm model ####
 mod_tag <- "lm"
@@ -1311,7 +1318,7 @@ ppxl_all <- fm_cprod(
   )
 )
 
-set.seed(1)
+# set.seed(1)
 safe_predict <- function(model, newdata, fun, n1 = 100, n2 = 10) {
   tryCatch(
     {
@@ -2216,7 +2223,7 @@ ggsave(
 
 ### 3.4.2 some locations time series ####
 
-set.seed(1)
+# set.seed(1)
 sample_sites <- model_df0 %>%
   group_by(tech_typ) %>%
   distinct(site_name) %>%
