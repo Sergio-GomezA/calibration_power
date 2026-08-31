@@ -2,7 +2,8 @@
 gbl_start_time <- Sys.time()
 
 # 0. Setup ####
-
+# Get task ID and others from command-line arguments
+args <- commandArgs(trailingOnly = TRUE)
 source('4_block_code/0_setup.R')
 
 

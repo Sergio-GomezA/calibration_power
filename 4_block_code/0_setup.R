@@ -40,14 +40,14 @@ cluster_ext <- "rds" # "geojson" previously
 
 pow_threshold <- 0.05
 
+tol <- 0.01
+norm_dist_tol <- 0.3
+
 if (local_run) {
   cat("Running in local mode\n")
 } else {
   cat("Running in cluster mode\n")
 }
-
-# Get task ID and others from command-line arguments
-args <- commandArgs(trailingOnly = TRUE)
 
 # Override defaults only if arguments are provided
 if (length(args) > 0) {
@@ -72,8 +72,37 @@ if (length(args) > 6) {
   save_models <- as.logical(args[7])
 }
 if (length(args) > 7) {
-  pow_threshold <- as.numeric(args[8])
+  norm_dist_tol <- as.numeric(args[8])
 }
+
+#print arguments used
+cat(
+  "Running with parameters:\n",
+  "day_id =",
+  day_id,
+  "\n",
+  "mesh_edge_par =",
+  mesh_edge_par,
+  "\n",
+  "override_objects =",
+  override_objects,
+  "\n",
+  "re_run_st =",
+  re_run_st,
+  "\n",
+  "n.days.before =",
+  n.days.before,
+  "\n",
+  "batch_name =",
+  batch_name,
+  "\n",
+  "save_models =",
+  save_models,
+  "\n",
+  "norm_dist_tol =",
+  norm_dist_tol,
+  "\n"
+)
 
 ## 0.2 libraries and paths ####
 require(parallel)
