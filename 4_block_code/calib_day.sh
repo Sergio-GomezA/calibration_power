@@ -8,7 +8,7 @@
 #$ -pe sharedmem 24
 #$ -M s2441782@ed.ac.uk
 #$ -m bea
-#$ -t 1-15
+#$ -t 1,51,101
 
 # Initialise modules
 source /etc/profile.d/modules.sh
@@ -17,6 +17,6 @@ source /etc/profile.d/modules.sh
 module load R/4.5
 
 # Run resolution code
-Rscript 4_block_code/0_main_calib_valid.R $SGE_TASK_ID 50 TRUE TRUE 10 batch2025 FALSE
+Rscript 4_block_code/0_main_calib_valid.R $SGE_TASK_ID 50 TRUE TRUE 3 batchY25d150 FALSE 0.3
 # file name/ day id/ mesh edge length / recreate files / 
 # rerun st model / days in traning samp / batch folder / save models
