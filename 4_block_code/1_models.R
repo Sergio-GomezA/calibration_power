@@ -197,6 +197,7 @@ if (!override_objects && length(files_found) > 0) {
   n.days <- 0
   # n.days.before <- 7
 
+  cat("Filtering data for the selected day and nearby days\n")
   wf_df_frag <- pwr_curv_df %>%
     rename(time = halfHourEndTime) %>%
     mutate(
@@ -255,8 +256,7 @@ if (!override_objects && length(files_found) > 0) {
   # p_quant3 <- quantile(gb_day_df$norm_power_est0, probs = cutprobs3)
   p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
 
-  tol <- 0.01
-  norm_dist_tol <- 0.50
+  cat("Identifying anomalies in the dataset\n")
   wf_df_frag <- wf_df_frag %>%
     mutate(
       anomaly = case_when(
@@ -282,10 +282,12 @@ if (!override_objects && length(files_found) > 0) {
     coord_fixed(ratio = 1)
 
   ggsave(
-    sprintf("%s/%s/fig/fit/anomalies_%s.pdf", output_path, batch_name, d0_tag),
+    sprintf("%s/%s/fig/fit/anomalies_%s.png", output_path, batch_name, d0_tag),
     width = 4,
-    height = 4.5
+    height = 4.5,
+    dpi = 100
   )
+  cat("Masking anomalies for model fitting\n")
 
   # mask anomalies for model fitting
 
@@ -294,6 +296,16 @@ if (!override_objects && length(files_found) > 0) {
       norm_potential_orig = norm_potential,
       norm_potential = ifelse(anomaly, NA, norm_potential)
     )
+
+  anomaly_perc <- mean(wf_df_frag$anomaly, na.rm = TRUE) * 100
+  cat(sprintf(
+    "Percentage of anomalies at %.1f%% tol in the dataset: %.2f%%\n",
+    norm_dist_tol * 100,
+    anomaly_perc
+  ))
+
+  wf_df_frag <- wf_df_frag %>%
+    filter(!anomaly)
 
   x <- wf_df_frag$pow_group %>% unique() %>% sort()
   min_jump <- min(diff(sort(x))) / diff(range(x))
@@ -1167,8 +1179,8 @@ mesh1D <- fm_mesh_1d(
 
 spde1D <- inla.spde2.pcmatern(
   mesh = mesh1D,
-  prior.range = c(3, 0.5), # P(range < 1 hour) = 0.5
-  prior.sigma = c(0.03, 0.5) # P(sd > 0.2) = 0.5
+  prior.range = c(50, 0.5), # P(range < 1 hour) = 0.5
+  prior.sigma = c(0.5, 0.5) # P(sd > 0.2) = 0.5
 )
 
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
@@ -1755,35 +1767,34 @@ model_df0 <- wf_df_frag %>%
     st_high = bru0$summary.fitted.values[1:n, "0.975quant"]
   )
 
-if (save_daily_files) {
-  model_df_fname <- sprintf(
-    "%s/%s/data/fit/calibration_df_%s_%s.%s",
-    output_path,
-    batch_name,
-    mesh_label,
-    d0_tag,
-    extension
-  )
+model_df_fname <- sprintf(
+  "%s/%s/data/fit/calibration_df_%s_%s.%s",
+  output_path,
+  batch_name,
+  mesh_label,
+  d0_tag,
+  extension
+)
 
-  if (extension == "geojson" & file.exists(model_df_fname)) {
-    cat("GeoJSON file already exists. Overwriting...\n")
-    file.remove(model_df_fname)
-  }
-
-  if (extension != "rds") {
-    st_write(
-      model_df0,
-      model_df_fname,
-      driver = driver,
-      append = FALSE,
-    )
-  } else {
-    saveRDS(
-      model_df0,
-      model_df_fname
-    )
-  }
+if (extension == "geojson" & file.exists(model_df_fname)) {
+  cat("GeoJSON file already exists. Overwriting...\n")
+  file.remove(model_df_fname)
 }
+
+if (extension != "rds") {
+  st_write(
+    model_df0,
+    model_df_fname,
+    driver = driver,
+    append = FALSE,
+  )
+} else {
+  saveRDS(
+    model_df0,
+    model_df_fname
+  )
+}
+
 
 ## 3.1 Exploring fitted values ####
 
@@ -1792,7 +1803,6 @@ if (extension != "rds") {
 } else {
   model_df0 <- readRDS(model_df_fname)
 }
-
 
 pos_breaks <- with(
   model_df0,
@@ -1868,21 +1878,21 @@ df_long0 <- model_df0 %>%
 df_long0 %>%
   ggplot() +
   geom_density(
-    aes(x = err, fill = model),
-    alpha = 0.5
+    aes(x = err, col = model),
+    fill = NA,
+    alpha = 0.5,
+    key_glyph = "path"
   ) +
-  facet_wrap(~model, scales = "free_y") +
   theme_minimal() +
   labs(
     title = "Error distribution by model",
     x = "Error (model estimate - observed)",
     y = "Density",
-    fill = "Model"
+    col = "Model"
   ) +
-  # coord_cartesian(xlim = c(-0.25, 0.25)) +
-  theme(legend.position = "none") #+
-# scale_fill_manual(values = pal_lancet()(n_models))
-# scale_fill_manual(blues9)
+  theme(
+    legend.position = "bottom"
+  )
 
 ggsave(
   sprintf(
@@ -1936,7 +1946,8 @@ metrics_table <- df_long0 %>%
     across(
       c(norm_potential, estimate),
       ~ sum(. * capacity) / sum(capacity)
-    )
+    ),
+    .groups = "drop_last"
   ) %>%
   group_by(model) %>%
   summarise(
@@ -1974,7 +1985,8 @@ df_long0 %>%
     across(
       c(norm_potential, estimate),
       ~ sum(. * capacity) / sum(capacity)
-    )
+    ),
+    .groups = "drop_last"
   ) %>%
   mutate(
     err = estimate - norm_potential,
@@ -1983,16 +1995,17 @@ df_long0 %>%
   group_by(model) %>%
   ggplot() +
   geom_density(
-    aes(x = err, fill = model),
-    alpha = 0.5
+    aes(x = err, col = model),
+    alpha = 0.5,
+    key_glyph = "path"
   ) +
-  facet_wrap(~model, scales = "free_y") +
+  # facet_wrap(~model, scales = "free_y") +
   theme_minimal() +
   labs(
     title = "Error distribution by model",
     x = "Error (model estimate - observed)",
     y = "Density",
-    fill = "Model"
+    col = "Model"
   ) +
   theme(legend.position = "bottom") #+
 # scale_fill_manual(values = pal_lancet()(n_models))
@@ -2045,16 +2058,18 @@ df_long0 %>%
   st_drop_geometry() %>%
   ggplot() +
   geom_density_ridges(
-    aes(err, tech_typ, fill = model),
+    aes(err, tech_typ, col = model),
+    fill = NA,
     alpha = 0.5,
-    scale = 1
+    scale = 1,
+    key_glyph = "path"
   ) +
   theme_ridges() +
   labs(
     title = "Error distribution by technology type",
     x = "Error (model estimate - observed)",
     y = "Technology Type",
-    fill = "Model"
+    col = "Model"
   ) +
   theme(legend.position = "bottom") #+
 # scale_fill_manual(values = pal_lancet()(n_models))
@@ -2106,16 +2121,18 @@ df_long0 %>%
   st_drop_geometry() %>%
   ggplot() +
   geom_density_ridges(
-    aes(err, p_group3, fill = model),
+    aes(err, p_group3, col = model),
+    fill = NA,
     alpha = 0.5,
-    scale = 1
+    scale = 1,
+    key_glyph = "path"
   ) +
   theme_ridges() +
   labs(
     title = "Error distribution by regime",
     x = "Error (model estimate - observed)",
     y = "Regime",
-    fill = "Model"
+    col = "Model"
   ) +
   theme(legend.position = "bottom") #+
 # scale_fill_manual(values = pal_lancet()(n_models))
@@ -2155,14 +2172,15 @@ df_long0 %>%
 
 ggsave(
   sprintf(
-    "%s/%s/fig/fit/error_distribution_by_hourA_%s_%s.pdf",
+    "%s/%s/fig/fit/error_distribution_by_hourA_%s_%s.png",
     output_path,
     batch_name,
     mesh_label,
     d0_tag
   ),
   width = 12,
-  height = 8
+  height = 8,
+  dpi = 50
 )
 
 df_long0 %>%
@@ -2241,16 +2259,18 @@ df_long0 %>%
   st_drop_geometry() %>%
   ggplot() +
   geom_density_ridges(
-    aes(err, dist_coast_g4, fill = model),
+    aes(err, dist_coast_g4, col = model),
+    fill = NA,
     alpha = 0.5,
-    scale = 1
+    scale = 1,
+    key_glyph = "path"
   ) +
   theme_ridges() +
   labs(
     title = "Error distribution by distance to coast",
     x = "Error (model estimate - observed)",
     y = "Distance to Coast",
-    fill = "Model"
+    col = "Model"
   ) +
   theme(legend.position = "bottom") #+
 # scale_fill_manual(values = pal_lancet()(n_models))
@@ -2302,16 +2322,18 @@ df_long0 %>%
   st_drop_geometry() %>%
   ggplot() +
   geom_density_ridges(
-    aes(err, elevation_g4, fill = model),
+    aes(err, elevation_g4, col = model),
+    fill = NA,
     alpha = 0.5,
-    scale = 1
+    scale = 1,
+    key_glyph = "path"
   ) +
   theme_ridges() +
   labs(
     title = "Error distribution by elevation",
     x = "Error (model estimate - observed)",
     y = "Elevation",
-    fill = "Model"
+    col = "Model"
   ) +
   theme(legend.position = "bottom") # +
 # scale_fill_manual(values = pal_lancet()(n_models))
@@ -2331,193 +2353,192 @@ ggsave(
 ## 3.4 time series plots #####
 
 ### 3.4.1 aggregated time series version #####
-mod_labels2 <- c(mod_labels, "norm_potential" = "Observed")
-model_df_ts <- model_df0 %>%
-  dplyr::select(
-    time,
-    site_name,
-    tech_typ,
-    norm_potential,
-    capacity,
-    ws_h,
-    any_of(est_cols)
-  ) %>%
-  pivot_longer(
-    cols = any_of(c("norm_potential", est_cols)),
-    names_to = "model",
-    values_to = "estimate"
-  ) %>%
-  mutate(
-    estimate = pmin(1, pmax(0, estimate)), # clipping estimates to [0, 1]
-  )
+# mod_labels2 <- c(mod_labels, "norm_potential" = "Observed")
+# model_df_ts <- model_df0 %>%
+#   dplyr::select(
+#     time,
+#     site_name,
+#     tech_typ,
+#     norm_potential,
+#     capacity,
+#     ws_h,
+#     any_of(est_cols)
+#   ) %>%
+#   pivot_longer(
+#     cols = any_of(c("norm_potential", est_cols)),
+#     names_to = "model",
+#     values_to = "estimate"
+#   ) %>%
+#   mutate(
+#     estimate = pmin(1, pmax(0, estimate)), # clipping estimates to [0, 1]
+#   )
 
-model_df_ts %>%
-  ggplot() +
-  geom_line(
-    aes(time, estimate, group = site_name),
-    alpha = 0.5,
-    col = "gray50"
-  ) +
-  geom_line(
-    data = model_df_ts %>%
-      group_by(time, model) %>%
-      summarise(
-        power = sum(estimate * capacity) / sum(capacity),
-        .groups = "drop"
-      ),
-    aes(time, power, col = "capacity weighted avg."),
-    lwd = 1
-  ) +
-  geom_line(
-    data = model_df_ts %>%
-      group_by(time, model) %>%
-      summarise(power = mean(estimate), .groups = "drop"),
-    aes(time, power, col = "simple avg."),
-    lwd = 1
-  ) +
-  theme_minimal() +
-  facet_wrap(~model, ncol = 3, labeller = as_labeller(mod_labels2)) +
-  scale_x_datetime(date_labels = "%H:%M") +
-  labs(
-    title = sprintf("Power estimates Time Series %s", d0),
-    x = "Time",
-    y = "Generation (% of capacity)",
-    col = ""
-  ) +
-  scale_color_manual(
-    values = c("capacity weighted avg." = "blue", "simple avg." = "red")
-  ) +
-  theme(legend.position = "bottom")
-ggsave(
-  sprintf(
-    "%s/%s/fig/fit/power_estimates_time_series_%s_%s.pdf",
-    output_path,
-    batch_name,
-    mesh_label,
-    d0_tag
-  ),
-  width = 10,
-  height = 6
-)
+# model_df_ts %>%
+#   ggplot() +
+#   geom_line(
+#     aes(time, estimate, group = site_name),
+#     alpha = 0.5,
+#     col = "gray50"
+#   ) +
+#   geom_line(
+#     data = model_df_ts %>%
+#       group_by(time, model) %>%
+#       summarise(
+#         power = sum(estimate * capacity) / sum(capacity),
+#         .groups = "drop"
+#       ),
+#     aes(time, power, col = "capacity weighted avg."),
+#     lwd = 1
+#   ) +
+#   geom_line(
+#     data = model_df_ts %>%
+#       group_by(time, model) %>%
+#       summarise(power = mean(estimate), .groups = "drop"),
+#     aes(time, power, col = "simple avg."),
+#     lwd = 1
+#   ) +
+#   theme_minimal() +
+#   facet_wrap(~model, ncol = 3, labeller = as_labeller(mod_labels2)) +
+#   scale_x_datetime(date_labels = "%H:%M") +
+#   labs(
+#     title = sprintf("Power estimates Time Series %s", d0),
+#     x = "Time",
+#     y = "Generation (% of capacity)",
+#     col = ""
+#   ) +
+#   scale_color_manual(
+#     values = c("capacity weighted avg." = "blue", "simple avg." = "red")
+#   ) +
+#   theme(legend.position = "bottom")
+# ggsave(
+#   sprintf(
+#     "%s/%s/fig/fit/power_estimates_time_series_%s_%s.pdf",
+#     output_path,
+#     batch_name,
+#     mesh_label,
+#     d0_tag
+#   ),
+#   width = 10,
+#   height = 6
+# )
 
 ### 3.4.2 some locations time series ####
 
 # set.seed(1)
-sample_sites <- model_df0 %>%
-  group_by(tech_typ) %>%
-  distinct(site_name) %>%
-  slice_sample(n = 2) %>%
-  pull(site_name)
-sample_sites
+# sample_sites <- model_df0 %>%
+#   group_by(tech_typ) %>%
+#   distinct(site_name) %>%
+#   slice_sample(n = 2) %>%
+#   pull(site_name)
+# sample_sites
 
-model_df_ts %>%
-  filter(site_name %in% sample_sites) %>%
-  mutate(model = mod_labels2[model]) %>%
-  ggplot() +
-  geom_line(
-    aes(time, estimate, group = model, col = model),
-    # alpha = 0.5
-  ) +
-  theme_minimal() +
-  facet_wrap(
-    ~ sprintf(
-      "%s (%s)",
-      site_name,
-      gsub("Wind", "", tech_typ) %>% trimws()
-    ),
-    ncol = 2
-  ) +
-  scale_x_datetime(date_labels = "%H:%M") +
-  labs(
-    title = sprintf("Power estimates Time Series %s", d0),
-    x = "Time",
-    y = "Generation (% of capacity)",
-    col = ""
-  ) +
-  # scale_fill_manual(values = pal_lancet()(n_models)) +
-  theme(legend.position = "bottom")
-ggsave(
-  sprintf(
-    "%s/%s/fig/fit/power_estimates_time_series_%s_sampWF_%s.pdf",
-    output_path,
-    batch_name,
-    mesh_label,
-    d0_tag
-  ),
-  width = 10,
-  height = 6
-)
-
+# model_df_ts %>%
+#   filter(site_name %in% sample_sites) %>%
+#   mutate(model = mod_labels2[model]) %>%
+#   ggplot() +
+#   geom_line(
+#     aes(time, estimate, group = model, col = model),
+#     # alpha = 0.5
+#   ) +
+#   theme_minimal() +
+#   facet_wrap(
+#     ~ sprintf(
+#       "%s (%s)",
+#       site_name,
+#       gsub("Wind", "", tech_typ) %>% trimws()
+#     ),
+#     ncol = 2
+#   ) +
+#   scale_x_datetime(date_labels = "%H:%M") +
+#   labs(
+#     title = sprintf("Power estimates Time Series %s", d0),
+#     x = "Time",
+#     y = "Generation (% of capacity)",
+#     col = ""
+#   ) +
+#   # scale_fill_manual(values = pal_lancet()(n_models)) +
+#   theme(legend.position = "bottom")
+# ggsave(
+#   sprintf(
+#     "%s/%s/fig/fit/power_estimates_time_series_%s_sampWF_%s.pdf",
+#     output_path,
+#     batch_name,
+#     mesh_label,
+#     d0_tag
+#   ),
+#   width = 10,
+#   height = 6
+# )
 
 ### 3.4.3 aggregated error time series version ####
-model_df_ts2 <- model_df0 %>%
-  dplyr::select(
-    time,
-    site_name,
-    tech_typ,
-    norm_potential,
-    capacity,
-    ws_h,
-    any_of(est_cols)
-  ) %>%
-  mutate(across(
-    any_of(est_cols),
-    ~ . - norm_potential
-  )) %>%
-  pivot_longer(
-    cols = any_of(est_cols),
-    names_to = "model",
-    values_to = "error"
-  )
-model_df_ts2 %>%
-  ggplot() +
-  geom_line(
-    aes(time, error, group = site_name),
-    alpha = 0.5,
-    col = "gray50"
-  ) +
-  geom_line(
-    data = model_df_ts2 %>%
-      group_by(time, model) %>%
-      summarise(
-        error = sum(error * capacity, na.rm = TRUE) /
-          sum(capacity, na.rm = TRUE),
-        .groups = "drop"
-      ),
-    aes(time, error, col = "capacity weighted avg."),
-    lwd = 1
-  ) +
-  geom_line(
-    data = model_df_ts2 %>%
-      group_by(time, model) %>%
-      summarise(error = mean(error, na.rm = TRUE), .groups = "drop"),
-    aes(time, error, col = "simple avg."),
-    lwd = 1
-  ) +
-  theme_minimal() +
-  facet_wrap(~model, ncol = 3, labeller = as_labeller(mod_labels)) +
-  scale_x_datetime(date_labels = "%H:%M") +
-  labs(
-    title = sprintf("Estimation Error Time Series %s", d0),
-    x = "Time",
-    y = "Error (% of capacity)",
-    col = ""
-  ) +
-  scale_color_manual(
-    values = c("capacity weighted avg." = "blue", "simple avg." = "red")
-  ) +
-  theme(legend.position = "bottom")
-ggsave(
-  sprintf(
-    "%s/%s/fig/fit/power_estimates_error_time_series_%s_%s.pdf",
-    output_path,
-    batch_name,
-    mesh_label,
-    d0_tag
-  ),
-  width = 10,
-  height = 6
-)
+# model_df_ts2 <- model_df0 %>%
+#   dplyr::select(
+#     time,
+#     site_name,
+#     tech_typ,
+#     norm_potential,
+#     capacity,
+#     ws_h,
+#     any_of(est_cols)
+#   ) %>%
+#   mutate(across(
+#     any_of(est_cols),
+#     ~ . - norm_potential
+#   )) %>%
+#   pivot_longer(
+#     cols = any_of(est_cols),
+#     names_to = "model",
+#     values_to = "error"
+#   )
+# model_df_ts2 %>%
+#   ggplot() +
+#   geom_line(
+#     aes(time, error, group = site_name),
+#     alpha = 0.5,
+#     col = "gray50"
+#   ) +
+#   geom_line(
+#     data = model_df_ts2 %>%
+#       group_by(time, model) %>%
+#       summarise(
+#         error = sum(error * capacity, na.rm = TRUE) /
+#           sum(capacity, na.rm = TRUE),
+#         .groups = "drop"
+#       ),
+#     aes(time, error, col = "capacity weighted avg."),
+#     lwd = 1
+#   ) +
+#   geom_line(
+#     data = model_df_ts2 %>%
+#       group_by(time, model) %>%
+#       summarise(error = mean(error, na.rm = TRUE), .groups = "drop"),
+#     aes(time, error, col = "simple avg."),
+#     lwd = 1
+#   ) +
+#   theme_minimal() +
+#   facet_wrap(~model, ncol = 3, labeller = as_labeller(mod_labels)) +
+#   scale_x_datetime(date_labels = "%H:%M") +
+#   labs(
+#     title = sprintf("Estimation Error Time Series %s", d0),
+#     x = "Time",
+#     y = "Error (% of capacity)",
+#     col = ""
+#   ) +
+#   scale_color_manual(
+#     values = c("capacity weighted avg." = "blue", "simple avg." = "red")
+#   ) +
+#   theme(legend.position = "bottom")
+# ggsave(
+#   sprintf(
+#     "%s/%s/fig/fit/power_estimates_error_time_series_%s_%s.pdf",
+#     output_path,
+#     batch_name,
+#     mesh_label,
+#     d0_tag
+#   ),
+#   width = 10,
+#   height = 6
+# )
 
 endtime <- Sys.time()
 
