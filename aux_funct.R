@@ -13,8 +13,65 @@ require(geosphere)
 
 theme_set(theme_bw())
 
-wind.bmus <- fread(file.path("data", "wind_bmu_2.csv.gz"))
-wind.bmus.alt <- read.csv("data/wind_bmu_alt.csv")
+bmu_list_fname <- "data/wind_bmu_2.csv.gz"
+if (!file.exists(bmu_list_fname)) {
+  cat("BMU list file not found: ", bmu_list_fname, "\n")
+  cat("Recreating...\n")
+  # wind.bmus <- bmus %>%
+  #   filter(grepl("WIND",fuelType), fpnFlag) %>%
+  #   filter(productionOrConsumptionFlag %in% c("P"))
+  url <- "https://data.elexon.co.uk/bmrs/api/v1/reference/bmunits/all"
+  response <- GET(url, accept("text/plain"))
+  json_data <- content(response, "text", encoding = "UTF-8")
+  bmus <- fromJSON(json_data)
+  wind.bmus <- bmus %>%
+    filter(
+      grepl("WIND", fuelType) |
+        grepl("wind|offshore", leadPartyName, ignore.case = TRUE) |
+        grepl("wind farm|windfarm", bmUnitName, ignore.case = TRUE)
+    ) %>%
+    filter(!is.na(elexonBmUnit)) %>%
+    mutate(generationCapacity = as.numeric(generationCapacity))
+  # wind.bmus
+
+  wind.bmus %>%
+    write.csv(
+      .,
+      gzfile(bmu_list_fname),
+    )
+} else {
+  wind.bmus <- fread(bmu_list_fname)
+}
+
+wind_bmus_alt_fname <- "data/wind_bmu_alt.csv"
+if (!file.exists(wind_bmus_alt_fname)) {
+  power_park <- readxl::read_xlsx(
+    "data/power-park-modules.xlsx",
+    sheet = 1,
+    n_max = 252
+  ) %>%
+    rename(
+      elexonBmUnit = `Settlement BMU name`,
+      capacity_alt = `BMU or Large Reg Cap only`
+    )
+  names(power_park) <- tolower(gsub(" ", "_", names(power_park)))
+  wind.bmus.alt <- wind.bmus %>%
+    left_join(
+      power_park %>% dplyr::select(elexonbmunit, capacity_alt),
+      by = c("elexonBmUnit" = "elexonbmunit")
+    ) %>%
+    mutate(
+      diff_cap = abs(generationCapacity - capacity_alt),
+      capacity = case_when(
+        is.na(capacity_alt) ~ generationCapacity,
+        capacity_alt <= 0 ~ generationCapacity,
+        diff_cap > generationCapacity * 0.1 ~ capacity_alt,
+        TRUE ~ generationCapacity
+      )
+    )
+} else {
+  wind.bmus.alt <- read.csv(wind_bmus_alt_fname)
+}
 
 mypalette <- pal_aaas()(3)[c(1, 3)] # offshore / onshore
 regime_palette <- pal_lancet()(3)[c(2, 3, 1)]

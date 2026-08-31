@@ -283,7 +283,7 @@ power_park <- readxl::read_xlsx("data/power-park-modules.xlsx", sheet = 1, n_max
 names(power_park) <- tolower(gsub(" ", "_", names(power_park)))
 wind.bmus.alt <- wind.bmus %>% 
   left_join(
-    power_park %>% select(elexonbmunit,capacity_alt),
+    power_park %>% dplyr::select(elexonbmunit,capacity_alt),
     by = c("elexonBmUnit"="elexonbmunit")
   ) %>% 
   mutate(
