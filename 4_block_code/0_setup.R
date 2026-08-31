@@ -18,7 +18,7 @@ fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
 n.days.before <- 3
 n.days.before.heavy <- 3
-batch_name <- "batch2025simtest"
+batch_name <- "batchY25d150"
 
 task_prefix <- "spaceoos"
 save_models <- FALSE
@@ -103,13 +103,33 @@ if (local_run) {
   .libPaths(temp_lib)
 }
 
-if (!dir.exists(file.path("fig", batch_name))) {
-  dir.create(file.path("fig", batch_name), recursive = TRUE)
+if (!dir.exists(file.path(output_path, batch_name, "fig"))) {
+  dir.create(file.path(output_path, batch_name, "fig/fit"), recursive = TRUE)
+  dir.create(file.path(output_path, batch_name, "fig/oos"), recursive = TRUE)
+  dir.create(file.path(output_path, batch_name, "fig/checks"), recursive = TRUE)
 }
-if (!dir.exists(file.path("summaries", batch_name))) {
-  dir.create(file.path("summaries", batch_name), recursive = TRUE)
+if (!dir.exists(file.path(output_path, batch_name, "summaries"))) {
+  dir.create(
+    file.path(output_path, batch_name, "summaries/fit"),
+    recursive = TRUE
+  )
+  dir.create(
+    file.path(output_path, batch_name, "summaries/oos"),
+    recursive = TRUE
+  )
+  dir.create(
+    file.path(output_path, batch_name, "summaries/checks"),
+    recursive = TRUE
+  )
 }
-
+if (!dir.exists(file.path(output_path, batch_name, "data"))) {
+  dir.create(file.path(output_path, batch_name, "data/fit"), recursive = TRUE)
+  dir.create(file.path(output_path, batch_name, "data/oos"), recursive = TRUE)
+}
+if (!dir.exists(file.path(extra_path, batch_name, "meshes"))) {
+  dir.create(file.path(extra_path, batch_name, "meshes"), recursive = TRUE)
+  dir.create(file.path(extra_path, batch_name, "mesh_figs"), recursive = TRUE)
+}
 
 require(tidyverse)
 require(sf)
