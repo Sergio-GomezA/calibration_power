@@ -54,7 +54,7 @@ cat("Preparing data for model fitting\n")
 
 gb_day_df_fname <- sprintf("data/GB_daily_summary.parquet")
 
-if (!file.exists(gb_day_df_fname) || override_objects) {
+if (!file.exists(gb_day_df_fname)) {
   cat("GB daily summary file not found, creating new summary\n")
   GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
     rename(time = halfHourEndTime) %>%
