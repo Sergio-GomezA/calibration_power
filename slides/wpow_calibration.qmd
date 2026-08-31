@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2026-08-05"
+date: "2026-08-26"
 format: 
   beamer:
     theme: Rochester
@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "wpow_calibration_slides_26-08-05.pdf"
+    output-file: "wpow_calibration_slides_26-08-26.pdf"
 header-includes:
   - \usepackage{graphicx}
   - \setbeamerfont{itemize/enumerate body}{size=\footnotesize}
@@ -63,12 +63,81 @@ theme_set(theme_bw())
 ### New
 \begin{itemize}
   \item Annual Review 2026
-  \item Updated validation framework
-  \item Anomalies exclusions
-  \item Probabilistic scores
-  \item Low wind events distribution
+  \item Simulation for aggregation
 \end{itemize}
 
+## Simulating aggregation with different anomaly thresholds
+
+::: {.columns}
+
+::: {.column width="50%"}
+- WF level data contains anomalies consistent with curtailment or outages
+- Previouly only observations 50% away from Generic power curve estimate were excluded
+- A simulation exercise now includes a 30% threshold
+:::
+
+::: {.column width="50%"}
+\centering
+\small Anomalies excluded from data set
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{/home/s2441782/Documents/elexon/sims/batchsim_tol0_30/fig/anomalies_250127.pdf}
+:::
+
+:::
+
+
+## Anomaly exclusion
+::: {.columns}
+
+::: {.column width="50%"}
+- WF level data contains anomalies consistent with curtailment or outages
+- A 50% usually excluded less than 15% of the observations
+- A 30% threshold is more aggresive and can exclude up to 30% of the observations 
+:::
+
+::: {.column width="50%"}
+\centering
+\small Anomalies excluded from data set
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/anomaly_perc_boxplot.pdf}
+:::
+
+:::
+
+## Effects for aggregated coverage
+::: {.columns}
+
+::: {.column width="50%"}
+- Aggregation results in better coverage after excluding more anomalies
+- Uncertainty bands seem quite narrow though
+
+\centering
+\tiny
+WF coverage for simulationsn and real data
+\includegraphics[width=\linewidth,height=3.5cm,keepaspectratio]{../fig/elex24H+sim_WF_coverage_boxplot.pdf}
+:::
+
+::: {.column width="50%"}
+\centering
+\small Posterior mean and 95% credible interval at different thresholds
+
+\includegraphics[width=\linewidth,height=5cm,keepaspectratio]{../fig/elex24H_aggr_cov_scatter.pdf}
+:::
+
+:::
+
+## Annual Review
+
+### Project 2: Calibration of Reanalysis Using Wind Power Data
+
+- Three approaches tried: aggregated GB model, power curve estimation (ERA5), deterministic power curve calibration
+- Each excels at different aspect: country-level uncertainty, power curve shape, wf-level calibration
+- Naive aggregation biases estimates, understates uncertainty (curtailment-like anomalies)
+- **Next phase:**
+  - Update uncertainty quantification for wf + aggregated calibration
+  - Extend validation across wider range of periods/conditions
+  - Model low-generation anomalies vs. exclude via threshold
+  - Reassess low-generation events with updated estimates
 
 ## Annual Review
 
@@ -84,6 +153,7 @@ theme_set(theme_bw())
   - Obtain calibrated solar estimates matching the aggregated data
   - Characterise low-generation events for solar
   - Estimate the joint distribution of low-generation events
+- Prioritised for months 6-10, pending Project 2 progress
 
 ## Annual Review
 ### Project 4: Impact of Low-Generation Events on Regional Demand and Transmission
@@ -94,7 +164,7 @@ theme_set(theme_bw())
 - **Goals:**
   - Understand how low-generation events interact with demand dynamics and transmission constraints
   - Evaluate frequency and severity of worst-case scenarios, in terms of megawatt-hour gaps
-
+- Tentative, months 10-12: full chapter, shorter chapter, or future work depending on progress
 
 
 # Model validation framework
