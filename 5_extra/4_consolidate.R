@@ -17,6 +17,7 @@ elexsim_files <- lapply(
   }
 )
 
+
 elexsim_df <- lapply(
   seq(elexsim_files),
   function(i) {
@@ -27,7 +28,7 @@ elexsim_df <- lapply(
           elexsim_files[[i]],
           function(x) {
             read.csv(
-              file.path(batch_names[i], "summaries", x),
+              file.path(sim_path, batch_names[i], "summaries", x),
               stringsAsFactors = FALSE
             )
           }
@@ -41,11 +42,27 @@ elexsim_df <- lapply(
   bind_rows() # %>%
 # filter(!is.na(var_samples)) # remove cases where no samples were generated
 
+old_elexsim_files <- list.files(
+  file.path("summaries", "batch2025simtest"),
+  pattern = sprintf("^%s_aggr_samples.*\\.%s$", prefix, "csv")
+)
+old_elexsim_df <- lapply(
+  old_elexsim_files,
+  function(x) {
+    read.csv(
+      file.path("summaries", "batch2025simtest", x),
+      stringsAsFactors = FALSE
+    )
+  }
+) %>%
+  bind_rows() %>%
+  mutate(anomaly_thres = 0.5)
+
 elex1H_files <- lapply(
   batch_names,
   function(batch_name) {
     list.files(
-      file.path(batch_name, "summaries"),
+      file.path(sim_path, batch_name, "summaries"),
       pattern = sprintf("^%s_.*\\.%s$", prefixfull, "csv")
     )
   }
@@ -60,7 +77,7 @@ elex1H_df <- lapply(
           elex1H_files[[i]],
           function(x) {
             read.csv(
-              file.path(batch_names[i], "summaries", x),
+              file.path(sim_path, batch_names[i], "summaries", x),
               stringsAsFactors = FALSE
             )
           }
@@ -74,31 +91,73 @@ elex1H_df <- lapply(
   bind_rows()
 # filter(!is.na(variance_samples)) # remove cases where no samples were generated
 
-elexsim_df %>%
-  group_by(anomaly_thres) %>%
-  summarise(
-    aggr_in_ci = mean(aggr_in_ci)
+old_elex1H_files <- list.files(
+  file.path("summaries", "batch2025simtest"),
+  pattern = sprintf("^%s_.*\\.%s$", prefixfull, "csv")
+)
+old_elex1H_df <- lapply(
+  old_elex1H_files,
+  function(x) {
+    read.csv(
+      file.path("summaries", "batch2025simtest", x),
+      stringsAsFactors = FALSE
+    )
+  }
+) %>%
+  bind_rows() %>%
+  mutate(anomaly_thres = 0.5)
+
+sim_df <- elexsim_df %>%
+  filter(anomaly_thres != 0.5) %>%
+  bind_rows(
+    old_elexsim_df %>%
+      filter(anomaly_thres == 0.5)
   )
-elex1H_df %>%
+sim_df %>%
   group_by(anomaly_thres) %>%
   summarise(
     aggr_in_ci = mean(aggr_in_ci)
   )
 
+elex_df <- elex1H_df %>%
+  filter(anomaly_thres != 0.5) %>%
+  bind_rows(
+    old_elex1H_df %>%
+      filter(anomaly_thres == 0.5)
+  )
+elex_df %>%
+  group_by(anomaly_thres) %>%
+  summarise(
+    aggr_in_ci = mean(aggr_in_ci)
+  )
 
-elexsim_df %>%
+sim_df %>%
+  group_by(anomaly_thres) %>%
+  summarise(
+    cov_noise_oos = mean(cov_noise_oos),
+    aggr_in_ci = mean(aggr_in_ci)
+  )
+
+elex_df %>%
   group_by(anomaly_thres) %>%
   summarise(
     cov_noise_oos = mean(cov_noise_oos),
     aggr_in_ci = mean(aggr_in_ci)
   )
 # plot figures ####
-
+elex1H_df %>%
+  filter(anomaly_thres != 0.4) %>%
+  mutate(
+    anomaly_thres = factor(anomaly_thres, levels = tols)
+  ) %>%
+  ggplot() +
+  geom_boxplot(aes(x = anomaly_thres, y = anomaly_perc))
+ggsave("fig/anomaly_perc_boxplot.pdf", width = 6, height = 6)
 ## scatter plot of posterior mean vs observed data with error bars
 
 ### elexsim
 
-elexsim_df %>%
+sim_df %>%
   ggplot(aes(x = fit, y = observed)) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
   # geom_point() +
@@ -123,7 +182,8 @@ elexsim_df %>%
 
 ### elex1H model
 
-elex1H_df %>%
+elex_df %>%
+  filter(anomaly_thres != 0.4) %>%
   ggplot(aes(x = fit, y = observed)) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
   geom_errorbar(
@@ -138,12 +198,16 @@ elex1H_df %>%
     values = c("TRUE" = blues9[7], "FALSE" = "darkred"),
   ) +
   coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
-  facet_wrap(~anomaly_thres)
-# ggsave(
-#   file.path("fig", batch_name, sprintf("%s_aggr_cov_scatter.pdf", prefixfull)),
-#   width = 6,
-#   height = 6
-# )
+  facet_wrap(
+    ~anomaly_thres,
+    labeller = labeller(anomaly_thres = function(x) paste0("Threshold: ", x))
+  ) +
+  theme(legend.position = "bottom")
+ggsave(
+  file.path("fig", sprintf("%s_aggr_cov_scatter.pdf", "elex24H")),
+  width = 6,
+  height = 6
+)
 
 ## coverage simulations vs real data
 
@@ -193,18 +257,35 @@ elexsim_df %>%
       dplyr::select(aggr_in_ci, cov_noise_oos, anomaly_thres) %>%
       mutate(
         type = "real data"
+      ) %>%
+      filter(anomaly_thres != 0.5) %>%
+      bind_rows(
+        old_elex1H_df %>%
+          dplyr::select(aggr_in_ci, cov_noise_oos, anomaly_thres) %>%
+          mutate(
+            type = "real data"
+          ) %>%
+          filter(anomaly_thres == 0.5)
       )
   ) %>%
+  filter(anomaly_thres != 0.4) %>%
   mutate(
     aggr_in_ci = as.logical(aggr_in_ci),
     anomaly_thres = factor(anomaly_thres, levels = tols)
   ) %>%
   ggplot() +
   geom_boxplot(aes(x = anomaly_thres, y = cov_noise_oos)) +
-  geom_hline(yintercept = 0.95, linetype = "dashed", color = "red")
+  geom_hline(yintercept = 0.95, linetype = "dashed", color = "red") +
+  facet_wrap(~type) +
+  labs(x = "Anomaly threshold", y = "Coverage probability (WF level)")
+ggsave(
+  file.path("fig", sprintf("%s_WF_coverage_boxplot.pdf", "elex24H+sim")),
+  width = 4,
+  height = 3
+)
 
 
-elexsim_df %>%
+sim_df %>%
   dplyr::select(aggr_in_ci, cov_noise_oos, anomaly_thres) %>%
   mutate(
     type = "simulation"
@@ -234,7 +315,7 @@ elexsim_df %>%
   theme(legend.position = "bottom")
 
 ggsave(
-  file.path("fig", batch_name, sprintf("%s_WF_coverage_boxplot.pdf", prefix)),
+  file.path("fig", sprintf("%s_WF_coverage_boxplot.pdf", "elex24H+sim")),
   width = 6,
   height = 6
 )
@@ -284,14 +365,15 @@ ggsave(
 
 ## variance of samples vs variance of observed data
 
-elexsim_df %>%
+sim_df %>%
   ggplot(aes(x = variance_samples, y = variance_observed)) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
   geom_point(col = blues9[7]) +
   facet_wrap(~anomaly_thres) +
   labs(x = "Variance of samples", y = "Variance of observed data")
 
-elex1H_df %>%
+elex_df %>%
+  filter(anomaly_thres != 0.4) %>%
   ggplot(aes(x = variance_samples, y = variance_observed)) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
   geom_point(
@@ -312,7 +394,6 @@ elex1H_df %>%
 ggsave(
   file.path(
     "fig",
-    batch_name,
     sprintf("%s_WF_variance_scatter.pdf", prefixfull)
   ),
   width = 6,
