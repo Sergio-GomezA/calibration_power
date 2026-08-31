@@ -2560,7 +2560,18 @@ rm(
   brulmt,
   qqmod,
   model_AIC0,
-  model_AIC0_agg
+  model_AIC0_agg,
+  pwr_curv_df,
+  wf_df_frag,
+  ppxl,
+  ppxl_all,
+  pow_est_st,
+  model_df_ts,
+  model_df_ts2,
+  df_long0,
+  samp_gb,
+  pit_list,
+  scores_df
 )
 gc()
 
