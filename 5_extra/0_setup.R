@@ -30,7 +30,7 @@ n.hours.time <- 72
 
 # space validation
 n.days.space <- 0
-n.days.before.space <- 10
+n.days.before.space <- 3
 n.hours.space <- 72
 
 cluster_ext <- "rds" # "geojson" previously
@@ -57,7 +57,6 @@ if (length(args) > 1) {
     sub("\\.", "_", sprintf("%.2f", norm_dist_tol))
   )
 }
-
 
 cat(
   "Running with parameters:\n",

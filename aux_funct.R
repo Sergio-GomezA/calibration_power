@@ -2070,20 +2070,20 @@ bru_ci_plot <- function(
       lwr = quantile(fit, 0.025),
       upr = quantile(fit, 0.975),
       fit = mean(fit),
-      norm_potential = mean(norm_potential),
+      norm_potential = mean(norm_potential, na.rm = TRUE),
       .groups = "drop"
     )
-
+  not_anomaly_ind <- (!is.na(newdata$norm_potential))
   # browser()
   if (is.null(t_start)) {
     t_start <- t1 # global variable
   }
   if (oos_type == "time") {
-    pred_ind <- which(newdata$time >= t_start)
+    pred_ind <- which(newdata$time >= t_start & not_anomaly_ind)
   } else if (oos_type == "space") {
-    pred_ind <- which(newdata$time < t_start)
+    pred_ind <- which(newdata$time < t_start & not_anomaly_ind)
   } else {
-    pred_ind <- which(newdata$time >= t_start)
+    pred_ind <- which(newdata$time >= t_start & not_anomaly_ind)
   }
   observed <- newdata$norm_potential[pred_ind]
 
@@ -2113,7 +2113,8 @@ bru_ci_plot <- function(
         expr(
           mean(
             norm_potential >= !!rlang::sym(lower_cols[i]) &
-              norm_potential <= !!rlang::sym(upper_cols[i])
+              norm_potential <= !!rlang::sym(upper_cols[i]),
+            na.rm = TRUE
           )
         )
       }),
@@ -2159,7 +2160,8 @@ bru_ci_plot <- function(
     # aggregate all sites keep samples
     summarise(
       estimate = sum(fit * capacity) / sum(capacity),
-      norm_potential = sum(norm_potential * capacity) / sum(capacity),
+      norm_potential = sum(norm_potential * capacity, na.rm = TRUE) /
+        sum(capacity),
       .groups = "drop_last"
     ) %>%
     # GB aggregation summary
@@ -2167,7 +2169,7 @@ bru_ci_plot <- function(
       mean = mean(estimate),
       lwr = quantile(estimate, 0.025),
       upr = quantile(estimate, 0.975),
-      norm_potential = mean(norm_potential),
+      norm_potential = mean(norm_potential, na.rm = TRUE),
       .groups = "drop"
     )
 

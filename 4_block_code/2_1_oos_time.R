@@ -369,6 +369,11 @@ if (!override_objects && length(files_found) > 0) {
     norm_dist_tol * 100,
     anomaly_perc
   ))
+  # wf_df_pred <- wf_df_pred %>%
+  #   mutate(
+  #     norm_potential_orig = norm_potential,
+  #     norm_potential = ifelse(anomaly, NA, norm_potential)
+  #   )
   wf_df_pred <- wf_df_pred %>%
     filter(!anomaly)
 
@@ -466,7 +471,8 @@ lm_pred_fig_df <- lm_pred %>%
     } else {
       mean(std_error)
     },
-    norm_potential = sum(norm_potential * capacity) / sum(capacity),
+    norm_potential = sum(norm_potential * capacity, na.rm = TRUE) /
+      sum(capacity),
     norm_power_est0 = sum(norm_power_est0 * capacity) / sum(capacity),
     .groups = "drop"
   ) %>%
@@ -523,7 +529,8 @@ qm_pred_fig_df <- qm_pred_df %>%
   group_by(time, model) %>%
   summarise(
     mean = sum(estimate * capacity) / sum(capacity),
-    norm_potential = sum(norm_potential * capacity) / sum(capacity),
+    norm_potential = sum(norm_potential * capacity, na.rm = TRUE) /
+      sum(capacity),
     norm_power_est0 = sum(norm_power_est0 * capacity) / sum(capacity),
     .groups = "drop"
   )
@@ -579,6 +586,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
   pred_band_summary <- lapply(
     seq_along(bru_df$fname),
     function(i) {
+      # debug(bru_ci_plot)
       cat(
         "-------------------------------------------------------------------------------------------------\n"
       )
@@ -899,7 +907,10 @@ cov_bands_wf <- wf_fig_df %>%
   filter(time >= t1) %>%
   group_by(model, coord_id) %>%
   summarise(
-    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    coverage = mean(
+      norm_potential >= lwr & norm_potential <= upr,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   ) %>%
   group_by(model) %>%
@@ -937,7 +948,10 @@ cov_bands <- gb_fig_df %>%
   filter(time >= t1) %>%
   group_by(model) %>%
   summarise(
-    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    coverage = mean(
+      norm_potential >= lwr & norm_potential <= upr,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   ) %>%
   arrange(desc(coverage)) %>%
@@ -986,13 +1000,17 @@ gb_fig_df <- gb_fig_df %>%
 
 var_emp <- gb_fig_df %>%
   group_by(model) %>%
-  summarise(var_res = var(residual), sd_res = sd(residual), .groups = "drop")
+  summarise(
+    var_res = var(residual, na.rm = TRUE),
+    sd_res = sd(residual, na.rm = TRUE),
+    .groups = "drop"
+  )
 
 var_wf <- wf_fig_df %>%
   group_by(model) %>%
   summarise(
-    var_res = var(norm_potential - fit),
-    sd_res = sd(norm_potential - fit),
+    var_res = var(norm_potential - fit, na.rm = TRUE),
+    sd_res = sd(norm_potential - fit, na.rm = TRUE),
     .groups = "drop"
   )
 
