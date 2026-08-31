@@ -372,8 +372,9 @@ if (!override_objects && length(files_found) > 0) {
     st_set_geometry(wf_df_pred, .)
 
   wf_df_fname <- sprintf(
-    "data/calibration_preddf_%s_%s_%s.%s",
-    "base",
+    "%s/%s/data/oos/calibration_preddf_%s_%s_%s.%s",
+    output_path,
+    batch_name,
     task_prefix,
     d0_tag,
     extension
@@ -522,7 +523,9 @@ bru_df <- model_df %>% filter(type == "bru")
 
 # pred band summary
 pred_summary_fname <- sprintf(
-  "summaries/pred_band_%s_summary_%s.rds",
+  "%s/%s/summaries/oos/pred_band_%s_summary_%s.rds",
+  output_path,
+  batch_name,
   task_prefix,
   d0_tag
 )
@@ -535,12 +538,16 @@ pred_samples_fname <- file.path(
   )
 )
 cov_summary_fname <- sprintf(
-  "summaries/pred_band_coverage_summary_%s_%s.rds",
+  "%s/%s/summaries/oos/pred_band_coverage_summary_%s_%s.rds",
+  output_path,
+  batch_name,
   task_prefix,
   d0_tag
 )
 scores_summary_fname <- sprintf(
-  "summaries/model_scores_summary_%s_%s.csv",
+  "%s/%s/summaries/oos/model_scores_summary_%s_%s.csv",
+  output_path,
+  batch_name,
   task_prefix,
   d0_tag
 )
@@ -670,7 +677,13 @@ gb_fig_df <- bind_rows(
   )
 saveRDS(
   gb_fig_df,
-  sprintf("summaries/GB_fig_band_summary_%s_%s.rds", task_prefix, d0_tag)
+  sprintf(
+    "%s/%s/summaries/oos/GB_fig_band_summary_%s_%s.rds",
+    output_path,
+    batch_name,
+    task_prefix,
+    d0_tag
+  )
 )
 
 gb_fig_df %>%
@@ -718,7 +731,8 @@ gb_fig_df %>%
 
 ggsave(
   filename = sprintf(
-    "fig/%s/GB_pred_band_%s_%s.pdf",
+    "%s/%s/fig/oos/GB_pred_band_%s_%s.pdf",
+    output_path,
     batch_name,
     task_prefix,
     d0_tag
@@ -785,7 +799,13 @@ wf_fig_df <- bind_rows(
 
 saveRDS(
   wf_fig_df,
-  sprintf("summaries/WF_fig_band_summary_%s_%s.rds", task_prefix, d0_tag)
+  sprintf(
+    "%s/%s/summaries/oos/WF_fig_band_summary_%s_%s.rds",
+    output_path,
+    batch_name,
+    task_prefix,
+    d0_tag
+  )
 )
 
 for (mod in est_cols) {
@@ -841,7 +861,8 @@ for (mod in est_cols) {
       labs(fill = "", color = "", y = "Normalised power output")
     ggsave(
       filename = sprintf(
-        "fig/%s/WF_pred_band_%s_%s_%s_%d.pdf",
+        "%s/%s/fig/oos/WF_pred_band_%s_%s_%s_%d.pdf",
+        output_path,
         batch_name,
         task_prefix,
         mod,
@@ -884,7 +905,8 @@ cov_bands_wf %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
   filename = sprintf(
-    "fig/%s/WF_pred_band_coverage_%s_%s.pdf",
+    "%s/%s/fig/oos/WF_pred_band_coverage_%s_%s.pdf",
+    output_path,
     batch_name,
     task_prefix,
     d0_tag
@@ -917,7 +939,8 @@ cov_bands %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
   filename = sprintf(
-    "fig/%s/GB_pred_band_coverage_%s_%s.pdf",
+    "%s/%s/fig/oos/GB_pred_band_coverage_%s_%s.pdf",
+    output_path,
     batch_name,
     task_prefix,
     d0_tag

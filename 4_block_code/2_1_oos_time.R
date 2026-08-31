@@ -76,15 +76,15 @@ require(arrow)
 
 # source("aux_funct.R")
 
-sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
-  mutate(date = as.Date(date))
+# sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
+#   mutate(date = as.Date(date))
 
-sampled_days <- sampled_days_df %>%
-  pull(date)
+# sampled_days <- sampled_days_df %>%
+#   pull(date)
 
 # sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
-d0 <- sampled_days[day_id] %>% as.Date()
-d0_tag <- base::format(d0, "%y%m%d")
+# d0 <- sampled_days[day_id] %>% as.Date()
+# d0_tag <- base::format(d0, "%y%m%d")
 
 alphas <- c(0.01, seq(0.05, 0.95, by = 0.05), 0.99)
 
@@ -367,8 +367,9 @@ if (!override_objects && length(files_found) > 0) {
     st_set_geometry(wf_df_pred, .)
 
   wf_df_fname <- sprintf(
-    "data/calibration_preddf_%s_%s.%s",
-    "base",
+    "%s/%s/data/oos/calibration_preddf_%s_%s.%s",
+    output_path,
+    batch_name,
     d0_tag,
     extension
   )
@@ -516,7 +517,9 @@ bru_df <- model_df %>% filter(type == "bru")
 
 # pred band summary
 pred_summary_fname <- sprintf(
-  "summaries/pred_band_summary_%s.rds",
+  "%s/%s/summaries/oos/pred_band_summary_%s.rds",
+  output_path,
+  batch_name,
   d0_tag
 )
 pred_samples_fname <- file.path(
@@ -527,11 +530,15 @@ pred_samples_fname <- file.path(
   )
 )
 cov_summary_fname <- sprintf(
-  "summaries/pred_band_coverage_summary_%s.rds",
+  "%s/%s/summaries/oos/pred_band_coverage_summary_%s.rds",
+  output_path,
+  batch_name,
   d0_tag
 )
 scores_summary_fname <- sprintf(
-  "summaries/model_scores_summary_%s.csv",
+  "%s/%s/summaries/oos/model_scores_summary_%s.csv",
+  output_path,
+  batch_name,
   d0_tag
 )
 if (!file.exists(pred_summary_fname) || rerun_samples) {
@@ -661,7 +668,12 @@ gb_fig_df <- bind_rows(
   )
 saveRDS(
   gb_fig_df,
-  sprintf("summaries/GB_fig_band_summary_%s.rds", d0_tag)
+  sprintf(
+    "%s/%s/summaries/oos/GB_fig_band_summary_%s.rds",
+    output_path,
+    batch_name,
+    d0_tag
+  )
 )
 # gb_fig_df$time %>% range()
 gb_fig_df %>%
@@ -708,7 +720,12 @@ gb_fig_df %>%
   labs(fill = "", color = "", y = "Normalised power output")
 
 ggsave(
-  filename = sprintf("fig/%s/GB_pred_band_%s.pdf", batch_name, d0_tag),
+  filename = sprintf(
+    "%s/%s/fig/oos/GB_pred_band_%s.pdf",
+    output_path,
+    batch_name,
+    d0_tag
+  ),
   width = 10,
   height = 6,
   # dpi = 300
@@ -771,7 +788,12 @@ wf_fig_df <- bind_rows(
 
 saveRDS(
   wf_fig_df,
-  sprintf("summaries/WF_fig_band_summary_%s.rds", d0_tag)
+  sprintf(
+    "%s/%s/summaries/oos/WF_fig_band_summary_%s.rds",
+    output_path,
+    batch_name,
+    d0_tag
+  )
 )
 
 for (mod in est_cols) {
@@ -827,7 +849,8 @@ for (mod in est_cols) {
       labs(fill = "", color = "", y = "Normalised power output")
     ggsave(
       filename = sprintf(
-        "fig/%s/WF_pred_band_%s_%s_%d.pdf",
+        "%s/%s/fig/oos/WF_pred_band_%s_%s_%d.pdf",
+        output_path,
         batch_name,
         mod,
         d0_tag,
@@ -868,7 +891,12 @@ cov_bands_wf %>%
   scale_x_discrete(labels = mod_labels) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
-  filename = sprintf("fig/%s/WF_pred_band_coverage_%s.pdf", batch_name, d0_tag),
+  filename = sprintf(
+    "%s/%s/fig/oos/WF_pred_band_coverage_%s.pdf",
+    output_path,
+    batch_name,
+    d0_tag
+  ),
   width = 10,
   height = 6,
   # dpi = 300
@@ -896,7 +924,12 @@ cov_bands %>%
   scale_x_discrete(labels = mod_labels) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
-  filename = sprintf("fig/%s/GB_pred_band_coverage_%s.pdf", batch_name, d0_tag),
+  filename = sprintf(
+    "%s/%s/fig/oos/GB_pred_band_coverage_%s.pdf",
+    output_path,
+    batch_name,
+    d0_tag
+  ),
   width = 10,
   height = 6,
   # dpi = 300
