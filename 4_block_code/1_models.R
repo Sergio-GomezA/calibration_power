@@ -50,16 +50,7 @@ cat(
 
 cat("Preparing data for model fitting\n")
 
-sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
-  mutate(date = as.Date(date))
-
-sampled_days <- sampled_days_df %>%
-  pull(date)
-
 ## 1.0.1 GB daily summary ####
-
-d0 <- sampled_days[day_id] %>% as.Date()
-d0_tag <- base::format(d0, "%y%m%d")
 
 gb_day_df_fname <- sprintf("data/GB_daily_summary.parquet")
 
@@ -124,6 +115,35 @@ if (!file.exists(gb_day_df_fname) || override_objects) {
   gb_day_df <- read_parquet(gb_day_df_fname)
 }
 
+sample_days_fname <- "data/sample_days_df_25_n150.csv"
+
+if (!file.exists(sample_days_fname)) {
+  cat("List of days for validation not found, recreating...\n")
+  # generating sample days for 3nd round of modelling
+  set.seed(2)
+  # sample 1 day per regime
+  sampled_days_df <- gb_day_df %>%
+    filter(date >= "2025-01-01") %>%
+    group_by(p_group3) %>%
+    slice_sample(n = 50)
+
+  write.csv(
+    sampled_days_df,
+    file = "data/sample_days_df_25_n150.csv",
+    row.names = FALSE
+  )
+
+  cat("List of days for validation saved.\n")
+} else {
+  cat("Loading list of days for validation")
+  sampled_days_df <- read.csv(sample_days_fname)
+}
+
+sampled_days <- sampled_days_df %>%
+  pull(date)
+
+d0 <- sampled_days[day_id] %>% as.Date()
+d0_tag <- base::format(d0, "%y%m%d")
 
 extension <- ifelse(local_run, local_ext, cluster_ext)
 df_pattern <- sprintf("^calibration_df_.*_%s\\.%s$", d0_tag, extension)
