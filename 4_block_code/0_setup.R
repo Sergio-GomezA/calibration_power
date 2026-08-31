@@ -5,7 +5,7 @@
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 ## 0.1 global parameter #####
-day_id <- 2
+day_id <- 102
 mesh_edge_par <- 50 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
 save_daily_files <- FALSE
@@ -83,6 +83,7 @@ if (local_run) {
   gen_path <- "~/Documents/elexon/"
   model_path <- "~/Documents/elexon/model_objects"
   extra_path <- "~/Documents/elexon/extra"
+  output_path <- "~/Documents/elexon/caloutput"
   sample_path <- "~/Documents/elexon/samples"
   pixel_dims <- c(150, 150)
   n_samp <- 10
@@ -93,6 +94,7 @@ if (local_run) {
   gen_path <- "/exports/eddie/scratch/s2441782/calibration/data"
   model_path <- "/exports/eddie/scratch/s2441782/calibration/model_objects"
   extra_path <- "/exports/eddie/scratch/s2441782/calibration/extra"
+  output_path <- "/exports/eddie/scratch/s2441782/calibration/caloutput"
   sample_path <- "/exports/eddie/scratch/s2441782/calibration/samples"
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   pixel_dims <- c(300, 300)
