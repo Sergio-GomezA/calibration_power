@@ -87,7 +87,7 @@ require(arrow)
 # d0_tag <- base::format(d0, "%y%m%d")
 
 alphas <- c(0.01, seq(0.05, 0.95, by = 0.05), 0.99)
-
+task_prefix0 <- "time"
 cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
@@ -353,6 +353,25 @@ if (!override_objects && length(files_found) > 0) {
       by = c("date" = "date")
     )
 
+  cat("Identifying anomalies in the dataset\n")
+  wf_df_pred <- wf_df_pred %>%
+    mutate(
+      anomaly = case_when(
+        norm_potential <= tol & norm_power_est0 >= p_quant3[1] ~ TRUE,
+        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
+        abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
+        TRUE ~ FALSE
+      )
+    )
+  anomaly_perc <- mean(wf_df_pred$anomaly, na.rm = TRUE) * 100
+  cat(sprintf(
+    "Percentage of anomalies at %.1f%% tol in the dataset: %.2f%%\n",
+    norm_dist_tol * 100,
+    anomaly_perc
+  ))
+  wf_df_pred <- wf_df_pred %>%
+    filter(!anomaly)
+
   x <- wf_df_pred$pow_group %>% unique() %>% sort()
   min_jump <- min(diff(sort(x))) / diff(range(x))
   if (min_jump <= 1e-4) {
@@ -370,6 +389,7 @@ if (!override_objects && length(files_found) > 0) {
     "%s/%s/data/oos/calibration_preddf_%s_%s.%s",
     output_path,
     batch_name,
+    task_prefix0,
     d0_tag,
     extension
   )
@@ -377,6 +397,8 @@ if (!override_objects && length(files_found) > 0) {
     wf_df_pred,
     wf_df_fname
   )
+  rm(pwr_curv_df)
+  gc()
 }
 n_loc <- nrow(wf_df_pred %>% distinct(x, y))
 cat("Number of unique locations:", n_loc, "\n")
@@ -517,9 +539,10 @@ bru_df <- model_df %>% filter(type == "bru")
 
 # pred band summary
 pred_summary_fname <- sprintf(
-  "%s/%s/summaries/oos/pred_band_summary_%s.rds",
+  "%s/%s/summaries/oos/pred_band_summary_%s_%s.rds",
   output_path,
   batch_name,
+  task_prefix0,
   d0_tag
 )
 pred_samples_fname <- file.path(
@@ -530,15 +553,17 @@ pred_samples_fname <- file.path(
   )
 )
 cov_summary_fname <- sprintf(
-  "%s/%s/summaries/oos/pred_band_coverage_summary_%s.rds",
+  "%s/%s/summaries/oos/pred_band_coverage_summary_%s_%s.rds",
   output_path,
   batch_name,
+  task_prefix0,
   d0_tag
 )
 scores_summary_fname <- sprintf(
-  "%s/%s/summaries/oos/model_scores_summary_%s.csv",
+  "%s/%s/summaries/oos/model_scores_summary_%s_%s.csv",
   output_path,
   batch_name,
+  task_prefix0,
   d0_tag
 )
 if (!file.exists(pred_summary_fname) || rerun_samples) {
@@ -669,9 +694,10 @@ gb_fig_df <- bind_rows(
 saveRDS(
   gb_fig_df,
   sprintf(
-    "%s/%s/summaries/oos/GB_fig_band_summary_%s.rds",
+    "%s/%s/summaries/oos/GB_fig_band_summary_%s_%s.rds",
     output_path,
     batch_name,
+    task_prefix0,
     d0_tag
   )
 )
@@ -721,9 +747,10 @@ gb_fig_df %>%
 
 ggsave(
   filename = sprintf(
-    "%s/%s/fig/oos/GB_pred_band_%s.pdf",
+    "%s/%s/fig/oos/GB_pred_band_%s_%s.pdf",
     output_path,
     batch_name,
+    task_prefix0,
     d0_tag
   ),
   width = 10,
@@ -789,9 +816,10 @@ wf_fig_df <- bind_rows(
 saveRDS(
   wf_fig_df,
   sprintf(
-    "%s/%s/summaries/oos/WF_fig_band_summary_%s.rds",
+    "%s/%s/summaries/oos/WF_fig_band_summary_%s_%s.rds",
     output_path,
     batch_name,
+    task_prefix0,
     d0_tag
   )
 )
@@ -849,15 +877,17 @@ for (mod in est_cols) {
       labs(fill = "", color = "", y = "Normalised power output")
     ggsave(
       filename = sprintf(
-        "%s/%s/fig/oos/WF_pred_band_%s_%s_%d.pdf",
+        "%s/%s/fig/oos/by_model/WF_pred_band_%s_%s_%s_%d.pdf",
         output_path,
         batch_name,
+        task_prefix0,
         mod,
         d0_tag,
         k + 1
       ),
       width = 10,
       height = 6,
+      create.dir = TRUE
       # dpi = 300
     )
   }
@@ -892,9 +922,10 @@ cov_bands_wf %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
   filename = sprintf(
-    "%s/%s/fig/oos/WF_pred_band_coverage_%s.pdf",
+    "%s/%s/fig/oos/WF_pred_band_coverage_%s_%s.pdf",
     output_path,
     batch_name,
+    task_prefix0,
     d0_tag
   ),
   width = 10,
@@ -913,7 +944,12 @@ cov_bands <- gb_fig_df %>%
   mutate(
     model = factor(model, levels = model)
   )
-
+# test <- gb_fig_df %>% filter(time >= t1, model == "ar1")
+# test %>%
+#   ggplot(aes(x = time, y = norm_potential)) +
+#   geom_line() +
+#   geom_ribbon(aes(ymin = lwr, ymax = upr), fill = blues9[5], alpha = 0.5) +
+#   geom_line(aes(y = mean), color = "red")
 cov_bands %>%
   ggplot(aes(x = model, y = coverage)) +
   geom_col(fill = blues9[5]) +
@@ -925,9 +961,10 @@ cov_bands %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ggsave(
   filename = sprintf(
-    "%s/%s/fig/oos/GB_pred_band_coverage_%s.pdf",
+    "%s/%s/fig/oos/GB_pred_band_coverage_%s_%s.pdf",
     output_path,
     batch_name,
+    task_prefix0,
     d0_tag
   ),
   width = 10,
@@ -950,7 +987,6 @@ gb_fig_df <- gb_fig_df %>%
 var_emp <- gb_fig_df %>%
   group_by(model) %>%
   summarise(var_res = var(residual), sd_res = sd(residual), .groups = "drop")
-
 
 var_wf <- wf_fig_df %>%
   group_by(model) %>%

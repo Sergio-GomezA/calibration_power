@@ -77,14 +77,14 @@ require(arrow)
 
 # source("aux_funct.R")
 
-sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
-  mutate(date = as.Date(date))
+# sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
+#   mutate(date = as.Date(date))
 
-sampled_days <- sampled_days_df %>%
-  pull(date)
-# sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
-d0 <- sampled_days[day_id] %>% as.Date()
-d0_tag <- base::format(d0, "%y%m%d")
+# sampled_days <- sampled_days_df %>%
+#   pull(date)
+# # sampled_days <- c("2020-08-14", "2024-04-17", "2024-04-12")
+# d0 <- sampled_days[day_id] %>% as.Date()
+# d0_tag <- base::format(d0, "%y%m%d")
 
 alphas <- c(0.01, seq(0.05, 0.95, by = 0.05), 0.99)
 
@@ -122,7 +122,7 @@ cat(
   format(d0, "%Y-%m-%d"),
   "\n"
 )
-cat("Prediction next", n.hours, "hours after", format(t1, "%Y-%m-%d"), "\n")
+cat("Predicting", n.hours, "hours before", format(t1, "%Y-%m-%d"), "\n")
 
 cat(
   "-------------------------------------------------------------------------------------------------\n"
@@ -358,6 +358,25 @@ if (!override_objects && length(files_found) > 0) {
       by = c("date" = "date")
     )
 
+  cat("Identifying anomalies in the dataset\n")
+  wf_df_pred <- wf_df_pred %>%
+    mutate(
+      anomaly = case_when(
+        norm_potential <= tol & norm_power_est0 >= p_quant3[1] ~ TRUE,
+        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
+        abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
+        TRUE ~ FALSE
+      )
+    )
+  anomaly_perc <- mean(wf_df_pred$anomaly, na.rm = TRUE) * 100
+  cat(sprintf(
+    "Percentage of anomalies at %.1f%% tol in the dataset: %.2f%%\n",
+    norm_dist_tol * 100,
+    anomaly_perc
+  ))
+  wf_df_pred <- wf_df_pred %>%
+    filter(!anomaly)
+
   x <- wf_df_pred$pow_group %>% unique() %>% sort()
   min_jump <- min(diff(sort(x))) / diff(range(x))
   if (min_jump <= 1e-4) {
@@ -372,7 +391,7 @@ if (!override_objects && length(files_found) > 0) {
     st_set_geometry(wf_df_pred, .)
 
   wf_df_fname <- sprintf(
-    "%s/%s/data/oos/calibration_preddf_%s_%s_%s.%s",
+    "%s/%s/data/oos/calibration_preddf_%s_%s.%s",
     output_path,
     batch_name,
     task_prefix,
@@ -383,6 +402,8 @@ if (!override_objects && length(files_found) > 0) {
     wf_df_pred,
     wf_df_fname
   )
+  rm(pwr_curv_df)
+  gc()
 }
 n_loc <- nrow(wf_df_pred %>% distinct(x, y))
 cat("Number of unique locations:", n_loc, "\n")
@@ -861,7 +882,7 @@ for (mod in est_cols) {
       labs(fill = "", color = "", y = "Normalised power output")
     ggsave(
       filename = sprintf(
-        "%s/%s/fig/oos/WF_pred_band_%s_%s_%s_%d.pdf",
+        "%s/%s/fig/oos/by_model/WF_pred_band_%s_%s_%s_%d.pdf",
         output_path,
         batch_name,
         task_prefix,
@@ -872,6 +893,7 @@ for (mod in est_cols) {
       width = 10,
       height = 6,
       # dpi = 300
+      create.dir = TRUE
     )
   }
 }
