@@ -5,7 +5,7 @@
 #$ -o /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 #$ -e /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 ##$ -l h_rt=4:00:0,h_vmem=16G
-#$ -l amd=true,intel=true
+##$ -l amd=true,intel=true
 #$ -pe sharedmem 8
 #$ -M s2441782@ed.ac.uk
 #$ -m bea
