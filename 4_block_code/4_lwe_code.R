@@ -1,3 +1,116 @@
+local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
+
+pow_threshold <- 0.05
+pow_threshold_label <- gsub("\\.", "_", as.character(pow_threshold))
+
+
+override_objects <- FALSE
+# rerun_samples <- FALSE
+# prec_init <- log(200)
+# batch_name <- "batch2025"
+batch_name <- "batchY25d150"
+
+
+if (local_run) {
+  cat("Running in local mode\n")
+} else {
+  cat("Running in cluster mode\n")
+}
+
+
+# 0.2 libraries and paths ####
+require(parallel)
+
+if (local_run) {
+  data_path <- "~/Documents/ERA5_at_wf/"
+  gen_path <- "~/Documents/elexon/"
+  model_path <- "~/Documents/elexon/model_objects"
+  extra_path <- "~/Documents/elexon/extra"
+  output_path <- "~/Documents/elexon/caloutput"
+  sample_path <- "~/Documents/elexon/samples"
+  n_samp <- 100
+  pixel_dims <- c(150, 150)
+} else {
+  data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
+  gen_path <- "/exports/eddie/scratch/s2441782/calibration/data"
+  model_path <- "/exports/eddie/scratch/s2441782/calibration/model_objects"
+  extra_path <- "/exports/eddie/scratch/s2441782/calibration/extra"
+  output_path <- "/exports/eddie/scratch/s2441782/calibration/caloutput"
+  sample_path <- "/exports/eddie/scratch/s2441782/calibration/samples"
+  temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
+  pixel_dims <- c(300, 300)
+  n_samp <- 1000
+  .libPaths(temp_lib)
+}
+
+
+require(tidyverse)
+require(sf)
+require(INLA)
+require(inlabru)
+require(fmesher)
+require(ggspatial)
+require(ModelMetrics)
+require(qmap)
+require(ggridges)
+require(ggthemes)
+require(ggsci)
+require(arrow)
+require(kableExtra)
+# require(ggspatial)
+
+source("aux_funct.R")
+mc <- ifelse(local_run, 1, available_cores())
+sampled_days_df <- read.csv("data/sample_days_df_25_n150.csv") %>%
+  mutate(date = as.Date(date))
+
+# sampled_days_df <- read.csv("data/sample_days_df.csv") %>%
+#   mutate(date = as.Date(date))
+
+sampled_days <- sampled_days_df %>%
+  pull(date) %>%
+  sort()
+
+coord_list_fname <- "data/coord_list.csv"
+
+cat("Loading existing coordinate list\n")
+coord_list <- read.csv(coord_list_fname)
+
+# Read models ####
+model_catalog <- read.csv("data/model_catalog.csv") %>%
+  na.omit()
+
+# if (local_run) {
+#   model_catalog <- model_catalog %>%
+#     # filter(!grepl("fine", mod_labels)) %>%
+#     filter(!grepl("st0", est_cols))
+# }
+mod_labels <- model_catalog$mod_labels
+est_cols <- model_catalog$est_cols
+n_models <- length(est_cols)
+names(mod_labels) <- est_cols
+# excluded_models0 <- c("lm_bru")
+# excluded_models <- c("lm_bru", "qm")
+
+excluded_models0 <- c("")
+excluded_models <- c("", "qm")
+
+model_catalog <- read.csv("data/model_catalog.csv") %>%
+  na.omit()
+model_df <- model_catalog %>%
+  rename(code = est_cols, label = mod_labels) %>%
+  arrange(desc(nchar(mode_code_prefix))) %>%
+  mutate(
+    type = case_when(
+      grepl("lm_", code) ~ "bru",
+      grepl("lm", code) ~ "lm",
+      grepl("qm", code) ~ "qm",
+      TRUE ~ "bru"
+    )
+  ) %>%
+  filter(!code %in% c("st0_m0", "st0_m1"))
+bru_df <- model_df %>% filter(type == "bru")
+
 # LWE diagram ####
 
 cat(
@@ -342,6 +455,7 @@ mods <- unique(low_events_model$model)
 # Default hue palette
 cols <- scales::hue_pal()(length(mods))
 names(cols) <- mods
+
 cols["Observed"] <- "darkred"
 # excluded_models0
 # mod_labels
