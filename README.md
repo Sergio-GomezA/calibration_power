@@ -303,7 +303,9 @@ CRPS
   - [x] add unseen locations
   - [X] simulation from any model that is collapsing
   - [ ] make simple example collapse
+  - [ ] check RMSE in fit vs RMSE in oos *
 - [ ] new batch
+  - [ ] add R2 score to everything
 - [ ] new models: 
   - [ ] aggregate consitent uncertainty
   - [ ] LM beta with AR
