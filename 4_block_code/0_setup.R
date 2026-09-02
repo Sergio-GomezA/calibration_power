@@ -18,7 +18,7 @@ fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
 n.days.before <- 3
 n.days.before.heavy <- 3
-batch_name <- "batchY25d150"
+batch_name <- "batchY25d150_v2"
 
 task_prefix <- "spaceoos"
 save_models <- FALSE
