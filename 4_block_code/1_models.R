@@ -685,8 +685,23 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     model = "rw2",
     constr = TRUE
   ) + # smooth correction elevation
-  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) # smooth correction wind
-
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
+  u(
+    t,
+    model = "ar1",
+    replicate = tech_typ,
+    hyper = list(
+      rho = list(
+        prior = "pc.cor1",
+        param = c(0.6, 0.5)
+      ),
+      # prec = list(
+      #   prior = "pc.prec",
+      #   param = c(50, 0.05)
+      # ),
+      prec = list(initial = prec_init, fixed = fixed_ucomp)
+    )
+  )
 model_code <- sprintf("ts_bru0_%s_%s.rds", mod_tag, d0_tag)
 model_fname <- file.path(
   model_path,
@@ -709,7 +724,8 @@ if (!file.exists(model_fname) || override_objects) {
       # power_correction +
       d_coast +
       elev +
-      wind,
+      wind +
+      u,
     family = "beta",
     control.family = list(
       beta.censor.value = 0.005
@@ -802,8 +818,23 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     model = "rw2",
     constr = TRUE
   ) + # smooth correction elevation
-  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) # smooth correction wind
-
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
+  u(
+    t,
+    model = "ar1",
+    replicate = tech_typ,
+    hyper = list(
+      rho = list(
+        prior = "pc.cor1",
+        param = c(0.6, 0.5)
+      ),
+      # prec = list(
+      #   prior = "pc.prec",
+      #   param = c(50, 0.05)
+      # ),
+      prec = list(initial = prec_init, fixed = fixed_ucomp)
+    )
+  )
 model_code <- sprintf("ts_bru0_%s_%s.rds", mod_tag, d0_tag)
 model_fname <- file.path(
   model_path,
@@ -825,7 +856,8 @@ if (!file.exists(model_fname) || override_objects) {
       slope +
       d_coast +
       elev +
-      wind,
+      wind +
+      u,
     family = "T",
     data = wf_df_frag,
     options = base_bru_options
