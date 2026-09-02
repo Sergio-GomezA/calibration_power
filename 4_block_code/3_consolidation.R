@@ -227,6 +227,7 @@ bru_df <- model_df %>% filter(type == "bru")
 
 # Time oos ####
 ## read summary tables of prediction bands ######
+cat("Reading summary tables for GB prediction bands\n")
 gb_fig_df <- lapply(
   seq_along(sampled_days),
   function(i) {
@@ -256,6 +257,7 @@ gb_fig_df <- lapply(
     by = "date"
   )
 
+cat("Reading summary tables for WF level prediction bands\n")
 wf_fig_df <- lapply(
   seq_along(sampled_days),
   function(i) {
@@ -560,6 +562,7 @@ metrics_table_t %>%
 
 # space oos ####
 ## read summary tables of prediction bands ######
+cat("Reading summary tables for GB prediction bands\n")
 gb_fig_df <- lapply(
   seq_along(sampled_days),
   function(i) {
@@ -591,7 +594,7 @@ gb_fig_df <- lapply(
     gb_day_df %>% dplyr::select(date, p_group3) %>% rename(pgroup3 = p_group3),
     by = "date"
   )
-
+cat("Reading summary tables for WF level prediction bands\n")
 wf_fig_df <- lapply(
   seq_along(sampled_days),
   function(i) {
