@@ -8,7 +8,7 @@ override_objects <- FALSE
 # rerun_samples <- FALSE
 # prec_init <- log(200)
 # batch_name <- "batch2025"
-batch_name <- "batchY25d150"
+batch_name <- "batchY25d150_v2"
 
 
 if (local_run) {
@@ -169,7 +169,7 @@ pacf_df <- GB_df %>%
   dplyr::select(-pacf) %>%
   unnest(c(lag, acf))
 
-head(pacf_df)
+# head(pacf_df)
 pacf_df %>%
   ggplot(aes(x = lag, y = acf)) +
   geom_hline(yintercept = 0, colour = "grey60") +
@@ -206,9 +206,9 @@ names(mod_labels) <- est_cols
 # excluded_models0 <- c("lm_bru")
 # excluded_models <- c("lm_bru", "qm")
 
-excluded_models0 <- c("")
-excluded_models <- c("", "qm")
-
+excluded_models0 <- c("lm")
+excluded_models <- c("lm", "qm")
+mod_labels["lm_bru"] <- "Linear model"
 model_catalog <- read.csv("data/model_catalog.csv") %>%
   na.omit()
 model_df <- model_catalog %>%
