@@ -2321,13 +2321,28 @@ extract_pit_model <- function(mod.obj, data = NULL) {
   )
   return(result)
 }
-
-fit_bru_att <- function(n_attempts = 3, ...) {
+base_bru_options <- bru_options(
+  bru_verbose = 3,
+  # verbose = TRUE,
+  control.compute = list(
+    dic = TRUE,
+    cpo = TRUE,
+    waic = TRUE,
+    control.gcpo = list(enable = TRUE, num.level.sets = 3)
+  )
+)
+fit_bru_att <- function(n_attempts = 3, options = base_bru_options, ...) {
   for (i in 1:n_attempts) {
     message("Attempt ", i)
 
+    current_options <- options
+
+    if (i >= 2) {
+      current_options$verbose <- TRUE
+    }
+
     fit <- tryCatch(
-      bru(...),
+      bru(..., options = current_options),
       error = function(e) NULL
     )
 

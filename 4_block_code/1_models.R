@@ -13,16 +13,7 @@ require(ggthemes)
 require(ggsci)
 require(arrow)
 
-base_bru_options <- bru_options(
-  bru_verbose = 3,
-  # verbose = TRUE,
-  control.compute = list(
-    dic = TRUE,
-    cpo = TRUE,
-    waic = TRUE,
-    control.gcpo = list(enable = TRUE, num.level.sets = 3)
-  )
-)
+
 spde1d_bru_opt <- as.bru_options(
   list(
     control.family = list(
@@ -135,7 +126,7 @@ if (!file.exists(sample_days_fname)) {
 
   cat("List of days for validation saved.\n")
 } else {
-  cat("Loading list of days for validation")
+  cat("Loading list of days for validation\n")
   sampled_days_df <- read.csv(sample_days_fname)
 }
 
