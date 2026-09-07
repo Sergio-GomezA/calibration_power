@@ -526,7 +526,7 @@ metrics_table_t <- wf_fig_df %>%
   ) %>%
   arrange(desc(RMSE_OOS))
 metrics_table_t
-metrics_table_t %>%
+tab_latex <- metrics_table_t %>%
   mutate(
     across(
       c(RMSE_IS, RMSE_OOS, MAE_IS, MAE_OOS, Bias_IS, Bias_OOS),
@@ -559,6 +559,11 @@ metrics_table_t %>%
     "Bias" = 2
   )) %>%
   kable_styling(latex_options = "hold_position")
+writeLines(
+  as.character(tab_latex),
+  sprintf("tables/%s/err_metrics_time.tex", batch_name)
+)
+
 
 # space oos ####
 ## read summary tables of prediction bands ######
@@ -865,7 +870,7 @@ metrics_table <- wf_fig_df %>%
   ) %>%
   arrange(desc(RMSE_OOS))
 metrics_table
-metrics_table %>%
+tab_latex <- metrics_table %>%
   mutate(
     across(
       c(RMSE_IS, RMSE_OOS, MAE_IS, MAE_OOS, Bias_IS, Bias_OOS),
@@ -899,6 +904,10 @@ metrics_table %>%
   )) %>%
   kable_styling(latex_options = "hold_position")
 
+writeLines(
+  as.character(tab_latex),
+  sprintf("tables/%s/err_metrics_space.tex", batch_name)
+)
 
 # reliability diagrams ####
 
@@ -1189,7 +1198,7 @@ scores_tbl_t <- lapply(
 #   ) %>%
 #   kable_styling(latex_options = "hold_position")
 
-scores_tbl_t %>%
+tab_latex <- scores_tbl_t %>%
   dplyr::select(-bs_0_2) %>%
   kbl(
     format = "latex",
@@ -1201,9 +1210,9 @@ scores_tbl_t %>%
       "CRPS",
       "Energy",
       "Log",
-      "1\\%",
-      "5\\%",
-      "10\\%"
+      "1%",
+      "5%",
+      "10%"
     ),
     caption = "Average scores for out-of-sample predictions across all sampled days."
   ) %>%
@@ -1212,6 +1221,10 @@ scores_tbl_t %>%
     "Brier score (CF threshold)" = 3
   )) %>%
   kable_styling(latex_options = "hold_position")
+writeLines(
+  as.character(tab_latex),
+  sprintf("tables/%s/cal_scores_time.tex", batch_name)
+)
 
 ## space ####
 scores_tbl <- lapply(
@@ -1243,7 +1256,7 @@ scores_tbl <- lapply(
   mutate(
     model = factor(model, levels = model)
   )
-scores_tbl %>%
+tab_latex <- scores_tbl %>%
   dplyr::select(-bs_0_2) %>%
   kbl(
     format = "latex",
@@ -1255,9 +1268,9 @@ scores_tbl %>%
       "CRPS",
       "Energy",
       "Log",
-      "1\\%",
-      "5\\%",
-      "10\\%"
+      "1%",
+      "5%",
+      "10%"
     ),
     caption = "Average scores for out-of-sample predictions across all sampled days."
   ) %>%
@@ -1266,6 +1279,9 @@ scores_tbl %>%
     "Brier score (CF threshold)" = 3
   )) %>%
   kable_styling(latex_options = "hold_position")
-
+writeLines(
+  as.character(tab_latex),
+  sprintf("tables/%s/err_metrics_space.tex", batch_name)
+)
 # rm(gb_fig_df, wf_fig_df, pit_df)
 # gc()
