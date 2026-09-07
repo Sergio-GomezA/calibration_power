@@ -1892,7 +1892,7 @@ bru_ci_plot <- function(
   newdata,
   n.samples = 100,
   show.fig = TRUE,
-  alphas = NULL,
+  alphas = c(0.025, 0.975),
   oos_type = "time",
   family = "gaussian",
   t_start = NULL
@@ -2036,13 +2036,14 @@ bru_ci_plot <- function(
     seq_along(samples),
     function(s) {
       data.frame(
+        lp = samples[[s]]$lin_pred,
         fit = samples[[s]]$pow_st,
         lwr = samples[[s]]$lwr,
         upr = samples[[s]]$upr,
         samples[[s]][q_cols]
       ) %>%
         mutate(
-          across(c(fit, lwr, upr, all_of(q_cols)), ~ pmin(1, pmax(0, .))),
+          # across(c(lp, fit, lwr, upr, all_of(q_cols)), ~ pmin(1, pmax(0, .))),
           sim = s
         ) %>%
         bind_cols(
@@ -2070,8 +2071,12 @@ bru_ci_plot <- function(
       lwr = quantile(fit, 0.025),
       upr = quantile(fit, 0.975),
       fit = mean(fit),
+      lp = mean(lp),
       norm_potential = mean(norm_potential, na.rm = TRUE),
       .groups = "drop"
+    ) %>%
+    mutate(
+      across(c(lwr, upr, fit, lp), ~ pmin(1, pmax(0, .)))
     )
   not_anomaly_ind <- (!is.na(newdata$norm_potential))
   # browser()
@@ -2092,7 +2097,7 @@ bru_ci_plot <- function(
     setNames(paste0("samp_", seq_along(.))) %>%
     bind_cols() %>%
     as.matrix()
-
+  # browser()
   # calculate scores
   scores <- compute_scores(
     observed = observed,
@@ -2129,9 +2134,9 @@ bru_ci_plot <- function(
     # browser()
     if (oos_type == "time") {
       ## oos for time
-      coverage_df <- coverage_df %>% mutate(oos = time >= t1)
+      coverage_df <- coverage_df %>% mutate(oos = time >= t_start)
     } else {
-      coverage_df <- coverage_df %>% mutate(oos = time <= t1)
+      coverage_df <- coverage_df %>% mutate(oos = time <= t_start)
     } ## oos for space)
 
     # drop qcols from pred df
@@ -2171,6 +2176,9 @@ bru_ci_plot <- function(
       upr = quantile(estimate, 0.975),
       norm_potential = mean(norm_potential, na.rm = TRUE),
       .groups = "drop"
+    ) %>%
+    mutate(
+      across(c(mean, lwr, upr), ~ pmin(1, pmax(0, .)))
     )
 
   p <- pred_fig_df %>%
