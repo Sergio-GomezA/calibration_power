@@ -6,8 +6,6 @@
 "ST model fine","st0_m0","st_bru0_fine_","gaussian"
 "ST model coarse","st0_m1","st_bru0_coarse_","gaussian"
 "ST model coarser","st0_m2","st_bru0_very_coarse_","gaussian"
-"LM+hour model","spde1d","ts_bru0_1DSPDE_","gaussian"
 "AR1 model","ar1","ts_bru0_ar1_","gaussian"
 "LM bru model","lm_bru","ts_bru0_lm_","gaussian"
 "LM beta model","lm_beta","ts_bru0_lmbeta_","beta"
-"LM t model","lm_t","ts_bru0_lmt_","t"
