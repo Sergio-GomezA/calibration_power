@@ -790,133 +790,133 @@ ggsave(
 )
 
 ## 2.01 bru t model ####
-mod_tag <- "lmt"
-components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
-  techno(tech_typ, model = "iid") + # random intercept by tech_typ
-  # norm_power_est0 +
-  slope(
-    tech_typ,
-    model = "iid",
-    weights = norm_power_est0
-  ) +
-  d_coast(
-    d_coast_group,
-    model = "rw2",
-    constr = TRUE
-  ) + # smooth correction distance to coast
-  elev(
-    elev_group,
-    model = "rw2",
-    constr = TRUE
-  ) + # smooth correction elevation
-  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
-  u(
-    t,
-    model = "ar1",
-    replicate = tech_typ,
-    hyper = list(
-      rho = list(
-        prior = "pc.cor1",
-        param = c(0.6, 0.5)
-      ),
-      # prec = list(
-      #   prior = "pc.prec",
-      #   param = c(50, 0.05)
-      # ),
-      prec = list(initial = prec_init, fixed = fixed_ucomp)
-    )
-  )
-model_code <- sprintf("ts_bru0_%s_%s.rds", mod_tag, d0_tag)
-model_fname <- file.path(
-  model_path,
-  model_code
-)
+# mod_tag <- "lmt"
+# components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+#   techno(tech_typ, model = "iid") + # random intercept by tech_typ
+#   # norm_power_est0 +
+#   slope(
+#     tech_typ,
+#     model = "iid",
+#     weights = norm_power_est0
+#   ) +
+#   d_coast(
+#     d_coast_group,
+#     model = "rw2",
+#     constr = TRUE
+#   ) + # smooth correction distance to coast
+#   elev(
+#     elev_group,
+#     model = "rw2",
+#     constr = TRUE
+#   ) + # smooth correction elevation
+#   wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
+#   u(
+#     t,
+#     model = "ar1",
+#     replicate = tech_typ,
+#     hyper = list(
+#       rho = list(
+#         prior = "pc.cor1",
+#         param = c(0.6, 0.5)
+#       ),
+#       # prec = list(
+#       #   prior = "pc.prec",
+#       #   param = c(50, 0.05)
+#       # ),
+#       prec = list(initial = prec_init, fixed = fixed_ucomp)
+#     )
+#   )
+# model_code <- sprintf("ts_bru0_%s_%s.rds", mod_tag, d0_tag)
+# model_fname <- file.path(
+#   model_path,
+#   model_code
+# )
 
-if (!file.exists(model_fname) || override_objects) {
-  cat(
-    "-------------------------------------------------------------------------------------------------\n"
-  )
-  cat("Fitting bru lm t model\n")
-  cat(
-    "-------------------------------------------------------------------------------------------------\n"
-  )
-  brulmt <- fit_bru_att(
-    components = components0,
-    formula = norm_potential ~ Intercept +
-      techno +
-      slope +
-      d_coast +
-      elev +
-      wind +
-      u,
-    family = "T",
-    data = wf_df_frag,
-    options = base_bru_options
-  )
+# if (!file.exists(model_fname) || override_objects) {
+#   cat(
+#     "-------------------------------------------------------------------------------------------------\n"
+#   )
+#   cat("Fitting bru lm t model\n")
+#   cat(
+#     "-------------------------------------------------------------------------------------------------\n"
+#   )
+#   brulmt <- fit_bru_att(
+#     components = components0,
+#     formula = norm_potential ~ Intercept +
+#       techno +
+#       slope +
+#       d_coast +
+#       elev +
+#       wind +
+#       u,
+#     family = "T",
+#     data = wf_df_frag,
+#     options = base_bru_options
+#   )
 
-  scores_df[[model_code]] <- extract_score_model(brulmt)
-  pit_list[[model_code]] <- extract_pit_model(brulmt)
+#   scores_df[[model_code]] <- extract_score_model(brulmt)
+#   pit_list[[model_code]] <- extract_pit_model(brulmt)
 
-  if (save_models) {
-    saveRDS(
-      brulmt,
-      file = model_fname
-    )
-  } else {
-    model_list[[model_code]] <- brulmt
-  }
-} else {
-  cat("Loading existing lmt model\n")
-  brulmt <- readRDS(model_fname)
-}
+#   if (save_models) {
+#     saveRDS(
+#       brulmt,
+#       file = model_fname
+#     )
+#   } else {
+#     model_list[[model_code]] <- brulmt
+#   }
+# } else {
+#   cat("Loading existing lmt model\n")
+#   brulmt <- readRDS(model_fname)
+# }
 
-summary(brulmt)
-# source("aux_funct.R")
-effect_names <- names(brulmt$summary.random)
-excluded_effects <- c("u")
-effect_names <- setdiff(effect_names, excluded_effects)
-for (effect in effect_names) {
-  if (effect %in% c("wind")) {
-    n_repl <- 2
-    repl_names <- c("Offshore", "Onshore")
-  } else {
-    n_repl <- 1
-    repl_names <- NULL
-  }
-  # browser()
-  plot.effects(
-    brulmt,
-    effect,
-    n.replicate = n_repl,
-    replicate_names = repl_names,
-    show.plot = TRUE
-  )
-  ggsave(
-    sprintf(
-      "%s/%s/fig/fit/%s_effect_%s_%s.pdf",
-      output_path,
-      batch_name,
-      effect,
-      mod_tag,
-      d0_tag
-    ),
-    width = 6,
-    height = 4
-  )
-}
+# summary(brulmt)
+# # source("aux_funct.R")
+# effect_names <- names(brulmt$summary.random)
+# excluded_effects <- c("u")
+# effect_names <- setdiff(effect_names, excluded_effects)
+# for (effect in effect_names) {
+#   if (effect %in% c("wind")) {
+#     n_repl <- 2
+#     repl_names <- c("Offshore", "Onshore")
+#   } else {
+#     n_repl <- 1
+#     repl_names <- NULL
+#   }
+#   # browser()
+#   plot.effects(
+#     brulmt,
+#     effect,
+#     n.replicate = n_repl,
+#     replicate_names = repl_names,
+#     show.plot = TRUE
+#   )
+#   ggsave(
+#     sprintf(
+#       "%s/%s/fig/fit/%s_effect_%s_%s.pdf",
+#       output_path,
+#       batch_name,
+#       effect,
+#       mod_tag,
+#       d0_tag
+#     ),
+#     width = 6,
+#     height = 4
+#   )
+# }
 
-plot.hyper.dens(brulmt)
-ggsave(
-  sprintf(
-    "%s/%s/fig/fit/hyperparameters_%s_%s.pdf",
-    output_path,
-    batch_name,
-    mod_tag,
-    d0_tag
-  ),
-  width = 6,
-  height = 4
-)
+# plot.hyper.dens(brulmt)
+# ggsave(
+#   sprintf(
+#     "%s/%s/fig/fit/hyperparameters_%s_%s.pdf",
+#     output_path,
+#     batch_name,
+#     mod_tag,
+#     d0_tag
+#   ),
+#   width = 6,
+#   height = 4
+# )
 
 ## 2.1 AR1 temporal model ####
 ar_tag <- "ar1"
@@ -1058,269 +1058,268 @@ ggsave(
 )
 
 ## 2.2 AR2 temporal model ####
-ar_tag <- "ar2"
-components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
-  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
-  norm_power_est0 +
-  # power_correction(
-  #   pow_group,
-  #   model = "rw2",
-  #   # replicate = tech_typ,
-  #   constr = TRUE
-  # ) + # smooth correction power
-  d_coast(
-    d_coast_group,
-    model = "rw2",
-    constr = TRUE
-  ) + # smooth correction distance to coast
-  elev(
-    elev_group,
-    model = "rw2",
-    constr = TRUE
-  ) + # smooth correction elevation
-  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
-  u(
-    t,
-    model = "ar",
-    order = 2,
-    replicate = tech_typ,
-    hyper = list(
-      # rho = list(
-      #   prior = "pc.cor1",
-      #   param = c(0.6, 0.5)
-      # ),
-      # prec = list(
-      #   prior = "pc.prec",
-      #   param = c(50, 0.05)
-      # )
-      prec = list(initial = prec_init, fixed = fixed_ucomp)
-    )
-  )
+# ar_tag <- "ar2"
+# components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+#   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+#   norm_power_est0 +
+#   # power_correction(
+#   #   pow_group,
+#   #   model = "rw2",
+#   #   # replicate = tech_typ,
+#   #   constr = TRUE
+#   # ) + # smooth correction power
+#   d_coast(
+#     d_coast_group,
+#     model = "rw2",
+#     constr = TRUE
+#   ) + # smooth correction distance to coast
+#   elev(
+#     elev_group,
+#     model = "rw2",
+#     constr = TRUE
+#   ) + # smooth correction elevation
+#   wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
+#   u(
+#     t,
+#     model = "ar",
+#     order = 2,
+#     replicate = tech_typ,
+#     hyper = list(
+#       # rho = list(
+#       #   prior = "pc.cor1",
+#       #   param = c(0.6, 0.5)
+#       # ),
+#       # prec = list(
+#       #   prior = "pc.prec",
+#       #   param = c(50, 0.05)
+#       # )
+#       prec = list(initial = prec_init, fixed = fixed_ucomp)
+#     )
+#   )
 
-model_code <- sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
-model_fname <- file.path(
-  model_path,
-  model_code
-)
+# model_code <- sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
+# model_fname <- file.path(
+#   model_path,
+#   model_code
+# )
 
-if (!file.exists(model_fname) || override_objects) {
-  cat(
-    "-------------------------------------------------------------------------------------------------\n"
-  )
-  cat("Fitting ar2 model\n")
-  cat(
-    "-------------------------------------------------------------------------------------------------\n"
-  )
-  bruar2 <- bru(
-    components = components0,
-    formula = norm_potential ~ Intercept +
-      norm_power_est0 +
-      # power_correction +
-      d_coast +
-      elev +
-      wind +
-      u,
-    family = "gaussian",
-    data = wf_df_frag,
-    options = base_bru_options
-  )
+# if (!file.exists(model_fname) || override_objects) {
+#   cat(
+#     "-------------------------------------------------------------------------------------------------\n"
+#   )
+#   cat("Fitting ar2 model\n")
+#   cat(
+#     "-------------------------------------------------------------------------------------------------\n"
+#   )
+#   bruar2 <- bru(
+#     components = components0,
+#     formula = norm_potential ~ Intercept +
+#       norm_power_est0 +
+#       # power_correction +
+#       d_coast +
+#       elev +
+#       wind +
+#       u,
+#     family = "gaussian",
+#     data = wf_df_frag,
+#     options = base_bru_options
+#   )
 
-  scores_df[[model_code]] <- extract_score_model(bruar2)
-  pit_list[[model_code]] <- extract_pit_model(bruar2)
+#   scores_df[[model_code]] <- extract_score_model(bruar2)
+#   pit_list[[model_code]] <- extract_pit_model(bruar2)
 
-  if (save_models) {
-    saveRDS(
-      bruar2,
-      file = model_fname
-    )
-  } else {
-    model_list[[model_code]] <- bruar2
-  }
-} else {
-  cat("Loading existing ar2 model\n")
-  bruar2 <- readRDS(model_fname)
-}
+#   if (save_models) {
+#     saveRDS(
+#       bruar2,
+#       file = model_fname
+#     )
+#   } else {
+#     model_list[[model_code]] <- bruar2
+#   }
+# } else {
+#   cat("Loading existing ar2 model\n")
+#   bruar2 <- readRDS(model_fname)
+# }
 
-summary(bruar2)
+# summary(bruar2)
 
-effect_names <- names(bruar2$summary.random)
-excluded_effects <- c("u")
-effect_names <- setdiff(effect_names, excluded_effects)
-for (effect in effect_names) {
-  if (effect == "wind") {
-    n_repl <- 2
-    repl_names <- c("Offshore", "Onshore")
-  } else {
-    n_repl <- 1
-    repl_names <- NULL
-  }
-  plot.effects(
-    bruar2,
-    effect,
-    n.replicate = n_repl,
-    replicate_names = repl_names,
-    show.plot = TRUE
-  )
-  ggsave(
-    sprintf(
-      "%s/%s/fig/fit/%s_effect_%s_%s.pdf",
-      output_path,
-      batch_name,
-      effect,
-      ar_tag,
-      d0_tag
-    ),
-    width = 6,
-    height = 4
-  )
-}
-plot.hyper.dens(bruar2)
-ggsave(
-  sprintf(
-    "%s/%s/fig/fit/hyperparameters_%s_%s.pdf",
-    output_path,
-    batch_name,
-    ar_tag,
-    d0_tag
-  ),
-  width = 6,
-  height = 4
-)
+# effect_names <- names(bruar2$summary.random)
+# excluded_effects <- c("u")
+# effect_names <- setdiff(effect_names, excluded_effects)
+# for (effect in effect_names) {
+#   if (effect == "wind") {
+#     n_repl <- 2
+#     repl_names <- c("Offshore", "Onshore")
+#   } else {
+#     n_repl <- 1
+#     repl_names <- NULL
+#   }
+#   plot.effects(
+#     bruar2,
+#     effect,
+#     n.replicate = n_repl,
+#     replicate_names = repl_names,
+#     show.plot = TRUE
+#   )
+#   ggsave(
+#     sprintf(
+#       "%s/%s/fig/fit/%s_effect_%s_%s.pdf",
+#       output_path,
+#       batch_name,
+#       effect,
+#       ar_tag,
+#       d0_tag
+#     ),
+#     width = 6,
+#     height = 4
+#   )
+# }
+# plot.hyper.dens(bruar2)
+# ggsave(
+#   sprintf(
+#     "%s/%s/fig/fit/hyperparameters_%s_%s.pdf",
+#     output_path,
+#     batch_name,
+#     ar_tag,
+#     d0_tag
+#   ),
+#   width = 6,
+#   height = 4
+# )
 # plot(bruar2$summary.fitted.values$mean[1:n], wf_df_frag$norm_potential)
 ## 2.3 1D SPDE temporal model ####
-ar_tag <- "1DSPDE"
-mint <- 0
-maxt <- 23
-buffert <- 0
-x <- seq(mint - buffert, maxt + buffert, by = 0.5)
-mesh1D <- fm_mesh_1d(
-  loc = x,
-  interval = c(mint, maxt),
-  degree = 2,
-  boundary = "cyclic"
-)
+# ar_tag <- "1DSPDE"
+# mint <- 0
+# maxt <- 23
+# buffert <- 0
+# x <- seq(mint - buffert, maxt + buffert, by = 0.5)
+# mesh1D <- fm_mesh_1d(
+#   loc = x,
+#   interval = c(mint, maxt),
+#   degree = 2,
+#   boundary = "cyclic"
+# )
 
-spde1D <- inla.spde2.pcmatern(
-  mesh = mesh1D,
-  prior.range = c(50, 0.5), # P(range < 1 hour) = 0.5
-  prior.sigma = c(0.5, 0.5) # P(sd > 0.2) = 0.5
-)
+# spde1D <- inla.spde2.pcmatern(
+#   mesh = mesh1D,
+#   prior.range = c(50, 0.5), # P(range < 1 hour) = 0.5
+#   prior.sigma = c(0.5, 0.5) # P(sd > 0.2) = 0.5
+# )
 
-components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
-  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
-  norm_power_est0 +
-  d_coast(
-    d_coast_group,
-    model = "rw2",
-    constr = TRUE
-  ) + # smooth correction distance to coast
-  elev(
-    elev_group,
-    model = "rw2",
-    constr = TRUE
-  ) + # smooth correction elevation
-  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
-  hour(
-    t,
-    model = spde1D,
-    replicate = tech_typ
-  )
+# components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+#   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
+#   norm_power_est0 +
+#   d_coast(
+#     d_coast_group,
+#     model = "rw2",
+#     constr = TRUE
+#   ) + # smooth correction distance to coast
+#   elev(
+#     elev_group,
+#     model = "rw2",
+#     constr = TRUE
+#   ) + # smooth correction elevation
+#   wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
+#   hour(
+#     t,
+#     model = spde1D,
+#     replicate = tech_typ
+#   )
 
-model_code <- sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
-model_fname <- file.path(
-  model_path,
-  model_code
-)
+# model_code <- sprintf("ts_bru0_%s_%s.rds", ar_tag, d0_tag)
+# model_fname <- file.path(
+#   model_path,
+#   model_code
+# )
 
-if (!file.exists(model_fname) || override_objects) {
-  cat(
-    "-------------------------------------------------------------------------------------------------\n"
-  )
-  cat("Fitting LM+hour model\n")
-  cat(
-    "-------------------------------------------------------------------------------------------------\n"
-  )
-  bru1d <- bru(
-    components = components0,
-    formula = norm_potential ~ Intercept +
-      # tech_typ +
-      norm_power_est0 +
-      # power_correction +
-      d_coast +
-      elev +
-      wind +
-      hour,
-    family = "gaussian",
-    data = wf_df_frag,
-    options = bru_options(
-      base_bru_options,
-      spde1d_bru_opt
-    )
-  )
-  scores_df[[model_code]] <- extract_score_model(bru1d)
-  pit_list[[model_code]] <- extract_pit_model(bru1d)
+# if (!file.exists(model_fname) || override_objects) {
+#   cat(
+#     "-------------------------------------------------------------------------------------------------\n"
+#   )
+#   cat("Fitting LM+hour model\n")
+#   cat(
+#     "-------------------------------------------------------------------------------------------------\n"
+#   )
+#   bru1d <- bru(
+#     components = components0,
+#     formula = norm_potential ~ Intercept +
+#       # tech_typ +
+#       norm_power_est0 +
+#       # power_correction +
+#       d_coast +
+#       elev +
+#       wind +
+#       hour,
+#     family = "gaussian",
+#     data = wf_df_frag,
+#     options = bru_options(
+#       base_bru_options,
+#       spde1d_bru_opt
+#     )
+#   )
+#   scores_df[[model_code]] <- extract_score_model(bru1d)
+#   pit_list[[model_code]] <- extract_pit_model(bru1d)
 
-  if (save_models) {
-    saveRDS(
-      bru1d,
-      file = model_fname
-    )
-  } else {
-    model_list[[model_code]] <- bru1d
-  }
-} else {
-  cat("Loading existing LM+hour model\n")
-  bru1d <- readRDS(model_fname)
-}
+#   if (save_models) {
+#     saveRDS(
+#       bru1d,
+#       file = model_fname
+#     )
+#   } else {
+#     model_list[[model_code]] <- bru1d
+#   }
+# } else {
+#   cat("Loading existing LM+hour model\n")
+#   bru1d <- readRDS(model_fname)
+# }
 
-summary(bru1d)
+# summary(bru1d)
 
-# source("aux_funct.R")
-effect_names <- names(bru1d$summary.random)
-excluded_effects <- c("u", "hour")
-effect_names <- setdiff(effect_names, excluded_effects)
-for (effect in effect_names) {
-  if (effect == "wind") {
-    n_repl <- 2
-    repl_names <- c("Offshore", "Onshore")
-  } else {
-    n_repl <- 1
-    repl_names <- NULL
-  }
-  plot.effects(
-    bru1d,
-    effect,
-    n.replicate = n_repl,
-    replicate_names = repl_names,
-    show.plot = TRUE
-  )
-  ggsave(
-    sprintf(
-      "%s/%s/fig/fit/%s_effect_%s_%s.pdf",
-      output_path,
-      batch_name,
-      effect,
-      ar_tag,
-      d0_tag
-    ),
-    width = 6,
-    height = 4
-  )
-}
+# # source("aux_funct.R")
+# effect_names <- names(bru1d$summary.random)
+# excluded_effects <- c("u", "hour")
+# effect_names <- setdiff(effect_names, excluded_effects)
+# for (effect in effect_names) {
+#   if (effect == "wind") {
+#     n_repl <- 2
+#     repl_names <- c("Offshore", "Onshore")
+#   } else {
+#     n_repl <- 1
+#     repl_names <- NULL
+#   }
+#   plot.effects(
+#     bru1d,
+#     effect,
+#     n.replicate = n_repl,
+#     replicate_names = repl_names,
+#     show.plot = TRUE
+#   )
+#   ggsave(
+#     sprintf(
+#       "%s/%s/fig/fit/%s_effect_%s_%s.pdf",
+#       output_path,
+#       batch_name,
+#       effect,
+#       ar_tag,
+#       d0_tag
+#     ),
+#     width = 6,
+#     height = 4
+#   )
+# }
 
-plot.hyper.dens(bru1d)
-ggsave(
-  sprintf(
-    "%s/%s/fig/fit/hyperparameters_%s_%s.pdf",
-    output_path,
-    batch_name,
-    ar_tag,
-    d0_tag
-  ),
-  width = 6,
-  height = 4
-)
-
+# plot.hyper.dens(bru1d)
+# ggsave(
+#   sprintf(
+#     "%s/%s/fig/fit/hyperparameters_%s_%s.pdf",
+#     output_path,
+#     batch_name,
+#     ar_tag,
+#     d0_tag
+#   ),
+#   width = 6,
+#   height = 4
+# )
 
 ## 2.4 ST SPDE model ####
 spde <- INLA::inla.spde2.pcmatern(
@@ -1776,14 +1775,14 @@ model_df0 <- wf_df_frag %>%
     date = as.Date(time),
     lm = predict(model_AIC0, newdata = .),
     ar1 = bruar1$summary.fitted.values[1:n, "mean"],
-    ar2 = bruar2$summary.fitted.values[1:n, "mean"],
-    spde1d = bru1d$summary.fitted.values[1:n, "mean"],
+    # ar2 = bruar2$summary.fitted.values[1:n, "mean"],
+    # spde1d = bru1d$summary.fitted.values[1:n, "mean"],
     st0_m2 = bru0$summary.fitted.values[1:n, "mean"],
     qm = wgen_qm,
     agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag),
     lm_bru = brulm$summary.fitted.values[1:n, "mean"],
-    lm_beta = brulmbeta$summary.fitted.values[1:n, "mean"],
-    lm_t = brulmt$summary.fitted.values[1:n, "mean"]
+    lm_beta = brulmbeta$summary.fitted.values[1:n, "mean"]
+    # lm_t = brulmt$summary.fitted.values[1:n, "mean"]
   ) %>%
   mutate(
     st_low = bru0$summary.fitted.values[1:n, "0.025quant"],
