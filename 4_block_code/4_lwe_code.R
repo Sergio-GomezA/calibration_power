@@ -8,7 +8,7 @@ override_objects <- FALSE
 # rerun_samples <- FALSE
 # prec_init <- log(200)
 # batch_name <- "batch2025"
-batch_name <- "batchY25d150"
+batch_name <- "batchY25d150_v2"
 
 
 if (local_run) {
@@ -92,8 +92,9 @@ names(mod_labels) <- est_cols
 # excluded_models0 <- c("lm_bru")
 # excluded_models <- c("lm_bru", "qm")
 
-excluded_models0 <- c("")
-excluded_models <- c("", "qm")
+excluded_models0 <- c("lm", "spde1d", "lm_t")
+excluded_models <- c("lm", "spde1d", "lm_t", "qm")
+mod_labels["lm_bru"] <- "Linear Model"
 
 model_catalog <- read.csv("data/model_catalog.csv") %>%
   na.omit()
@@ -167,7 +168,7 @@ model_df0 <- lapply(
 cat("--------------------------------------------------------------------\n")
 cat("Low wind events in observed data\n")
 cat("--------------------------------------------------------------------\n")
-max_h_duration <- 100
+max_h_duration <- 48
 lwe_obs_pred_fname <- file.path(
   "summaries",
   sprintf(
@@ -408,7 +409,7 @@ low_events_model <- model_df0 %>%
 
 # low_events_model$model %>% unique() %>% sort() %>% print()
 low_events_model %>%
-  filter(!model %in% excluded_models0) %>%
+  filter(!model %in% mod_labels[excluded_models0]) %>%
   filter(duration_h < max_h_duration) %>%
   # filter(
   #   model %in%
@@ -549,11 +550,11 @@ obs <- low_events_model %>%
   ) %>%
   pull(duration_h)
 
-probs <- seq(0, 1, length.out = 51)
+probs <- seq(0, 1, length.out = 101)
 
 qq_df <- low_events_model %>%
   filter(model != "Observed") %>%
-  filter(!model %in% mod_labels[c("agg_lm", "qm", "lm_bru")]) %>%
+  filter(!model %in% mod_labels[excluded_models0]) %>%
   filter(duration_h < max_h_duration) %>%
   group_by(model) %>%
   summarise(
