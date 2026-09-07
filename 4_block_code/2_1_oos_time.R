@@ -734,7 +734,7 @@ saveRDS(
 )
 # gb_fig_df$time %>% range()
 gb_fig_df %>%
-  # filter(time >= t1) %>%
+  filter(time >= t1 - hours(3), time <= t1 + hours(24)) %>%
   ggplot() +
   geom_ribbon(
     aes(
@@ -861,7 +861,7 @@ for (mod in est_cols) {
     wf_fig_df %>%
       filter(model == mod) %>%
       filter(coord_id %in% c(k * 40 + 1:40)) %>%
-      filter(time >= t1) %>%
+      filter(time >= t1 - hours(3), time <= t1 + hours(24)) %>%
       ggplot() +
       geom_ribbon(
         aes(
@@ -927,7 +927,7 @@ for (mod in est_cols) {
 ## Bands coverage by model ####
 ### wf level
 cov_bands_wf <- wf_fig_df %>%
-  filter(time >= t1) %>%
+  filter(time >= t1, time < t1 + hours(24)) %>%
   group_by(model, coord_id) %>%
   summarise(
     coverage = mean(
@@ -968,7 +968,7 @@ ggsave(
 )
 ### aggregated #####
 cov_bands <- gb_fig_df %>%
-  filter(time >= t1) %>%
+  filter(time >= t1, time < t1 + hours(24)) %>%
   group_by(model) %>%
   summarise(
     coverage = mean(
