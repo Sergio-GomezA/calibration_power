@@ -2072,6 +2072,7 @@ bru_ci_plot <- function(
       upr = quantile(fit, 0.975),
       fit = mean(fit),
       lp = mean(lp),
+      width = upr - lwr,
       norm_potential = mean(norm_potential, na.rm = TRUE),
       .groups = "drop"
     ) %>%
@@ -2208,11 +2209,21 @@ bru_ci_plot <- function(
       mean = mean(estimate),
       lwr = quantile(estimate, 0.025),
       upr = quantile(estimate, 0.975),
+      width = upr - lwr,
       norm_potential = mean(norm_potential, na.rm = TRUE),
       .groups = "drop"
     ) %>%
     mutate(
       across(c(mean, lwr, upr), ~ pmin(1, pmax(0, .)))
+    )
+
+  band_width <- pred_fig_df %>%
+    filter(time >= t1, time < t1 + hours(24)) %>%
+    summarise(gbl = mean(width, na.rm = TRUE)) %>%
+    bind_cols(
+      wf_summary_df %>%
+        filter(time >= t1, time < t1 + hours(24)) %>%
+        summarise(wf = mean(width, na.rm = TRUE))
     )
 
   p <- pred_fig_df %>%
@@ -2252,7 +2263,8 @@ bru_ci_plot <- function(
     cov_loc = cov_loc,
     scores = scores,
     scores_24 = scores_24,
-    scores_12 = scores_12
+    scores_12 = scores_12,
+    band_width = band_width
     # df_formula = formula_temp
   ))
 }

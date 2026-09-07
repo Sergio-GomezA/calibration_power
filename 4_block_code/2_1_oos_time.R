@@ -665,7 +665,9 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
         !!!setNames(
           as.list(x$scores_12$brier),
           paste0(names(x$scores_12$brier), "_12")
-        )
+        ),
+        gbl_width = x$band_width$gbl,
+        wf_width = x$band_width$wf
       )
     }) %>%
     bind_rows(.id = "model")
