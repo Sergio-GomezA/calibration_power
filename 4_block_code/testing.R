@@ -56,7 +56,12 @@ test <- model_df0 %>%
   head(1000) %>%
   left_join(pred_band_summary$st0_m2$wf_summary, by = c("coord_id", "time"))
 test %>%
-  dplyr::select(time, site_name, norm_potential, matches('st'), lwr, upr, fit)
+  filter(!is.na(fit)) %>%
+  dplyr::select(time, site_name.x, norm_potential.x, st0_m2, lwr, upr, fit)
+
+test %>%
+  filter(!is.na(fit), coord_id != 130) %>%
+  dplyr::select(time, site_name.x, norm_potential.x, st0_m2, lwr, upr, fit)
 
 test <- model_df0 %>%
   head(1000) %>%
