@@ -318,6 +318,8 @@ CRPS
 
 - [ ] Figures and scores with only 24 / 12 H
 - [ ] RMSE check
+  - [ ] check new metrics IS OOS
+  - [ ] do i need to fix prob scores at sample lvl?
 - [ ] Aggregated LWE
   - [ ] GB
   - [ ] Regions
