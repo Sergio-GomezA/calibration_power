@@ -2085,10 +2085,30 @@ bru_ci_plot <- function(
   }
   if (oos_type == "time") {
     pred_ind <- which(newdata$time >= t_start & not_anomaly_ind)
+    pred_ind_24 <- which(
+      newdata$time >= t_start & newdata$time < t1 + hours(24) & not_anomaly_ind
+    )
+    pred_ind_12 <- which(
+      newdata$time >= t_start & newdata$time < t1 + hours(12) & not_anomaly_ind
+    )
+    observed_24 <- newdata$norm_potential[pred_ind_24]
+    observed_12 <- newdata$norm_potential[pred_ind_12]
+    samp_mat_24 <- samples %>%
+      lapply(function(x) x$pow_st[pred_ind_24]) %>%
+      setNames(paste0("samp_", seq_along(.))) %>%
+      bind_cols() %>%
+      as.matrix()
+    samp_mat_12 <- samples %>%
+      lapply(function(x) x$pow_st[pred_ind_12]) %>%
+      setNames(paste0("samp_", seq_along(.))) %>%
+      bind_cols() %>%
+      as.matrix()
   } else if (oos_type == "space") {
     pred_ind <- which(newdata$time < t_start & not_anomaly_ind)
+    samp_mat_24 <- samp_mat_12 <- NULL
   } else {
     pred_ind <- which(newdata$time >= t_start & not_anomaly_ind)
+    samp_mat_24 <- samp_mat_12 <- NULL
   }
   observed <- newdata$norm_potential[pred_ind]
 
@@ -2097,12 +2117,26 @@ bru_ci_plot <- function(
     setNames(paste0("samp_", seq_along(.))) %>%
     bind_cols() %>%
     as.matrix()
-  # browser()
+
   # calculate scores
   scores <- compute_scores(
     observed = observed,
     sample_mat = samp_mat
   )
+
+  if (!is.null(samp_mat_24)) {
+    scores_24 <- compute_scores(
+      observed = observed_24,
+      sample_mat = samp_mat_24
+    )
+    scores_12 <- compute_scores(
+      observed = observed_12,
+      sample_mat = samp_mat_12
+    )
+  } else {
+    scores_24 <- NULL
+    scores_12 <- NULL
+  }
 
   # coverage check for all q_ columns
   if (length(q_cols) > 0) {
@@ -2216,7 +2250,9 @@ bru_ci_plot <- function(
     cov_gbl = cov_gbl,
     cov_time = cov_time,
     cov_loc = cov_loc,
-    scores = scores
+    scores = scores,
+    scores_24 = scores_24,
+    scores_12 = scores_12
     # df_formula = formula_temp
   ))
 }

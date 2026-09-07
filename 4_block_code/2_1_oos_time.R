@@ -651,7 +651,21 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
         crps = x$scores$crps,
         energy = x$scores$energy,
         log = x$scores$log,
-        !!!setNames(as.list(x$scores$brier), names(x$scores$brier))
+        !!!setNames(as.list(x$scores$brier), names(x$scores$brier)),
+        crps_24 = x$scores_24$crps,
+        energy_24 = x$scores_24$energy,
+        log_24 = x$scores_24$log,
+        !!!setNames(
+          as.list(x$scores_24$brier),
+          paste0(names(x$scores_24$brier), "_24")
+        ),
+        crps_12 = x$scores_12$crps,
+        energy_12 = x$scores_12$energy,
+        log_12 = x$scores_12$log,
+        !!!setNames(
+          as.list(x$scores_12$brier),
+          paste0(names(x$scores_12$brier), "_12")
+        )
       )
     }) %>%
     bind_rows(.id = "model")
