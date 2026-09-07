@@ -314,3 +314,11 @@ CRPS
   - [ ] Anomalies
   - [ ] regime switching
   - [ ] ensemble?
+
+
+- [ ] Figures and scores with only 24 / 12 H
+- [ ] RMSE check
+- [ ] Aggregated LWE
+  - [ ] GB
+  - [ ] Regions
+- [ ] Anomalies in LWE
