@@ -91,12 +91,12 @@ wf_fig_df %>%
 which(sampled_days == "2025-01-22")
 which(sampled_days == "2025-07-30")
 day_id <- 12
-d0 <- sampled_days[day_id]
+d0 <- sampled_days[day_id] %>% as.Date()
 d0_tag <- base::format(d0, "%y%m%d")
 
 # read model df0
 output_path <- "~/Documents/elexon/caloutput"
-batch_name <- "batchY25d150_v3"
+batch_name <- "batchY25d150_test"
 mesh_label <- "very_coarse"
 extension <- "rds"
 model_df_fname <- sprintf(
@@ -233,7 +233,7 @@ df %>%
 
 df %>%
   ggplot() +
-  geom_point(aes(st0_m2, lp_st0_m2), alpha = 0.1) +
+  geom_point(aes(st0_m2, fit_st0_m2), alpha = 0.1) +
   geom_abline(slope = 1, intercept = 0, color = "darkred")
 
 df %>%
@@ -307,7 +307,7 @@ pred_df %>%
   geom_abline(slope = 1, intercept = 0, color = "darkred")
 
 alphas <- c(0.025, 0.975)
-source("aux_funct.R")
+# source("aux_funct.R")
 pred_band <- bru_ci_plot(
   bru_model = model_list[[model_name]],
   newdata = model_df0,
@@ -491,3 +491,118 @@ pred_dfb %>%
 
 dfa
 dfb
+
+
+####
+pred_band_summary$st0_m2$wf_summary %>%
+  ggplot() +
+  geom_point(aes(norm_potential, fit), alpha = 0.1) +
+  geom_abline(slope = 1, intercept = 0, color = "darkred")
+
+ModelMetrics::rmse(
+  pred_band_summary$st0_m2$wf_summary$norm_potential,
+  pred_band_summary$st0_m2$wf_summary$lp
+)
+
+## double check beta model
+
+# modeldf0 vs wf_df_pred
+
+# model_list %>% names()
+model_name <- "ts_bru0_lmbeta_250730.rds"
+pred_beta <- predict(
+  object = model_list[[model_name]],
+  newdata = wf_df_pred,
+  formula = as.formula(sprintf(
+    "~ data.frame(
+    coord_id = coord_id,
+    time = time,
+    norm_potential = norm_potential,
+    lin_pred = %s,
+    fit = plogis(%s)
+  )",
+    get_bru_formula(
+      model_list[[model_name]]
+    ),
+    get_bru_formula(
+      model_list[[model_name]]
+    )
+  )),
+  n.samples = 10
+)
+
+pred_beta$fit %>%
+  ggplot() +
+  geom_point(aes(norm_potential, mean), alpha = 0.1) +
+  geom_abline(slope = 1, intercept = 0, color = "darkred")
+
+
+pred_beta$fit %>%
+  inner_join(
+    model_df0 %>% dplyr::select(coord_id, time, lm_beta) %>% st_drop_geometry(),
+    by = c("coord_id", "time")
+  ) %>%
+  ggplot() +
+  geom_point(aes(lm_beta, mean), alpha = 0.1) +
+  geom_abline(slope = 1, intercept = 0, color = "darkred")
+
+
+dfa <- wf_df_pred %>%
+  filter(time %in% model_df0$time) %>%
+  dplyr::select(
+    coord_id,
+    time,
+    site_name,
+    norm_power_est0,
+    ws_group,
+    tech_typ,
+    dist_coast,
+    d_coast_group,
+    elev_group,
+    norm_potential
+  )
+
+dfb <- model_df0 %>%
+  filter(time %in% dfa$time) %>%
+  dplyr::select(
+    coord_id,
+    time,
+    site_name,
+    norm_power_est0,
+    ws_group,
+    tech_typ,
+    dist_coast,
+    d_coast_group,
+    elev_group,
+    norm_potential,
+    lm_beta
+  )
+dfa
+dfb
+
+
+pred_beta_dfb <- predict(
+  object = model_list[[model_name]],
+  newdata = model_df0,
+  formula = as.formula(sprintf(
+    "~ data.frame(
+    coord_id = coord_id,
+    time = time,
+    norm_potential = norm_potential,
+    lin_pred = (%s),
+    fit = plogis(%s)
+  )",
+    get_bru_formula(
+      model_list[[model_name]]
+    ),
+    get_bru_formula(
+      model_list[[model_name]]
+    )
+  )),
+  n.samples = 10
+)
+
+pred_beta_dfb$fit %>%
+  ggplot() +
+  geom_point(aes(lm_beta, mean), alpha = 0.1) +
+  geom_abline(slope = 1, intercept = 0, color = "darkred")

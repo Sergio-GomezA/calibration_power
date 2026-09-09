@@ -186,7 +186,6 @@ if (!override_objects && length(files_found) > 0) {
   }
 
   n.days <- 0
-  # n.days.before <- 7
 
   cat("Filtering data for the selected day and nearby days\n")
   wf_df_frag <- pwr_curv_df %>%
@@ -241,7 +240,6 @@ if (!override_objects && length(files_found) > 0) {
       gb_day_df %>% dplyr::select(date, p_group3),
       by = c("date" = "date")
     )
-
   # plot candidate anomalies, norm_potential == 0 and p_group3 == "mid"
   cutprobs3 <- c(0.25, 0.75)
   # p_quant3 <- quantile(gb_day_df$norm_power_est0, probs = cutprobs3)
@@ -298,12 +296,48 @@ if (!override_objects && length(files_found) > 0) {
   wf_df_frag <- wf_df_frag %>%
     filter(!anomaly)
 
-  x <- wf_df_frag$pow_group %>% unique() %>% sort()
-  min_jump <- min(diff(sort(x))) / diff(range(x))
-  if (min_jump <= 1e-4) {
-    wf_df_frag <- wf_df_frag %>%
-      mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
-  }
+  # x <- wf_df_frag$pow_group %>% unique() %>% sort()
+  # min_jump <- min(diff(sort(x))) / diff(range(x))
+  # if (min_jump <= 1e-4) {
+  #   wf_df_frag <- wf_df_frag %>%
+  #     mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
+  # }
+
+  ws_breaks <- quantile(
+    wf_df_frag$ws_h,
+    probs = seq(0, 1, length.out = 21),
+    na.rm = TRUE
+  )
+
+  pow_breaks <- quantile(
+    wf_df_frag$norm_power_est0,
+    probs = seq(0, 1, length.out = 21),
+    na.rm = TRUE
+  )
+
+  d_coast_breaks <- quantile(
+    wf_df_frag$dist_coast,
+    probs = seq(0, 1, length.out = 11),
+    na.rm = TRUE
+  )
+  # wf_df_frag$d_coast_group %>% unique() %>% sort()
+  elev_breaks <- quantile(
+    wf_df_frag$elevation,
+    probs = seq(0, 1, length.out = 11),
+    na.rm = TRUE
+  )
+  ws_breaks <- unique(ws_breaks)
+  pow_breaks <- unique(pow_breaks)
+  d_coast_breaks <- unique(d_coast_breaks)
+  elev_breaks <- unique(elev_breaks)
+
+  wf_df_frag <- wf_df_frag %>%
+    make_groups(
+      ws_breaks = ws_breaks,
+      pow_breaks = pow_breaks,
+      d_coast_breaks = d_coast_breaks,
+      elev_breaks = elev_breaks
+    )
 
   cat("Converting coordinates to km\n")
   wf_df_frag <- wf_df_frag %>%

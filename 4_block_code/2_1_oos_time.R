@@ -378,12 +378,20 @@ if (!override_objects && length(files_found) > 0) {
   wf_df_pred <- wf_df_pred %>%
     filter(!anomaly)
 
-  x <- wf_df_pred$pow_group %>% unique() %>% sort()
-  min_jump <- min(diff(sort(x))) / diff(range(x))
-  if (min_jump <= 1e-4) {
-    wf_df_pred <- wf_df_pred %>%
-      mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
-  }
+  # x <- wf_df_pred$pow_group %>% unique() %>% sort()
+  # min_jump <- min(diff(sort(x))) / diff(range(x))
+  # if (min_jump <= 1e-4) {
+  #   wf_df_pred <- wf_df_pred %>%
+  #     mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
+  # }
+
+  wf_df_frag <- wf_df_frag %>%
+    make_groups(
+      ws_breaks = ws_breaks,
+      pow_breaks = pow_breaks,
+      d_coast_breaks = d_coast_breaks,
+      elev_breaks = elev_breaks
+    )
 
   cat("Converting coordinates to km\n")
   wf_df_pred <- wf_df_pred %>%

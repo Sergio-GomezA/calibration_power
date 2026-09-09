@@ -2463,3 +2463,41 @@ compute_scores <- function(
   # scores$log_obs <- log.s
   scores
 }
+
+
+make_groups <- function(
+  df,
+  ws_breaks,
+  pow_breaks,
+  d_coast_breaks,
+  elev_breaks
+) {
+  group_left <- function(x, breaks) {
+    i <- findInterval(x, breaks)
+    i <- pmax(1, pmin(i, length(breaks)))
+    breaks[i]
+  }
+
+  df %>%
+    mutate(
+      ws_group = group_left(
+        ws_h,
+        ws_breaks
+      ),
+
+      pow_group = group_left(
+        norm_power_est0,
+        pow_breaks
+      ),
+
+      d_coast_group = group_left(
+        dist_coast,
+        d_coast_breaks
+      ),
+
+      elev_group = group_left(
+        elevation,
+        elev_breaks
+      )
+    )
+}

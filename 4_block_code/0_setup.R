@@ -63,7 +63,7 @@ if (length(args) > 3) {
   re_run_st <- as.logical(args[4])
 }
 if (length(args) > 4) {
-  n.days.before <- as.numeric(args[5])
+  n.days.before.fit <- as.numeric(args[5])
 }
 if (length(args) > 5) {
   batch_name <- as.character(args[6])
@@ -90,8 +90,8 @@ cat(
   "re_run_st =",
   re_run_st,
   "\n",
-  "n.days.before =",
-  n.days.before,
+  "n.days.before.fit =",
+  n.days.before.fit,
   "\n",
   "batch_name =",
   batch_name,
