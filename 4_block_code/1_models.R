@@ -921,8 +921,13 @@ ggsave(
 ## 2.1 AR1 temporal model ####
 ar_tag <- "ar1"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
-  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
-  norm_power_est0 +
+  techno(tech_typ, model = "iid") + # random intercept by tech_typ
+  # norm_power_est0 +
+  slope(
+    tech_typ,
+    model = "iid",
+    weights = norm_power_est0
+  ) +
   # power_correction(
   #   pow_group,
   #   model = "rw2",
@@ -975,7 +980,8 @@ if (!file.exists(model_fname) || override_objects) {
   bruar1 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
-      norm_power_est0 +
+      techno +
+      slope +
       # power_correction +
       d_coast +
       elev +
@@ -1329,8 +1335,13 @@ spde <- INLA::inla.spde2.pcmatern(
 )
 
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
-  # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
-  norm_power_est0 +
+  techno(tech_typ, model = "iid") + # random intercept by tech_typ
+  # norm_power_est0 +
+  slope(
+    tech_typ,
+    model = "iid",
+    weights = norm_power_est0
+  ) +
   # power_correction(
   #   pow_group,
   #   model = "rw2",
@@ -1372,7 +1383,8 @@ if (!file.exists(model_fname) || re_run_st) {
   bru0 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
-      norm_power_est0 +
+      techno +
+      slope +
       # power_correction +
       d_coast +
       elev +
