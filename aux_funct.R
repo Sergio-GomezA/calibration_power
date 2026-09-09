@@ -2087,10 +2087,14 @@ bru_ci_plot <- function(
   if (oos_type == "time") {
     pred_ind <- which(newdata$time >= t_start & not_anomaly_ind)
     pred_ind_24 <- which(
-      newdata$time >= t_start & newdata$time < t1 + hours(24) & not_anomaly_ind
+      newdata$time >= t_start &
+        newdata$time < t_start + hours(24) &
+        not_anomaly_ind
     )
     pred_ind_12 <- which(
-      newdata$time >= t_start & newdata$time < t1 + hours(12) & not_anomaly_ind
+      newdata$time >= t_start &
+        newdata$time < t_start + hours(12) &
+        not_anomaly_ind
     )
     observed_24 <- newdata$norm_potential[pred_ind_24]
     observed_12 <- newdata$norm_potential[pred_ind_12]
@@ -2218,11 +2222,11 @@ bru_ci_plot <- function(
     )
 
   band_width <- pred_fig_df %>%
-    filter(time >= t1, time < t1 + hours(24)) %>%
+    filter(time >= t_start, time < t_start + hours(24)) %>%
     summarise(gbl = mean(width, na.rm = TRUE)) %>%
     bind_cols(
       wf_summary_df %>%
-        filter(time >= t1, time < t1 + hours(24)) %>%
+        filter(time >= t_start, time < t_start + hours(24)) %>%
         summarise(wf = mean(width, na.rm = TRUE))
     )
 
