@@ -5,7 +5,7 @@
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 ## 0.1 global parameter #####
-day_id <- 1
+day_id <- 12
 mesh_edge_par <- 50 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- FALSE
 save_daily_files <- FALSE
@@ -16,9 +16,9 @@ prec_init <- log(200) # for u
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
 fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
-n.days.before <- 3
+n.days.before.fit <- 3
 n.days.before.heavy <- 3
-batch_name <- "batchY25d150_v2"
+batch_name <- "batchY25d150_test"
 
 task_prefix <- "spaceoos"
 save_models <- FALSE
