@@ -383,7 +383,7 @@ if (!override_objects && length(files_found) > 0) {
   #   wf_df_pred <- wf_df_pred %>%
   #     mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
   # }
-  wf_df_frag <- wf_df_frag %>%
+  wf_df_pred <- wf_df_pred %>%
     make_groups(
       ws_breaks = ws_breaks,
       pow_breaks = pow_breaks,
@@ -724,7 +724,7 @@ saveRDS(
 )
 
 gb_fig_df %>%
-  # filter(time >= t0) %>%
+  filter(time >= t1 - hours(24), time <= t1 + hours(6)) %>%
   ggplot() +
   geom_ribbon(
     aes(
@@ -851,7 +851,7 @@ for (mod in est_cols) {
     wf_fig_df %>%
       filter(model == mod) %>%
       # filter(coord_id %in% c(k * 40 + 1:40)) %>%
-      filter(time >= t0) %>%
+      filter(time >= t1 - hours(24), time <= t1 + hours(6)) %>%
       ggplot() +
       geom_ribbon(
         aes(

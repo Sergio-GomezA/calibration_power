@@ -385,7 +385,7 @@ if (!override_objects && length(files_found) > 0) {
   #     mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
   # }
 
-  wf_df_frag <- wf_df_frag %>%
+  wf_df_pred <- wf_df_pred %>%
     make_groups(
       ws_breaks = ws_breaks,
       pow_breaks = pow_breaks,

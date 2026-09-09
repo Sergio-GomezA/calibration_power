@@ -276,7 +276,7 @@ model_df0 %>%
 ModelMetrics::rmse(model_df0$norm_potential, model_df0$st0_m2)
 d0
 
-source("aux_funct.R")
+# source("aux_funct.R")
 
 model_name <- "st_bru0_very_coarse_250730.rds"
 
@@ -606,3 +606,32 @@ pred_beta_dfb$fit %>%
   ggplot() +
   geom_point(aes(lm_beta, mean), alpha = 0.1) +
   geom_abline(slope = 1, intercept = 0, color = "darkred")
+
+
+alphas <- c(0.025, 0.975)
+# source("aux_funct.R")
+pred_band <- bru_ci_plot(
+  bru_model = model_list[[model_name]],
+  newdata = model_df0,
+  n.samples = n_samp,
+  show.fig = TRUE,
+  alphas = alphas,
+  oos_type = "time",
+  family = model_list[[model_name]]$.args$family,
+  t_start = min(model_df0$time)
+)
+
+pred_band$wf_summary %>%
+  ggplot() +
+  geom_point(aes(norm_potential, fit), alpha = 0.1) +
+  geom_abline(slope = 1, intercept = 0, color = "darkred")
+
+ModelMetrics::rmse(
+  pred_band$wf_summary$norm_potential,
+  pred_band$wf_summary$fit
+)
+
+ModelMetrics::rmse(
+  model_df0$norm_potential,
+  model_df0$lm_beta
+)
