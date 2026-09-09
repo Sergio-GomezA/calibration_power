@@ -111,6 +111,7 @@ n.hours <- n.hours.time
 t0 <- d0 - n.days.before
 t1 <- d0 + n.days
 th <- t1 + hours(n.hours)
+t_ind_adj <- 24 * (n.days.before.fit - n.days.before.time)
 
 cat("Traning sample length for assessment and figures:")
 cat(
@@ -131,9 +132,9 @@ model_catalog <- read.csv("data/model_catalog.csv") %>%
   na.omit()
 
 if (local_run) {
-  model_catalog <- model_catalog %>%
-    # filter(!grepl("fine", mod_labels)) %>%
-    filter(!grepl("st0", est_cols))
+  model_catalog <- model_catalog #%>%
+  # filter(!grepl("fine", mod_labels)) %>%
+  # filter(!grepl("st0", est_cols))
 }
 mod_labels <- model_catalog$mod_labels
 est_cols <- model_catalog$est_cols
@@ -197,10 +198,10 @@ if (length(missing_models) > 0) {
   names(mod_labels) <- est_cols
 }
 
-if (local_run) {
-  mod_labels <- mod_labels[!grepl("fine", mod_labels)]
-  est_cols <- est_cols[!grepl("st0", est_cols)]
-}
+# if (local_run) {
+#   mod_labels <- mod_labels[!grepl("fine", mod_labels)]
+#   est_cols <- est_cols[!grepl("st0", est_cols)]
+# }
 
 # Predictions for next hours ####
 
@@ -345,7 +346,7 @@ if (!override_objects && length(files_found) > 0) {
       pow_group = inla.group(norm_power_est0, n = 20, method = "quantile"),
       d_coast_group = inla.group(dist_coast, n = 10, method = "quantile"),
       elev_group = inla.group(elevation, n = 10, method = "quantile"),
-      time_id = as.integer(factor(time)),
+      time_id = as.integer(factor(time)) + t_ind_adj,
       date = as.Date(time)
     ) %>%
     left_join(
@@ -597,6 +598,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       )
       test <- tryCatch(
         {
+          # browser()
           bru_ci_plot(
             bru_model = model_list[[bru_mods[i]]],
             newdata = wf_df_pred,
