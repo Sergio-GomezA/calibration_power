@@ -2,13 +2,14 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 pow_threshold <- 0.05
 pow_threshold_label <- gsub("\\.", "_", as.character(pow_threshold))
-
+tables_path <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power_main_doc/tables"
+dir.exists(tables_path) || dir.create(tables_path, recursive = TRUE)
 
 override_objects <- FALSE
 # rerun_samples <- FALSE
 # prec_init <- log(200)
 # batch_name <- "batch2025"
-batch_name <- "batchY25d150_v2"
+batch_name <- "batchY25d150_v3"
 
 
 if (local_run) {
@@ -209,8 +210,8 @@ names(mod_labels) <- est_cols
 excluded_models0 <- c("lm")
 excluded_models <- c("lm", "qm")
 mod_labels["lm_bru"] <- "Linear model"
-model_catalog <- read.csv("data/model_catalog.csv") %>%
-  na.omit()
+# model_catalog <- read.csv("data/model_catalog.csv") %>%
+#   na.omit()
 model_df <- model_catalog %>%
   rename(code = est_cols, label = mod_labels) %>%
   arrange(desc(nchar(mode_code_prefix))) %>%
@@ -561,7 +562,7 @@ tab_latex <- metrics_table_t %>%
   kable_styling(latex_options = "hold_position")
 writeLines(
   as.character(tab_latex),
-  sprintf("tables/%s/err_metrics_time.tex", batch_name)
+  sprintf("%s/err_metrics_time.tex", tables_path)
 )
 
 
@@ -906,7 +907,7 @@ tab_latex <- metrics_table %>%
 
 writeLines(
   as.character(tab_latex),
-  sprintf("tables/%s/err_metrics_space.tex", batch_name)
+  sprintf("%s/err_metrics_space.tex", tables_path)
 )
 
 # reliability diagrams ####
@@ -1171,35 +1172,21 @@ scores_tbl_t <- lapply(
   bind_rows() %>%
   group_by(model) %>%
   summarise(
-    across(c(crps, energy, log, matches("bs")), ~ mean(., na.rm = TRUE)),
+    across(
+      c(matches("crps"), matches("energy"), matches("log"), matches("bs")),
+      ~ mean(., na.rm = TRUE)
+    ),
     .groups = "drop"
   ) %>%
   arrange(crps) %>%
   mutate(
     model = factor(model, levels = model)
   )
-# scores_tbl_t %>%
-#   dplyr::select(-bs_0_2) %>%
-#   kbl(
-#     format = "latex",
-#     booktabs = TRUE,
-#     digits = 3,
-#     align = "lcccccc",
-#     col.names = c(
-#       "Model",
-#       "CRPS",
-#       "Energy",
-#       "Log",
-#       "BS (CF < 1%)",
-#       "BS (CF < 5%)",
-#       "BS (CF < 10%)"
-#     ),
-#     caption = "Average scores for out-of-sample predictions across all sampled days."
-#   ) %>%
-#   kable_styling(latex_options = "hold_position")
+# scores_tbl_t %>% dplyr::select(model, matches("_24"))
 
 tab_latex <- scores_tbl_t %>%
-  dplyr::select(-bs_0_2) %>%
+  dplyr::select(model, matches("_24")) %>%
+  dplyr::select(-matches("bs_0_2")) %>%
   kbl(
     format = "latex",
     booktabs = TRUE,
@@ -1223,7 +1210,7 @@ tab_latex <- scores_tbl_t %>%
   kable_styling(latex_options = "hold_position")
 writeLines(
   as.character(tab_latex),
-  sprintf("tables/%s/cal_scores_time.tex", batch_name)
+  sprintf("%s/cal_scores_time.tex", tables_path)
 )
 
 ## space ####
@@ -1249,15 +1236,21 @@ scores_tbl <- lapply(
   bind_rows() %>%
   group_by(model) %>%
   summarise(
-    across(c(crps, energy, log, matches("bs")), ~ mean(., na.rm = TRUE)),
+    across(
+      c(matches("crps"), matches("energy"), matches("log"), matches("bs")),
+      ~ mean(., na.rm = TRUE)
+    ),
     .groups = "drop"
   ) %>%
   arrange(crps) %>%
   mutate(
     model = factor(model, levels = model)
   )
+# scores_tbl %>%
+#   dplyr::select(model, matches("_24"))
 tab_latex <- scores_tbl %>%
-  dplyr::select(-bs_0_2) %>%
+  # dplyr::select(model, matches("_24")) %>%
+  dplyr::select(-matches("bs_0_2")) %>%
   kbl(
     format = "latex",
     booktabs = TRUE,
@@ -1281,7 +1274,7 @@ tab_latex <- scores_tbl %>%
   kable_styling(latex_options = "hold_position")
 writeLines(
   as.character(tab_latex),
-  sprintf("tables/%s/err_metrics_space.tex", batch_name)
+  sprintf("%s/cal_scores_space.tex", tables_path)
 )
 # rm(gb_fig_df, wf_fig_df, pit_df)
 # gc()
