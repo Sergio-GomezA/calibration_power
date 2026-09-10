@@ -2174,8 +2174,15 @@ bru_ci_plot <- function(
     if (oos_type == "time") {
       ## oos for time
       coverage_df <- coverage_df %>% mutate(oos = time >= t_start)
+      cov_24h <- coverage_df %>%
+        filter(time >= t_start & time < t_start + hours(24)) %>%
+        summarise(across(matches("coverage"), mean), .groups = "drop")
+      cov_12h <- coverage_df %>%
+        filter(time >= t_start & time < t_start + hours(12)) %>%
+        summarise(across(matches("coverage"), mean), .groups = "drop")
     } else {
       coverage_df <- coverage_df %>% mutate(oos = time <= t_start)
+      cov_24h <- cov_12h <- NULL
     } ## oos for space)
 
     # drop qcols from pred df
@@ -2265,6 +2272,8 @@ bru_ci_plot <- function(
     cov_gbl = cov_gbl,
     cov_time = cov_time,
     cov_loc = cov_loc,
+    cov_24h = cov_24h,
+    cov_12h = cov_12h,
     scores = scores,
     scores_24 = scores_24,
     scores_12 = scores_12,

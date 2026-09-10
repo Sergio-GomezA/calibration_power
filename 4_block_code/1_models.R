@@ -776,7 +776,7 @@ if (!file.exists(model_fname) || override_objects) {
 }
 
 summary(brulmbeta)
-source("aux_funct.R")
+# source("aux_funct.R")
 effect_names <- names(brulmbeta$summary.random)
 excluded_effects <- c("u")
 effect_names <- setdiff(effect_names, excluded_effects)
