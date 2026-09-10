@@ -2474,39 +2474,119 @@ compute_scores <- function(
 }
 
 
+# make_groups <- function(
+#   df,
+#   ws_breaks,
+#   pow_breaks,
+#   d_coast_breaks,
+#   elev_breaks
+# ) {
+#   group_left <- function(x, breaks) {
+#     i <- findInterval(x, breaks)
+#     i <- pmax(1, pmin(i, length(breaks)))
+#     breaks[i]
+#   }
+
+#   df %>%
+#     mutate(
+#       ws_group = group_left(
+#         ws_h,
+#         ws_breaks
+#       ),
+
+#       pow_group = group_left(
+#         norm_power_est0,
+#         pow_breaks
+#       ),
+
+#       d_coast_group = group_left(
+#         dist_coast,
+#         d_coast_breaks
+#       ),
+
+#       elev_group = group_left(
+#         elevation,
+#         elev_breaks
+#       )
+#     )
+# }
+
+make_group_breaks <- function(x, n = 20) {
+  # Same quantile probabilities as inla.group()
+  breaks <- unique(
+    quantile(
+      x,
+      probs = c(0, ppoints(n - 1), 1),
+      na.rm = TRUE
+    )
+  )
+
+  # Assign training observations to intervals
+  idx <- cut(
+    x,
+    breaks = breaks,
+    include.lowest = TRUE
+  )
+
+  # Same group representative as inla.group():
+  # median of the observations within each interval
+  group_values <- tapply(
+    x,
+    idx,
+    median,
+    na.rm = TRUE
+  )
+
+  list(
+    breaks = as.numeric(breaks),
+    values = as.numeric(group_values)
+  )
+}
+
 make_groups <- function(
   df,
-  ws_breaks,
-  pow_breaks,
-  d_coast_breaks,
-  elev_breaks
+  ws_groups,
+  pow_groups,
+  d_coast_groups,
+  elev_groups
 ) {
-  group_left <- function(x, breaks) {
-    i <- findInterval(x, breaks)
-    i <- pmax(1, pmin(i, length(breaks)))
-    breaks[i]
+  group_value <- function(x, groups) {
+    idx <- findInterval(
+      x,
+      groups$breaks,
+      left.open = FALSE
+    )
+
+    # Keep observations outside the training range
+    # in the first/last group
+    idx <- pmax(
+      1,
+      pmin(idx, length(groups$values))
+    )
+
+    groups$values[idx]
   }
 
   df %>%
     mutate(
-      ws_group = group_left(
+      ws_group = group_value(
         ws_h,
-        ws_breaks
+        ws_groups
       ),
 
-      pow_group = group_left(
+      pow_group = group_value(
         norm_power_est0,
-        pow_breaks
+        pow_groups
       ),
 
-      d_coast_group = group_left(
+      d_coast_group = group_value(
         dist_coast,
-        d_coast_breaks
+        d_coast_groups
       ),
 
-      elev_group = group_left(
+      elev_group = group_value(
         elevation,
-        elev_breaks
+        elev_groups
       )
     )
 }

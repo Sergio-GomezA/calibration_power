@@ -385,10 +385,10 @@ if (!override_objects && length(files_found) > 0) {
   # }
   wf_df_pred <- wf_df_pred %>%
     make_groups(
-      ws_breaks = ws_breaks,
-      pow_breaks = pow_breaks,
-      d_coast_breaks = d_coast_breaks,
-      elev_breaks = elev_breaks
+      ws_groups = ws_groups,
+      pow_groups = pow_groups,
+      d_coast_groups = d_coast_groups,
+      elev_groups = elev_groups
     )
 
   cat("Converting coordinates to km\n")

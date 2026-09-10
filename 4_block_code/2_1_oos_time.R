@@ -387,10 +387,10 @@ if (!override_objects && length(files_found) > 0) {
 
   wf_df_pred <- wf_df_pred %>%
     make_groups(
-      ws_breaks = ws_breaks,
-      pow_breaks = pow_breaks,
-      d_coast_breaks = d_coast_breaks,
-      elev_breaks = elev_breaks
+      ws_groups = ws_groups,
+      pow_groups = pow_groups,
+      d_coast_groups = d_coast_groups,
+      elev_groups = elev_groups
     )
 
   cat("Converting coordinates to km\n")
@@ -780,7 +780,8 @@ gb_fig_df %>%
   ) +
   # coord_cartesian(ylim = c(0, 1)) +
   facet_wrap(~model, nrow = 2, labeller = as_labeller(mod_labels)) +
-  scale_x_datetime(date_labels = "%m/%d") +
+  # scale_x_datetime(date_labels = "%m/%d") +
+  scale_x_datetime(date_labels = "%H:%M") +
   theme(legend.position = "bottom") +
   scale_color_manual(
     values = c("fit" = blues9[9], "observed" = "darkred", "PC(ERA5)" = "gray70")
@@ -907,7 +908,8 @@ for (mod in est_cols) {
       ) +
       facet_wrap(~site_name, scales = "free_y") +
       coord_cartesian(ylim = c(0, 1)) +
-      scale_x_datetime(date_labels = "%m/%d") +
+      # scale_x_datetime(date_labels = "%m/%d") +
+      scale_x_datetime(date_labels = "%H:%M") +
       theme(legend.position = "bottom") +
       scale_color_manual(
         values = c(
