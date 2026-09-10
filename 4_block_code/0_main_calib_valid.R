@@ -17,10 +17,11 @@ source('4_block_code/1_models.R')
 # Sample extraction ####
 
 ## OOS time ####
-source('4_block_code/2_1_oos_time.R')
+# source('4_block_code/2_1_oos_time.R')
+source('4_block_code/2_1_oos_time.R', echo = local_run)
 
 ## OOS space ####
-source('4_block_code/2_2_oos_space.R')
+source('4_block_code/2_2_oos_space.R', echo = local_run)
 
 ## OOS space-time ####
 # source('4_block_code/2_3_oos_space_time.R')
