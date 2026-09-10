@@ -1369,7 +1369,7 @@ spde <- INLA::inla.spde2.pcmatern(
 )
 
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
-  techno(tech_typ, model = "iid") + # random intercept by tech_typ
+  # techno(tech_typ, model = "iid") + # random intercept by tech_typ
   # norm_power_est0 +
   slope(
     tech_typ,
@@ -1417,7 +1417,7 @@ if (!file.exists(model_fname) || re_run_st) {
   bru0 <- bru(
     components = components0,
     formula = norm_potential ~ Intercept +
-      techno +
+      # techno +
       slope +
       # power_correction +
       d_coast +
