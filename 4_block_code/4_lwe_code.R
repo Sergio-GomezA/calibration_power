@@ -2,13 +2,14 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 pow_threshold <- 0.05
 pow_threshold_label <- gsub("\\.", "_", as.character(pow_threshold))
+tol <- 0.01
+norm_dist_tol <- 0.3
 
-
-override_objects <- FALSE
+override_objects <- TRUE
 # rerun_samples <- FALSE
 # prec_init <- log(200)
 # batch_name <- "batch2025"
-batch_name <- "batchY25d150_v2"
+batch_name <- "batchY25d150_v5"
 
 
 if (local_run) {
@@ -96,8 +97,6 @@ excluded_models0 <- c("lm", "spde1d", "lm_t")
 excluded_models <- c("lm", "spde1d", "lm_t", "qm")
 mod_labels["lm_bru"] <- "Linear Model"
 
-model_catalog <- read.csv("data/model_catalog.csv") %>%
-  na.omit()
 model_df <- model_catalog %>%
   rename(code = est_cols, label = mod_labels) %>%
   arrange(desc(nchar(mode_code_prefix))) %>%
@@ -119,7 +118,7 @@ cat(
 )
 cat(
   " Low wind events analysis for days:",
-  paste(format(sampled_days, "%Y-%m-%d"), collapse = ", "),
+  paste(format(sampled_days, "%b-%d"), collapse = ", "),
   ")\n"
 )
 
@@ -168,7 +167,7 @@ model_df0 <- lapply(
 cat("--------------------------------------------------------------------\n")
 cat("Low wind events in observed data\n")
 cat("--------------------------------------------------------------------\n")
-max_h_duration <- 48
+max_h_duration <- 72
 lwe_obs_pred_fname <- file.path(
   "summaries",
   sprintf(
@@ -220,7 +219,9 @@ if (!file.exists(lwe_obs_pred_fname) | override_objects) {
     unique() %>%
     sort() %>%
     as.Date()
-
+  # difftime("2025-10-02","2025-01-01")
+  # full_seq <- seq.Date(min(pred_days), max(pred_days), by = 1)
+  # full_seq[which(!full_seq %in% pred_days)]
   lwe_obs_pred <- pwr_curv_df %>%
     rename(time = halfHourEndTime) %>%
     mutate(
@@ -259,11 +260,65 @@ if (!file.exists(lwe_obs_pred_fname) | override_objects) {
       norm_potential = pmin(1, potential / capacity),
       norm_power_est0 = power_est0 / capacity,
       error0 = norm_potential - norm_power_est0
+    )
+
+  # plot candidate anomalies, norm_potential == 0 and p_group3 == "mid"
+  cutprobs3 <- c(0.25, 0.75)
+  # p_quant3 <- quantile(gb_day_df$norm_power_est0, probs = cutprobs3)
+  p_quant3 <- quantile(lwe_obs_pred$norm_potential, probs = cutprobs3)
+
+  cat("Identifying anomalies in the dataset\n")
+  lwe_obs_pred <- lwe_obs_pred %>%
+    group_by(coord_id) %>%
+    mutate(
+      anomaly = case_when(
+        # norm_potential <= tol &
+        #   norm_power_est0 >= p_quant3[1] &
+        #   lead(norm_power_est0, 1, default = last(norm_power_est0)) >=
+        #     p_quant3[1] ~ TRUE,
+        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
+        abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
+        TRUE ~ FALSE
+      )
+    ) %>%
+    ungroup()
+
+  # lwe_obs_pred %>%
+  #   ggplot() +
+  #   geom_point(
+  #     aes(norm_potential, norm_power_est0, color = anomaly),
+  #     size = 0.5,
+  #     alpha = 0.1
+  #   ) +
+  #   scale_color_manual(values = c("grey50", "darkred")) +
+  #   theme(legend.position = "bottom") +
+  #   labs(
+  #     x = "Elexon CF (%)",
+  #     y = "Generic PC(ERA5) CF (%)",
+  #     color = "Anomaly"
+  #   ) +
+  #   coord_fixed(ratio = 1)
+  anomaly_perc <- mean(lwe_obs_pred$anomaly, na.rm = TRUE) * 100
+  cat(sprintf(
+    "Percentage of anomalies at %.1f%% tol in the dataset: %.2f%%\n",
+    norm_dist_tol * 100,
+    anomaly_perc
+  ))
+
+  # mask anomalies
+  lwe_obs_pred <- lwe_obs_pred %>%
+    mutate(
+      norm_potential_orig = norm_potential,
+      norm_potential = ifelse(anomaly, NA, norm_potential)
     ) %>%
     arrange(coord_id, time) %>%
     group_by(coord_id, site_name) %>%
     mutate(
-      below = norm_potential < pow_threshold,
+      below = ifelse(
+        is.na(norm_potential),
+        FALSE,
+        norm_potential < pow_threshold
+      ),
       run_id = cumsum(below != lag(below, default = first(below)))
     ) %>%
     group_by(coord_id, site_name, run_id, below) %>%
@@ -341,11 +396,45 @@ if (!file.exists(lwe_obs_pred_fname) | override_objects) {
       norm_potential = pmin(1, potential / capacity),
       norm_power_est0 = power_est0 / capacity,
       error0 = norm_potential - norm_power_est0
+    )
+
+  cat("Identifying anomalies in the dataset\n")
+  lwe_obs_newloc <- lwe_obs_newloc %>%
+    group_by(coord_id) %>%
+    mutate(
+      anomaly = case_when(
+        # norm_potential <= tol &
+        #   norm_power_est0 >= p_quant3[1] &
+        #   lead(norm_power_est0, 1, default = last(norm_power_est0)) >=
+        #     p_quant3[1] ~ TRUE,
+        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
+        abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
+        TRUE ~ FALSE
+      )
+    ) %>%
+    ungroup()
+
+  anomaly_perc <- mean(lwe_obs_newloc$anomaly, na.rm = TRUE) * 100
+  cat(sprintf(
+    "Percentage of anomalies at %.1f%% tol in the dataset: %.2f%%\n",
+    norm_dist_tol * 100,
+    anomaly_perc
+  ))
+
+  lwe_obs_newloc <- lwe_obs_newloc %>%
+    # mask anomalies
+    mutate(
+      norm_potential_orig = norm_potential,
+      norm_potential = ifelse(anomaly, NA, norm_potential)
     ) %>%
     arrange(coord_id, time) %>%
     group_by(coord_id, site_name) %>%
     mutate(
-      below = norm_potential < pow_threshold,
+      below = ifelse(
+        is.na(norm_potential),
+        FALSE,
+        norm_potential < pow_threshold
+      ),
       run_id = cumsum(below != lag(below, default = first(below)))
     ) %>%
     group_by(coord_id, site_name, run_id, below) %>%
@@ -366,6 +455,8 @@ if (!file.exists(lwe_obs_pred_fname) | override_objects) {
     )
 
   saveRDS(lwe_obs_newloc, lwe_obs_newloc_fname)
+  rm(pwr_curv_df)
+  gc()
 } else {
   cat("Loading existing low wind events observed data\n")
   lwe_obs_pred <- readRDS(lwe_obs_pred_fname)
@@ -406,6 +497,9 @@ low_events_model <- model_df0 %>%
       labels = c(mod_labels, "observed" = "Observed")
     )
   )
+
+rm(model_df0)
+gc()
 
 # low_events_model$model %>% unique() %>% sort() %>% print()
 low_events_model %>%
@@ -461,50 +555,50 @@ cols["Observed"] <- "darkred"
 # excluded_models0
 # mod_labels
 # density plot of low wind event durations
-low_events_model %>%
-  filter(!model %in% mod_labels[excluded_models0]) %>%
-  filter(duration_h < max_h_duration) %>%
-  ggplot(aes(x = duration_h)) +
-  geom_density(
-    # data = ~ dplyr::filter(.x, model != "observed"),
-    aes(colour = model),
-    alpha = 0.5,
-    key_glyph = "path",
-    lwd = 1
-  ) +
-  # geom_density(
-  #   data = ~ dplyr::filter(.x, model == "observed"),
-  #   aes(colour = model),
-  #   # colour = "darkred",
-  #   # linewidth = 1.2,
-  #   fill = NA
-  # ) +
-  labs(
-    title = "Distribution of Low Wind Events Duration",
-    x = "Duration (hours)",
-    y = "Frequency"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.position = "inside",
-    legend.position.inside = c(0.7, 0.7)
-  ) +
-  guides(
-    colour = guide_legend(ncol = 2)
-  ) +
-  scale_color_manual(values = cols)
+# low_events_model %>%
+#   filter(!model %in% mod_labels[excluded_models0]) %>%
+#   filter(duration_h < max_h_duration) %>%
+#   ggplot(aes(x = duration_h)) +
+#   geom_density(
+#     # data = ~ dplyr::filter(.x, model != "observed"),
+#     aes(colour = model),
+#     alpha = 0.5,
+#     key_glyph = "path",
+#     lwd = 1
+#   ) +
+#   # geom_density(
+#   #   data = ~ dplyr::filter(.x, model == "observed"),
+#   #   aes(colour = model),
+#   #   # colour = "darkred",
+#   #   # linewidth = 1.2,
+#   #   fill = NA
+#   # ) +
+#   labs(
+#     title = "Distribution of Low Wind Events Duration",
+#     x = "Duration (hours)",
+#     y = "Frequency"
+#   ) +
+#   theme_minimal() +
+#   theme(
+#     plot.title = element_text(hjust = 0.5),
+#     axis.text.x = element_text(angle = 45, hjust = 1),
+#     legend.position = "inside",
+#     legend.position.inside = c(0.7, 0.7)
+#   ) +
+#   guides(
+#     colour = guide_legend(ncol = 2)
+#   ) +
+#   scale_color_manual(values = cols)
 
-ggsave(
-  sprintf(
-    "fig/%s/low_wind_duration_dens_t%s.pdf",
-    batch_name,
-    pow_threshold_label
-  ),
-  width = 6,
-  height = 4
-)
+# ggsave(
+#   sprintf(
+#     "fig/%s/low_wind_duration_dens_t%s.pdf",
+#     batch_name,
+#     pow_threshold_label
+#   ),
+#   width = 6,
+#   height = 4
+# )
 
 # CDF plot of low wind event durations
 low_events_model %>%
