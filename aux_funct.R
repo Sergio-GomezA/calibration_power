@@ -2590,3 +2590,64 @@ make_groups <- function(
       )
     )
 }
+
+
+cov_fig <- function(
+  data,
+  h_max = NULL,
+  show.fig = TRUE,
+  name_prefix = "WF"
+) {
+  # browser()
+  data <- data %>%
+    filter(oos) %>%
+    group_by(model) %>%
+    mutate(
+      t1 = first(time),
+      h = difftime(time, t1, units = "hours") %>% as.numeric()
+    )
+
+  if (is.null(h_max)) {
+    h_max <- max(data$h)
+  }
+
+  for (j in seq_along(h_max)) {
+    cov_bands_hmax <- data %>%
+      filter(h <= h_max[j]) %>%
+      filter(!model %in% excluded_models) %>%
+      group_by(model) %>%
+      summarise(
+        coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+        .groups = "drop"
+      ) %>%
+      arrange(desc(coverage)) %>%
+      mutate(
+        model = factor(model, levels = model)
+      )
+
+    cov_bar <- cov_bands_hmax %>%
+      ggplot(aes(x = model, y = coverage)) +
+      geom_col(fill = blues9[7]) +
+      geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
+      geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
+      coord_cartesian(ylim = c(0, 1)) +
+      labs(x = "Model", y = "Coverage") +
+      scale_x_discrete(labels = mod_labels) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    if (show.fig) {
+      print(cov_bar)
+    }
+    ggsave(
+      filename = sprintf(
+        "fig/%s/%s_pred_band_coverage_%dh.pdf",
+        batch_name,
+        name_prefix,
+        h_max[j]
+      ),
+      plot = cov_bar,
+      width = 10,
+      height = 6,
+      # dpi = 300
+    )
+  }
+}
