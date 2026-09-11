@@ -1,11 +1,11 @@
 # update currently used figures in overleaf ####
 
 path1 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power_main_doc/spfig"
-path2 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power/fig/batchY25d150_v2"
+path2 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power/fig/batchY25d150_v5"
 path_alt <- c(
-  "/home/s2441782/Documents/elexon/caloutput/batchY25d150_v2/fig/oos",
-  "/home/s2441782/Documents/elexon/caloutput/batchY25d150_v2/fig/fit",
-  "/home/s2441782/Documents/elexon/caloutput/batchY25d150_v2/fig/oos/by_model"
+  "/home/s2441782/Documents/elexon/caloutput/batchY25d150_v5/fig/oos",
+  "/home/s2441782/Documents/elexon/caloutput/batchY25d150_v5/fig/fit",
+  "/home/s2441782/Documents/elexon/caloutput/batchY25d150_v5/fig/oos/by_model"
 )
 
 # Files to update in overleaf
