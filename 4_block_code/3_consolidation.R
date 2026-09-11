@@ -883,7 +883,7 @@ cov_gbl <- lapply(
       return(NULL)
     }
     cov_obj <- readRDS(file_name)
-    browser()
+    # browser()
     cov_gbl <- lapply(
       seq_along(cov_obj),
       \(x) {
@@ -1028,7 +1028,132 @@ ggsave(
   # dpi = 300
 )
 
-# named listtest
+# coverage in space map ####
+
+uk_map <- rnaturalearth::ne_countries(
+  scale = "medium",
+  country = "United Kingdom",
+  returnclass = "sf"
+) %>%
+  st_transform(crs = 27700)
+uk_map <- uk_map %>%
+  st_geometry() %>%
+  (\(g) g / 1000)() %>%
+  st_set_geometry(uk_map, .)
+
+## time #####
+cov_loc <- lapply(
+  seq_along(sampled_days),
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    d0_tag <- base::format(d0, "%y%m%d")
+    # browser()
+
+    file_name <- sprintf(
+      "%s/%s/summaries/oos/pred_band_coverage_summary_time_%s.rds",
+      output_path,
+      batch_name,
+      d0_tag
+    )
+    if (!file.exists(file_name)) {
+      cat("File not found:", file_name, "\n")
+      return(NULL)
+    }
+    cov_obj <- readRDS(file_name)
+    # browser()
+    cov_gbl <- lapply(
+      seq_along(cov_obj),
+      \(x) {
+        cov_obj[[x]]$cov_loc %>%
+          mutate(
+            model = cov_obj %>% names() %>% .[x],
+            date = d0
+          )
+      }
+    )
+  }
+) %>%
+  bind_rows()
+
+cov_loc_fig_time <- cov_loc %>%
+  group_by(model, coord_id) %>%
+  summarise(coverage_95 = mean(coverage_95), .groups = "drop") %>%
+  left_join(
+    loc_cat %>% dplyr::select(coord_id, lon, lat, short_name),
+    by = "coord_id"
+  ) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  st_transform(crs = 27700)
+
+
+## space ####
+cov_loc <- lapply(
+  seq_along(sampled_days),
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    d0_tag <- base::format(d0, "%y%m%d")
+    # browser()
+
+    file_name <- sprintf(
+      "%s/%s/summaries/oos/pred_band_coverage_summary_spaceoos_%s.rds",
+      output_path,
+      batch_name,
+      d0_tag
+    )
+    if (!file.exists(file_name)) {
+      cat("File not found:", file_name, "\n")
+      return(NULL)
+    }
+    cov_obj <- readRDS(file_name)
+    # browser()
+    cov_gbl <- lapply(
+      seq_along(cov_obj),
+      \(x) {
+        cov_obj[[x]]$cov_loc %>%
+          mutate(
+            model = cov_obj %>% names() %>% .[x],
+            date = d0
+          )
+      }
+    )
+  }
+) %>%
+  bind_rows()
+
+cov_loc_fig_space <- cov_loc %>%
+  group_by(model, coord_id) %>%
+  summarise(coverage_95 = mean(coverage_95), .groups = "drop") %>%
+  left_join(
+    loc_cat %>% dplyr::select(coord_id, lon, lat, short_name),
+    by = "coord_id"
+  ) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  st_transform(crs = 27700)
+cov_loc_fig <- bind_rows(
+  cov_loc_fig_time %>% mutate(type = "time"),
+  cov_loc_fig_space %>% mutate(type = "space")
+)
+cov_loc_fig <- cov_loc_fig %>%
+  st_geometry() %>%
+  (\(g) g / 1000)() %>%
+  st_set_geometry(cov_loc_fig, .)
+
+ggplot() +
+  geom_sf(data = uk_map, fill = NA, color = "gray45", alpha = 0.5) +
+  geom_sf(data = cov_loc_fig, aes(geometry = geometry, col = coverage_95)) +
+  facet_wrap(~model) +
+  scale_color_gradientn(
+    colours = c("darkred", "yellow", "darkgreen")
+  ) +
+  theme_map() +
+  theme(legend.position = "right") +
+  labs(col = "Coverage 95%")
+
+ggsave(
+  sprintf("fig/%s/pred_band_coverage_map.pdf", batch_name),
+  width = 4,
+  height = 6,
+)
 
 # PIT diagrams ####
 pit_df <- lapply(
