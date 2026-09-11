@@ -369,67 +369,11 @@ ggsave(
 
 ### wf level ####
 
-cov_bands_wf <- wf_fig_df %>%
-  filter(!model %in% excluded_models) %>%
-  filter(oos) %>%
-  group_by(model, coord_id) %>%
-  summarise(
-    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
-    .groups = "drop"
-  ) %>%
-  group_by(model) %>%
-  summarise(
-    mean_coverage = mean(coverage),
-    .groups = "drop"
-  ) %>%
-  arrange(desc(mean_coverage)) %>%
-  mutate(
-    model = factor(model, levels = model)
-  )
-cov_bands_wf %>%
-  ggplot(aes(x = model, y = mean_coverage)) +
-  geom_col(fill = blues9[7]) +
-  geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
-  geom_text(aes(label = round(mean_coverage, 3)), vjust = -0.5) +
-  coord_cartesian(ylim = c(0, 1)) +
-  labs(x = "Model", y = "Mean coverage") +
-  scale_x_discrete(labels = mod_labels) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave(
-  filename = sprintf("fig/%s/WF_pred_band_coverage.pdf", batch_name),
-  width = 10,
-  height = 6,
-  # dpi = 300
-)
-### aggregated #####
-cov_bands <- gb_fig_df %>%
-  filter(oos) %>%
-  filter(!model %in% excluded_models) %>%
-  group_by(model) %>%
-  summarise(
-    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
-    .groups = "drop"
-  ) %>%
-  arrange(desc(coverage)) %>%
-  mutate(
-    model = factor(model, levels = model)
-  )
+source("aux_funct.R")
+cov_fig(wf_fig_df, h_max = c(6, 12, 24), name_prefix = "WF")
 
-cov_bands %>%
-  ggplot(aes(x = model, y = coverage)) +
-  geom_col(fill = blues9[7]) +
-  geom_hline(yintercept = 0.95, linetype = "dashed", color = "darkred") +
-  geom_text(aes(label = round(coverage, 3)), vjust = -0.5) +
-  coord_cartesian(ylim = c(0, 1)) +
-  labs(x = "Model", y = "Coverage") +
-  scale_x_discrete(labels = mod_labels) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-ggsave(
-  filename = sprintf("fig/%s/GB_pred_band_coverage.pdf", batch_name),
-  width = 10,
-  height = 6,
-  # dpi = 300
-)
+### aggregated #####
+cov_fig(gb_fig_df, h_max = c(6, 12, 24), name_prefix = "GB")
 
 ### by tech type #####
 sample_loc_fname <- "data/coord_list_wloc.csv"
@@ -841,7 +785,6 @@ ggsave(
 
 
 ## error metrics ####
-
 metrics_table <- wf_fig_df %>%
   filter(!model %in% excluded_models0) %>%
   group_by(oos, model) %>%
@@ -872,9 +815,18 @@ metrics_table <- wf_fig_df %>%
   arrange(desc(RMSE_OOS))
 metrics_table
 tab_latex <- metrics_table %>%
+  dplyr::relocate(
+    model,
+    RMSE_OOS,
+    RMSE_IS,
+    MAE_OOS,
+    MAE_IS,
+    Bias_OOS,
+    Bias_IS
+  ) %>%
   mutate(
     across(
-      c(RMSE_IS, RMSE_OOS, MAE_IS, MAE_OOS, Bias_IS, Bias_OOS),
+      c(RMSE_OOS, RMSE_IS, MAE_OOS, MAE_IS, Bias_OOS, Bias_IS),
       ~ round(., 3)
     ),
     # across(c(MDAPE_IS, MDAPE_OOS), ~ round(., 1))
@@ -885,14 +837,14 @@ tab_latex <- metrics_table %>%
     align = "lcccccccc",
     col.names = c(
       "Model",
-      "IS",
-      "OOS",
-      "IS",
-      "OOS",
+      "space",
+      "space-time",
+      "space",
+      "space-time",
       # "IS",
       # "OOS",
-      "IS",
-      "OOS"
+      "space",
+      "space-time"
     ),
     caption = "Performance metrics for in-sample (IS) and out-of-sample (OOS) predictions."
   ) %>%
@@ -931,6 +883,7 @@ cov_gbl <- lapply(
       return(NULL)
     }
     cov_obj <- readRDS(file_name)
+    browser()
     cov_gbl <- lapply(
       seq_along(cov_obj),
       \(x) {
