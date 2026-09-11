@@ -651,7 +651,9 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
       list(
         cov_gbl = x$cov_gbl,
         cov_time = x$cov_time,
-        cov_loc = x$cov_loc
+        cov_loc = x$cov_loc,
+        cov_24h = x$cov_24h,
+        cov_12h = x$cov_12h
       )
     }
   )
