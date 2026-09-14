@@ -316,13 +316,16 @@ CRPS
   - [ ] ensemble?
 
 
-- [ ] Figures and scores with only 24 / 12 H
-- [ ] Figures with prediction for anomalies
-- [ ] summary interval width (scores) + anomalies percentage (distribution on days)(pwr_curv_df)
+- [x] Figures and scores with only 24 / 12 H
+- [x] Figures with prediction for anomalies
+- [ ] summary interval width (scores) 
+- [x] anomalies percentage (distribution on days)(pwr_curv_df)
 - [ ] RMSE check
-  - [ ] check new metrics IS OOS
+  - [x] check new metrics IS OOS
   - [ ] do i need to fix prob scores at sample lvl?
 - [ ] Aggregated LWE
   - [ ] GB
   - [ ] Regions
-- [ ] Anomalies in LWE
+- [x] Anomalies in LWE
+
+
