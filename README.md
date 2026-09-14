@@ -323,6 +323,7 @@ CRPS
 - [ ] RMSE check
   - [x] check new metrics IS OOS
   - [ ] do i need to fix prob scores at sample lvl?
+- [ ] Frequency of LWE
 - [ ] Aggregated LWE
   - [ ] GB
   - [ ] Regions

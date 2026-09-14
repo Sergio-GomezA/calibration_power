@@ -163,6 +163,10 @@ model_df0 <- lapply(
 #   include.lowest = TRUE
 # ))
 
+# GB aggregate model df
+#
+# LWE stats after aggregation
+
 ## 2.1 Low wind events in observed data ####
 cat("--------------------------------------------------------------------\n")
 cat("Low wind events in observed data\n")
