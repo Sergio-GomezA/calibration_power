@@ -293,8 +293,8 @@ if (!override_objects && length(files_found) > 0) {
     anomaly_perc
   ))
 
-  wf_df_frag <- wf_df_frag %>%
-    filter(!anomaly)
+  # wf_df_frag <- wf_df_frag %>%
+  #   filter(!anomaly)
 
   # x <- wf_df_frag$pow_group %>% unique() %>% sort()
   # min_jump <- min(diff(sort(x))) / diff(range(x))
@@ -1351,247 +1351,251 @@ ggsave(
 # )
 
 ## 2.4 ST SPDE model ####
-spde <- INLA::inla.spde2.pcmatern(
-  mesh = wf.mesh,
-  prior.range = c(50, 0.5), # P(range < 100 km)=0.5
-  prior.sigma = c(0.2, 0.5) # P(sd > 0.2)=0.5
-)
-
-components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
-  # techno(tech_typ, model = "iid") + # random intercept by tech_typ
-  # norm_power_est0 +
-  slope(
-    tech_typ,
-    model = "iid",
-    weights = norm_power_est0
-  ) +
-  # power_correction(
-  #   pow_group,
-  #   model = "rw2",
-  #   # replicate = tech_typ,
-  #   constr = TRUE
-  # ) + # smooth correction power
-  d_coast(
-    d_coast_group,
-    model = "rw2",
-    constr = TRUE
-  ) + # smooth correction distance to coast
-  elev(
-    elev_group,
-    model = "rw2",
-    constr = TRUE
-  ) + # smooth correction elevation
-  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
-  st_field(
-    geometry,
-    model = spde,
-    group = time_id,
-    control.group = list(model = "ar1")
+if (run_st) {
+  spde <- INLA::inla.spde2.pcmatern(
+    mesh = wf.mesh,
+    prior.range = c(50, 0.5), # P(range < 100 km)=0.5
+    prior.sigma = c(0.2, 0.5) # P(sd > 0.2)=0.5
   )
 
-model_code <- sprintf("st_bru0_%s_%s.rds", mesh_label, d0_tag)
-model_fname <- file.path(
-  model_path,
-  model_code
-)
-
-if (!file.exists(model_fname) || re_run_st) {
-  cat(
-    "-------------------------------------------------------------------------------------------------\n"
-  )
-  cat("Fitting spatiotemporal model\n")
-  cat(
-    "-------------------------------------------------------------------------------------------------\n"
-  )
-  bru0 <- bru(
-    components = components0,
-    formula = norm_potential ~ Intercept +
-      # techno +
-      slope +
-      # power_correction +
-      d_coast +
-      elev +
-      wind +
-      st_field,
-    family = "gaussian",
-    data = wf_df_frag %>%
-      filter(date >= d0 - n.days.before.heavy),
-    options = base_bru_options
-  )
-
-  scores_df[[model_code]] <- extract_score_model(bru0)
-  pit_list[[model_code]] <- extract_pit_model(bru0)
-
-  if (save_models) {
-    saveRDS(
-      bru0,
-      file = model_fname
+  components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+    # techno(tech_typ, model = "iid") + # random intercept by tech_typ
+    # norm_power_est0 +
+    slope(
+      tech_typ,
+      model = "iid",
+      weights = norm_power_est0
+    ) +
+    # power_correction(
+    #   pow_group,
+    #   model = "rw2",
+    #   # replicate = tech_typ,
+    #   constr = TRUE
+    # ) + # smooth correction power
+    d_coast(
+      d_coast_group,
+      model = "rw2",
+      constr = TRUE
+    ) + # smooth correction distance to coast
+    elev(
+      elev_group,
+      model = "rw2",
+      constr = TRUE
+    ) + # smooth correction elevation
+    wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) + # smooth correction wind
+    st_field(
+      geometry,
+      model = spde,
+      group = time_id,
+      control.group = list(model = "ar1")
     )
-  } else {
-    model_list[[model_code]] <- bru0
-  }
-} else {
-  cat("Loading existing spatiotemporal model\n")
-  bru0 <- readRDS(model_fname)
-}
 
-### summary and effect plots ####
-summary(bru0)
-# bru0$summary.fixed[, 1:6]
-# bru0$summary.random$tech_typ[, 1:6]
-# bru0$summary.random$tech_power[, 1:6]
-
-# source("aux_funct.R")
-effect_names <- names(bru0$summary.random)
-excluded_effects <- c("u", "hour", "st_field")
-effect_names <- setdiff(effect_names, excluded_effects)
-for (effect in effect_names) {
-  if (effect == "wind") {
-    n_repl <- 2
-    repl_names <- c("Offshore", "Onshore")
-  } else {
-    n_repl <- 1
-    repl_names <- NULL
-  }
-  plot.effects(
-    bru0,
-    effect,
-    n.replicate = n_repl,
-    replicate_names = repl_names,
-    show.plot = TRUE
+  model_code <- sprintf("st_bru0_%s_%s.rds", mesh_label, d0_tag)
+  model_fname <- file.path(
+    model_path,
+    model_code
   )
+
+  if (!file.exists(model_fname) || re_run_st) {
+    cat(
+      "-------------------------------------------------------------------------------------------------\n"
+    )
+    cat("Fitting spatiotemporal model\n")
+    cat(
+      "-------------------------------------------------------------------------------------------------\n"
+    )
+    bru0 <- bru(
+      components = components0,
+      formula = norm_potential ~ Intercept +
+        # techno +
+        slope +
+        # power_correction +
+        d_coast +
+        elev +
+        wind +
+        st_field,
+      family = "gaussian",
+      data = wf_df_frag %>%
+        filter(date >= d0 - n.days.before.heavy),
+      options = base_bru_options
+    )
+
+    scores_df[[model_code]] <- extract_score_model(bru0)
+    pit_list[[model_code]] <- extract_pit_model(bru0)
+
+    if (save_models) {
+      saveRDS(
+        bru0,
+        file = model_fname
+      )
+    } else {
+      model_list[[model_code]] <- bru0
+    }
+  } else {
+    cat("Loading existing spatiotemporal model\n")
+    bru0 <- readRDS(model_fname)
+  }
+
+  ### summary and effect plots ####
+  summary(bru0)
+  # bru0$summary.fixed[, 1:6]
+  # bru0$summary.random$tech_typ[, 1:6]
+  # bru0$summary.random$tech_power[, 1:6]
+
+  # source("aux_funct.R")
+  effect_names <- names(bru0$summary.random)
+  excluded_effects <- c("u", "hour", "st_field")
+  effect_names <- setdiff(effect_names, excluded_effects)
+  for (effect in effect_names) {
+    if (effect == "wind") {
+      n_repl <- 2
+      repl_names <- c("Offshore", "Onshore")
+    } else {
+      n_repl <- 1
+      repl_names <- NULL
+    }
+    plot.effects(
+      bru0,
+      effect,
+      n.replicate = n_repl,
+      replicate_names = repl_names,
+      show.plot = TRUE
+    )
+    ggsave(
+      sprintf(
+        "%s/%s/fig/fit/%s_effect_%s_%s.pdf",
+        output_path,
+        batch_name,
+        effect,
+        mesh_label,
+        d0_tag
+      ),
+      width = 6,
+      height = 4
+    )
+  }
+  plot.hyper.dens(bru0)
   ggsave(
     sprintf(
-      "%s/%s/fig/fit/%s_effect_%s_%s.pdf",
+      "%s/%s/fig/fit/hyperparameters_%s_%s.pdf",
       output_path,
       batch_name,
-      effect,
       mesh_label,
       d0_tag
     ),
     width = 6,
     height = 4
   )
-}
-plot.hyper.dens(bru0)
-ggsave(
-  sprintf(
-    "%s/%s/fig/fit/hyperparameters_%s_%s.pdf",
-    output_path,
-    batch_name,
-    mesh_label,
-    d0_tag
-  ),
-  width = 6,
-  height = 4
-)
 
+  ### plot intensity of spatial field ####
 
-### plot intensity of spatial field ####
-
-ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf", dims = pixel_dims)
-ppxl_all <- fm_cprod(
-  ppxl,
-  data.frame(
-    # time_id = unique(wf_df_frag$time_id)
-    time_id = c(9, 12, 18)
-  )
-)
-
-# set.seed(1)
-safe_predict <- function(model, newdata, fun, n1 = 100, n2 = 10) {
-  tryCatch(
-    {
-      fun(model, newdata, n.samples = n1)
-    },
-    error = function(e) {
-      message("First predict failed: ", conditionMessage(e))
-      message("Retrying with n.samples = ", n2)
-
-      tryCatch(
-        {
-          fun(model, newdata, n.samples = n2)
-        },
-        error = function(e2) {
-          message("Second predict also failed: ", conditionMessage(e2))
-          stop(e2)
-        }
-      )
-    }
-  )
-}
-pow_est_st <- safe_predict(
-  model = bru0,
-  newdata = ppxl_all,
-  fun = function(model, newdata, n.samples) {
-    predict(
-      model,
-      newdata,
-      ~ data.frame(
-        time_id = time_id,
-        norm_potential_est = pmax(-1, pmin(1, st_field)) # should i cap this?
-      ),
-      n.samples = n.samples
+  ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf", dims = pixel_dims)
+  ppxl_all <- fm_cprod(
+    ppxl,
+    data.frame(
+      # time_id = unique(wf_df_frag$time_id)
+      time_id = c(9, 12, 18)
     )
-  },
-  n1 = 100,
-  n2 = 10
-)
+  )
 
+  # set.seed(1)
+  safe_predict <- function(model, newdata, fun, n1 = 100, n2 = 10) {
+    tryCatch(
+      {
+        fun(model, newdata, n.samples = n1)
+      },
+      error = function(e) {
+        message("First predict failed: ", conditionMessage(e))
+        message("Retrying with n.samples = ", n2)
 
-p_median <- ggplot() +
-  gg(pow_est_st, geom = "tile", aes(fill = q0.5)) +
-  geom_sf(data = uk_map, fill = NA, color = "black", alpha = 0.5) +
-  # gg(wf.mesh, alpha = 0.5) +
-  geom_point(data = loc_unique, aes(x, y), color = "darkred", size = 0.5) +
-  facet_wrap(
-    ~time_id,
-    labeller = as_labeller(c("9" = "9:00", "12" = "12:00", "18" = "18:00"))
-  ) +
-  coord_sf() +
-  scale_fill_viridis_c() +
-  theme_void()
-p_median
-ggsave(
-  sprintf(
-    "%s/%s/fig/fit/%s_spatial_field_median_%s.png",
-    output_path,
-    batch_name,
-    mesh_label,
-    d0_tag
-  ),
-  width = 10,
-  height = 6,
-  dpi = 100
-)
+        tryCatch(
+          {
+            fun(model, newdata, n.samples = n2)
+          },
+          error = function(e2) {
+            message("Second predict also failed: ", conditionMessage(e2))
+            stop(e2)
+          }
+        )
+      }
+    )
+  }
+  pow_est_st <- safe_predict(
+    model = bru0,
+    newdata = ppxl_all,
+    fun = function(model, newdata, n.samples) {
+      predict(
+        model,
+        newdata,
+        ~ data.frame(
+          time_id = time_id,
+          norm_potential_est = pmax(-1, pmin(1, st_field)) # should i cap this?
+        ),
+        n.samples = n.samples
+      )
+    },
+    n1 = 100,
+    n2 = 10
+  )
 
-p_sd <- ggplot() +
-  gg(pow_est_st, geom = "tile", aes(fill = sd)) +
-  geom_sf(data = uk_map, fill = NA, color = "white", alpha = 0.5) +
-  # gg(wf.mesh, alpha = 0.5) +
-  geom_point(data = loc_unique, aes(x, y), color = "darkred", size = 0.5) +
-  facet_wrap(
-    ~time_id,
-    labeller = as_labeller(c("9" = "9:00", "12" = "12:00", "18" = "18:00"))
-  ) +
-  coord_sf() +
-  scale_fill_viridis_c(option = "inferno") +
-  theme_void()
-p_sd
-ggsave(
-  sprintf(
-    "%s/%s/fig/fit/%s_spatial_field_sd_%s.png",
-    output_path,
-    batch_name,
-    mesh_label,
-    d0_tag
-  ),
-  width = 10,
-  height = 6,
-  dpi = 100
-)
+  p_median <- ggplot() +
+    gg(pow_est_st, geom = "tile", aes(fill = q0.5)) +
+    geom_sf(data = uk_map, fill = NA, color = "black", alpha = 0.5) +
+    # gg(wf.mesh, alpha = 0.5) +
+    geom_point(data = loc_unique, aes(x, y), color = "darkred", size = 0.5) +
+    facet_wrap(
+      ~time_id,
+      labeller = as_labeller(c("9" = "9:00", "12" = "12:00", "18" = "18:00"))
+    ) +
+    coord_sf() +
+    scale_fill_viridis_c() +
+    theme_void()
+  p_median
+  ggsave(
+    sprintf(
+      "%s/%s/fig/fit/%s_spatial_field_median_%s.png",
+      output_path,
+      batch_name,
+      mesh_label,
+      d0_tag
+    ),
+    width = 10,
+    height = 6,
+    dpi = 100
+  )
 
-
+  p_sd <- ggplot() +
+    gg(pow_est_st, geom = "tile", aes(fill = sd)) +
+    geom_sf(data = uk_map, fill = NA, color = "white", alpha = 0.5) +
+    # gg(wf.mesh, alpha = 0.5) +
+    geom_point(data = loc_unique, aes(x, y), color = "darkred", size = 0.5) +
+    facet_wrap(
+      ~time_id,
+      labeller = as_labeller(c("9" = "9:00", "12" = "12:00", "18" = "18:00"))
+    ) +
+    coord_sf() +
+    scale_fill_viridis_c(option = "inferno") +
+    theme_void()
+  p_sd
+  ggsave(
+    sprintf(
+      "%s/%s/fig/fit/%s_spatial_field_sd_%s.png",
+      output_path,
+      batch_name,
+      mesh_label,
+      d0_tag
+    ),
+    width = 10,
+    height = 6,
+    dpi = 100
+  )
+} else {
+  bru0 <- list()
+  bru0[["summary.fitted.values"]] <- data.frame(
+    mean = rep(NA, nrow(wf_df_frag))
+  ) %>%
+    mutate(`0.025quant` = NA, `0.975quant` = NA)
+}
 ## 2.3 lm wf version ####
 
 model_code <- sprintf("lm_model_aic0_%s.rds", d0_tag)
@@ -1779,19 +1783,23 @@ pit_list <- list_rbind(pit_list, names_to = "model_code") %>%
     # removing date and .rds extension
     code = sub("_[0-9]{6}\\.rds$", "", model_code)
   )
-write.csv(
-  pit_list,
-  gzfile(
-    file.path(sprintf(
+con <- gzfile(
+  file.path(
+    sprintf(
       "%s/%s/summaries/fit/model_pit_%s.csv.gz",
       output_path,
       batch_name,
       d0_tag
-    )),
-    "w"
+    )
   ),
+  "w"
+)
+write.csv(
+  pit_list,
+  con,
   row.names = FALSE
 )
+close(con)
 
 ## 3.2 model labels and fitted values ####
 model_catalog <- read.csv("data/model_catalog.csv")
