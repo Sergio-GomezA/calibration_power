@@ -12,7 +12,7 @@ recalculate_gb <- FALSE
 save_daily_files <- FALSE
 perform_mesh_assess <- FALSE
 generate_old_figs <- FALSE
-run_st <- TRUE
+run_st <- !local_run
 re_run_st <- FALSE
 prec_init <- log(200) # for u
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
