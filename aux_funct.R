@@ -2054,9 +2054,11 @@ bru_ci_plot <- function(
               time,
               date,
               norm_potential,
+              norm_potential_orig,
               capacity,
               tech_typ,
-              p_group3
+              p_group3,
+              anomaly
             )
         )
     }
@@ -2073,7 +2075,9 @@ bru_ci_plot <- function(
       fit = mean(fit),
       lp = mean(lp),
       width = upr - lwr,
+      anomaly = first(anomaly, na.rm = TRUE),
       norm_potential = mean(norm_potential, na.rm = TRUE),
+      norm_potential_orig = mean(norm_potential_orig, na.rm = TRUE),
       .groups = "drop"
     ) %>%
     mutate(
@@ -2144,6 +2148,7 @@ bru_ci_plot <- function(
   }
 
   # coverage check for all q_ columns
+  # browser()
   if (length(q_cols) > 0) {
     n_intervals <- length(q_cols) / 2
 
@@ -2176,10 +2181,16 @@ bru_ci_plot <- function(
       coverage_df <- coverage_df %>% mutate(oos = time >= t_start)
       cov_24h <- coverage_df %>%
         filter(time >= t_start & time < t_start + hours(24)) %>%
-        summarise(across(matches("coverage"), mean), .groups = "drop")
+        summarise(
+          across(matches("coverage"), ~ mean(., na.rm = TRUE)),
+          .groups = "drop"
+        )
       cov_12h <- coverage_df %>%
         filter(time >= t_start & time < t_start + hours(12)) %>%
-        summarise(across(matches("coverage"), mean), .groups = "drop")
+        summarise(
+          across(matches("coverage"), ~ mean(., na.rm = TRUE)),
+          .groups = "drop"
+        )
     } else {
       coverage_df <- coverage_df %>% mutate(oos = time <= t_start)
       cov_24h <- cov_12h <- NULL
@@ -2191,37 +2202,59 @@ bru_ci_plot <- function(
     cov_time <- coverage_df %>%
       filter(oos) %>%
       group_by(time) %>%
-      summarise(across(matches("coverage"), mean), .groups = "drop")
+      summarise(
+        across(matches("coverage"), ~ mean(., na.rm = TRUE)),
+        .groups = "drop"
+      )
     cov_loc <- coverage_df %>%
       filter(oos) %>%
       group_by(coord_id, site_name) %>%
-      summarise(across(matches("coverage"), mean), .groups = "drop")
+      summarise(
+        across(matches("coverage"), ~ mean(., na.rm = TRUE)),
+        .groups = "drop"
+      )
     cov_gbl <- coverage_df %>%
       filter(oos) %>%
-      summarise(across(matches("coverage"), mean), .groups = "drop")
+      summarise(
+        across(matches("coverage"), ~ mean(., na.rm = TRUE)),
+        .groups = "drop"
+      )
   } else {
     cov_time <- NULL
     cov_loc <- NULL
     cov_gbl <- NULL
   }
-
+  # browser()
   # aggregated GB summary
   pred_fig_df <- pred_df %>%
+    filter(!is.na(norm_potential)) %>%
+    mutate(
+      potential = norm_potential * capacity,
+      potential_orig = norm_potential_orig * capacity,
+      est_mw = fit * capacity
+    ) %>%
     group_by(time, sim) %>%
     # aggregate all sites keep samples
     summarise(
-      estimate = sum(fit * capacity) / sum(capacity),
-      norm_potential = sum(norm_potential * capacity, na.rm = TRUE) /
-        sum(capacity),
+      across(
+        c(norm_potential, norm_potential_orig, fit),
+        ~ sum(. * capacity, na.rm = TRUE) / sum(capacity)
+      ),
+      capacity = sum(capacity, na.rm = TRUE),
+      across(c(potential:est_mw), ~ sum(., na.rm = TRUE)),
       .groups = "drop_last"
     ) %>%
     # GB aggregation summary
     summarise(
-      mean = mean(estimate),
-      lwr = quantile(estimate, 0.025),
-      upr = quantile(estimate, 0.975),
+      mean = mean(fit),
+      lwr = quantile(fit, 0.025),
+      upr = quantile(fit, 0.975),
       width = upr - lwr,
-      norm_potential = mean(norm_potential, na.rm = TRUE),
+      # norm_potential = mean(norm_potential, na.rm = TRUE),
+      across(
+        c(norm_potential_orig, norm_potential, capacity, potential:est_mw),
+        ~ mean(., na.rm = TRUE)
+      ),
       .groups = "drop"
     ) %>%
     mutate(
@@ -2254,7 +2287,7 @@ bru_ci_plot <- function(
       lwd = 1
     ) +
     geom_line(
-      aes(x = time, y = norm_potential),
+      aes(x = time, y = norm_potential_orig),
       color = "darkred",
       lwd = 1
     ) #+
