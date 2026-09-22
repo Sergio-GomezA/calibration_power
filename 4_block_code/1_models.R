@@ -39,6 +39,7 @@ cat(
 )
 # 1. data preparation ####
 
+dat_starttime <- Sys.time()
 cat("Preparing data for model fitting\n")
 
 cat("Creating coordinate list\n")
@@ -437,6 +438,13 @@ cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
 n <- nrow(wf_df_frag)
 cat("Number of records in the dataset:", n, "\n")
 
+dat_endtime <- Sys.time()
+cat(
+  "Data preparation took: ",
+  round(difftime(dat_endtime, dat_starttime, units = "mins"), 2),
+  " minutes\n"
+)
+
 ## 1.1 mesh building #####
 cat("Building spatial mesh\n")
 
@@ -629,6 +637,9 @@ if (perform_mesh_assess) {
 }
 # 2. Model fitting ####
 ## 2.0 bru lm model ####
+
+mod_starttime <- Sys.time()
+
 mod_tag <- "lm"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   techno(tech_typ, model = "iid") + # random intercept by tech_typ
@@ -749,8 +760,15 @@ ggsave(
   width = 6,
   height = 4
 )
+mod_endtime <- Sys.time()
+cat(
+  "Model fitting took: ",
+  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  " minutes\n"
+)
 
 ## 2.01 bru beta model ####
+mod_starttime <- Sys.time()
 mod_tag <- "lmbeta"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   techno(tech_typ, model = "iid") + # random intercept by tech_typ
@@ -882,7 +900,12 @@ ggsave(
   width = 6,
   height = 4
 )
-
+mod_endtime <- Sys.time()
+cat(
+  "Model fitting took: ",
+  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  " minutes\n"
+)
 ## 2.01 bru t model ####
 # mod_tag <- "lmt"
 # components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
@@ -1013,6 +1036,7 @@ ggsave(
 # )
 
 ## 2.1 AR1 temporal model ####
+mod_starttime <- Sys.time()
 ar_tag <- "ar1"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   techno(tech_typ, model = "iid") + # random intercept by tech_typ
@@ -1156,8 +1180,14 @@ ggsave(
   width = 6,
   height = 4
 )
-
+mod_endtime <- Sys.time()
+cat(
+  "Model fitting took: ",
+  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  " minutes\n"
+)
 ## 2.2 AR2 temporal model ####
+# mod_starttime <- Sys.time()
 # ar_tag <- "ar2"
 # components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
 #   # tech_typ(tech_typ, model = "iid") + # random intercept by tech_typ
@@ -1287,6 +1317,13 @@ ggsave(
 #   height = 4
 # )
 # plot(bruar2$summary.fitted.values$mean[1:n], wf_df_frag$norm_potential)
+# mod_endtime <- Sys.time()
+# cat(
+#   "Model fitting took: ",
+#   round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+#   " minutes\n"
+# )
+
 ## 2.3 1D SPDE temporal model ####
 # ar_tag <- "1DSPDE"
 # mint <- 0
@@ -1423,6 +1460,7 @@ ggsave(
 
 ## 2.4 ST SPDE model ####
 if (run_st) {
+  mod_starttime <- Sys.time()
   spde <- INLA::inla.spde2.pcmatern(
     mesh = wf.mesh,
     prior.range = c(50, 0.5), # P(range < 100 km)=0.5
@@ -1558,8 +1596,15 @@ if (run_st) {
     height = 4
   )
 
+  mod_endtime <- Sys.time()
+  cat(
+    "Model fitting took: ",
+    round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+    " minutes\n"
+  )
   ### plot intensity of spatial field ####
 
+  mod_starttime <- Sys.time()
   ppxl <- fm_pixels(wf.mesh, mask = bnd[[2]], format = "sf", dims = pixel_dims)
   ppxl_all <- fm_cprod(
     ppxl,
@@ -1667,8 +1712,14 @@ if (run_st) {
   ) %>%
     mutate(`0.025quant` = NA, `0.975quant` = NA)
 }
+mod_endtime <- Sys.time()
+cat(
+  "Spatial field figures took: ",
+  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  " minutes\n"
+)
 ## 2.3 lm wf version ####
-
+mod_starttime <- Sys.time()
 model_code <- sprintf("lm_model_aic0_%s.rds", d0_tag)
 
 if (!file.exists(file.path(model_path, model_code)) || override_objects) {
@@ -1705,7 +1756,8 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
     base_model,
     scope = list(lower = base_model, upper = full_model0),
     # steps = 5,
-    k = 2
+    k = 2,
+    trace = 0
   )
   scores_df[[model_code]] <- data.frame(
     AIC = AIC(model_AIC0),
@@ -1726,9 +1778,15 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
   cat("Loading existing LM model\n")
   model_AIC0 <- readRDS(file.path(model_path, model_code))
 }
+mod_endtime <- Sys.time()
+cat(
+  "Model fitting took: ",
+  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  " minutes\n"
+)
 
 ## 2.4 GB lm version #####
-
+mod_starttime <- Sys.time()
 model_code <- sprintf("gblm_model_aic0_%s.rds", d0_tag)
 
 if (!file.exists(file.path(model_path, model_code)) || override_objects) {
@@ -1785,7 +1843,8 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
     base_model_agg,
     scope = list(lower = base_model_agg, upper = full_model0_agg),
     # steps = 5,
-    k = 2
+    k = 2,
+    trace = 0
   )
 
   scores_df[[model_code]] <- data.frame(
@@ -1810,9 +1869,14 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
     model_code
   ))
 }
-
+mod_endtime <- Sys.time()
+cat(
+  "Model fitting took: ",
+  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  " minutes\n"
+)
 ## 2.5 QM version ####
-
+mod_starttime <- Sys.time()
 qm_fname <- sprintf("qm_model_%s.rds", d0_tag)
 
 if (!file.exists(file.path(model_path, qm_fname)) || override_objects) {
@@ -1848,6 +1912,12 @@ wgen_qm <- with(
 )
 scores_df[[qm_fname]] <- data.frame(
   R2 = cor(wgen_qm, wf_df_frag$norm_potential, use = "complete.obs")^2
+)
+mod_endtime <- Sys.time()
+cat(
+  "Model fitting took: ",
+  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  " minutes\n"
 )
 # 3. model comparison ####
 
