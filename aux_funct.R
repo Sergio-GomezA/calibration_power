@@ -2650,7 +2650,10 @@ cov_fig <- function(
       filter(!model %in% excluded_models) %>%
       group_by(model) %>%
       summarise(
-        coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+        coverage = mean(
+          norm_potential >= lwr & norm_potential <= upr,
+          na.rm = TRUE
+        ),
         .groups = "drop"
       ) %>%
       arrange(desc(coverage)) %>%
