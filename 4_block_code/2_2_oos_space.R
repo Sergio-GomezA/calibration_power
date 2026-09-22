@@ -1100,7 +1100,10 @@ cov_bands_wf <- wf_fig_df %>%
   filter(time < t1) %>%
   group_by(model, coord_id) %>%
   summarise(
-    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    coverage = mean(
+      norm_potential >= lwr & norm_potential <= upr,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   ) %>%
   group_by(model) %>%
@@ -1138,7 +1141,10 @@ cov_bands <- gb_fig_df %>%
   filter(time < t1) %>%
   group_by(model) %>%
   summarise(
-    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    coverage = mean(
+      norm_potential >= lwr & norm_potential <= upr,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   ) %>%
   arrange(desc(coverage)) %>%
