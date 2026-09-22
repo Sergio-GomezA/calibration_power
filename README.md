@@ -334,3 +334,4 @@ CRPS
  - [x] recreate GB_df
  - [x] check linear model df and qm df
  - [x] check oos space
+ - [ ] check GB_summary
