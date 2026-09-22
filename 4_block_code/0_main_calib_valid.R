@@ -8,7 +8,7 @@ source('4_block_code/0_setup.R')
 
 
 # model fitting ####
-source('4_block_code/1_models.R')
+source('4_block_code/1_models.R', echo = local_run)
 
 ## Lite models #####
 
