@@ -330,3 +330,7 @@ CRPS
 - [x] Anomalies in LWE
 
 
+- [ ] aggregation after anomaly removal
+ - [x] recreate GB_df
+ - [x] check linear model df and qm df
+ - [ ] check oos space
