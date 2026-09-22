@@ -9,7 +9,7 @@ override_objects <- FALSE
 # rerun_samples <- FALSE
 # prec_init <- log(200)
 # batch_name <- "batch2025"
-batch_name <- "batchY25d150_v5"
+batch_name <- "batchY25d150_v6"
 
 
 if (local_run) {
@@ -144,9 +144,10 @@ if (!file.exists(gb_day_df_fname) || override_objects) {
   cat("Loading existing GB daily summary\n")
   gb_day_df <- read_parquet(gb_day_df_fname)
 }
-
-GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
-  rename(time = halfHourEndTime) %>%
+norm_dist_tol <- 0.3
+gb_df_fname <- sprintf("GB_aggr_An-%0.1f.parquet", norm_dist_tol)
+GB_df <- read_parquet(file.path(gen_path, gb_df_fname)) %>%
+  # rename(time = halfHourEndTime) %>%
   mutate(
     err = norm_power_est0 - norm_potential,
     error0 = norm_potential - norm_power_est0,
@@ -385,7 +386,10 @@ cov_bands <- wf_fig_df %>%
   filter(oos) %>%
   group_by(model, tech_typ) %>%
   summarise(
-    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    coverage = mean(
+      norm_potential >= lwr & norm_potential <= upr,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   ) %>%
   arrange(desc(coverage)) %>%
@@ -416,7 +420,10 @@ cov_bands <- wf_fig_df %>%
   filter(!model %in% excluded_models) %>%
   group_by(model, pgroup3) %>%
   summarise(
-    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    coverage = mean(
+      norm_potential >= lwr & norm_potential <= upr,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   ) %>%
   arrange(desc(coverage)) %>%
@@ -443,6 +450,7 @@ ggsave(
 
 ## Error metrics #####
 metrics_table_t <- wf_fig_df %>%
+  filter(!anomaly) %>%
   filter(!model %in% excluded_models0) %>%
   group_by(oos, model) %>%
   summarise(
@@ -613,6 +621,7 @@ ggsave(
 )
 
 wf_fig_df %>%
+  filter(!anomaly) %>%
   slice_sample(n = 2e6) %>%
   filter(oos) %>%
   filter(!model %in% excluded_models0) %>%
@@ -654,6 +663,7 @@ ggsave(
 ### wf level ####
 cov_bands_wf <- wf_fig_df %>%
   filter(!model %in% excluded_models) %>%
+  filter(!anomaly) %>%
   filter(oos) %>%
   group_by(model, coord_id) %>%
   summarise(
@@ -687,6 +697,7 @@ ggsave(
 ### aggregated #####
 cov_bands <- gb_fig_df %>%
   filter(oos) %>%
+  # filter(!anomaly) %>%
   filter(!model %in% excluded_models) %>%
   group_by(model) %>%
   summarise(
@@ -721,7 +732,10 @@ cov_bands <- wf_fig_df %>%
   filter(!model %in% excluded_models) %>%
   group_by(model, tech_typ) %>%
   summarise(
-    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    coverage = mean(
+      norm_potential >= lwr & norm_potential <= upr,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   ) %>%
   arrange(desc(coverage)) %>%
@@ -753,9 +767,13 @@ cov_bands <- wf_fig_df %>%
   # left_join(loc_cat %>% dplyr::select(coord_id, tech_typ), by = "coord_id") %>%
   filter(oos) %>%
   filter(!model %in% excluded_models) %>%
+  filter(!anomaly) %>%
   group_by(model, pgroup3) %>%
   summarise(
-    coverage = mean(norm_potential >= lwr & norm_potential <= upr),
+    coverage = mean(
+      norm_potential >= lwr & norm_potential <= upr,
+      na.rm = TRUE
+    ),
     .groups = "drop"
   ) %>%
   arrange(desc(coverage)) %>%
@@ -786,6 +804,7 @@ ggsave(
 
 ## error metrics ####
 metrics_table <- wf_fig_df %>%
+  filter(!anomaly) %>%
   filter(!model %in% excluded_models0) %>%
   group_by(oos, model) %>%
   summarise(
