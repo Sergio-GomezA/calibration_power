@@ -8,6 +8,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 day_id <- 102
 mesh_edge_par <- 50 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- TRUE
+recalculate_gb <- FALSE
 save_daily_files <- FALSE
 perform_mesh_assess <- FALSE
 generate_old_figs <- FALSE
@@ -116,7 +117,7 @@ if (local_run) {
   output_path <- "~/Documents/elexon/caloutput"
   sample_path <- "~/Documents/elexon/samples"
   pixel_dims <- c(150, 150)
-  n_samp <- 10
+  n_samp <- 200
   local_ext <- "rds" # previously "gpkg"
   driver <- "GPKG"
 } else {
