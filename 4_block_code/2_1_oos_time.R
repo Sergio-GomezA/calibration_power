@@ -166,6 +166,7 @@ model_df <- model_catalog %>%
   ) %>%
   mutate(
     type = case_when(
+      # grepl("agg_", code) ~ "agg",
       grepl("lm_", code) ~ "bru",
       grepl("lm", code) ~ "lm",
       grepl("qm", code) ~ "qm",
@@ -206,67 +207,67 @@ if (length(missing_models) > 0) {
 # Predictions for next hours ####
 
 ## prediction df ####
-gb_day_df_fname <- sprintf("data/GB_daily_summary.parquet")
+# gb_day_df_fname <- sprintf("data/GB_daily_summary.parquet")
 
-if (!file.exists(gb_day_df_fname)) {
-  if (!file.exists(gb_day_df_fname)) {
-    cat("GB daily summary file not found, creating new summary\n")
-  } else {
-    cat(
-      "GB daily summary file found, but override_objects is TRUE. Recreating summary\n"
-    )
-  }
-  GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
-    rename(time = halfHourEndTime) %>%
-    mutate(
-      err = norm_power_est0 - norm_potential,
-      error0 = norm_potential - norm_power_est0,
-      date = as.Date(time)
-    )
+# if (!file.exists(gb_day_df_fname)) {
+#   if (!file.exists(gb_day_df_fname)) {
+#     cat("GB daily summary file not found, creating new summary\n")
+#   } else {
+#     cat(
+#       "GB daily summary file found, but override_objects is TRUE. Recreating summary\n"
+#     )
+#   }
+#   GB_df <- read_parquet(file.path(gen_path, "GB_aggr.parquet")) %>%
+#     rename(time = halfHourEndTime) %>%
+#     mutate(
+#       err = norm_power_est0 - norm_potential,
+#       error0 = norm_potential - norm_power_est0,
+#       date = as.Date(time)
+#     )
 
-  gb_day_df <- GB_df %>%
-    group_by(date, tech_typ) %>%
-    summarise(
-      across(
-        c(norm_power_est0, norm_potential),
-        ~ sum(. * capacity) / sum(capacity)
-      ),
-      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
-      across(c(capacity), mean)
-    ) %>%
-    summarise(
-      across(
-        c(norm_power_est0, norm_potential),
-        ~ sum(. * capacity) / sum(capacity)
-      ),
-      across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
-      across(c(capacity), sum),
-      .groups = "drop"
-    )
+#   gb_day_df <- GB_df %>%
+#     group_by(date, tech_typ) %>%
+#     summarise(
+#       across(
+#         c(norm_power_est0, norm_potential),
+#         ~ sum(. * capacity) / sum(capacity)
+#       ),
+#       across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+#       across(c(capacity), mean)
+#     ) %>%
+#     summarise(
+#       across(
+#         c(norm_power_est0, norm_potential),
+#         ~ sum(. * capacity) / sum(capacity)
+#       ),
+#       across(c(ws_h_wmean), ~ sum(. * capacity) / sum(capacity)),
+#       across(c(capacity), sum),
+#       .groups = "drop"
+#     )
 
-  cutprobs3 <- c(0.25, 0.75)
-  p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
-  cutprobs7 <- c(0.1, 0.2, 0.25, 0.75, 0.8, 0.9)
-  p_quant7 <- quantile(gb_day_df$norm_potential, probs = cutprobs7)
+#   cutprobs3 <- c(0.25, 0.75)
+#   p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
+#   cutprobs7 <- c(0.1, 0.2, 0.25, 0.75, 0.8, 0.9)
+#   p_quant7 <- quantile(gb_day_df$norm_potential, probs = cutprobs7)
 
-  gb_day_df <- gb_day_df %>%
-    mutate(
-      p_group3 = cut(
-        norm_potential,
-        breaks = c(-Inf, p_quant3, Inf),
-        labels = c("low", "mid", "high")
-      ),
-      p_group7 = cut(
-        norm_potential,
-        breaks = c(-Inf, p_quant7, Inf)
-      )
-    )
+#   gb_day_df <- gb_day_df %>%
+#     mutate(
+#       p_group3 = cut(
+#         norm_potential,
+#         breaks = c(-Inf, p_quant3, Inf),
+#         labels = c("low", "mid", "high")
+#       ),
+#       p_group7 = cut(
+#         norm_potential,
+#         breaks = c(-Inf, p_quant7, Inf)
+#       )
+#     )
 
-  write_parquet(gb_day_df, gb_day_df_fname)
-} else {
-  cat("Loading existing GB daily summary\n")
-  gb_day_df <- read_parquet(gb_day_df_fname)
-}
+#   write_parquet(gb_day_df, gb_day_df_fname)
+# } else {
+#   cat("Loading existing GB daily summary\n")
+#   gb_day_df <- read_parquet(gb_day_df_fname)
+# }
 
 # extension <- ifelse(local_run, "gpkg", "geojson")
 extension <- "rds"
@@ -326,7 +327,9 @@ if (!override_objects && length(files_found) > 0) {
       across(c(potential, power_est0, capacity, curtailment), sum),
       .groups = "drop"
     ) %>%
-    mutate(t = difftime(time, min(time), units = "hours") %>% as.numeric()) %>%
+    mutate(
+      t = t_ind_adj + difftime(time, t0, units = "hours") %>% as.numeric()
+    ) %>%
     mutate(
       norm_potential = pmin(1, potential / capacity),
       norm_power_est0 = power_est0 / capacity,
@@ -370,13 +373,13 @@ if (!override_objects && length(files_found) > 0) {
     norm_dist_tol * 100,
     anomaly_perc
   ))
-  # wf_df_pred <- wf_df_pred %>%
-  #   mutate(
-  #     norm_potential_orig = norm_potential,
-  #     norm_potential = ifelse(anomaly, NA, norm_potential)
-  #   )
   wf_df_pred <- wf_df_pred %>%
-    filter(!anomaly)
+    mutate(
+      norm_potential_orig = norm_potential,
+      norm_potential = ifelse(anomaly, NA, norm_potential)
+    )
+  # wf_df_pred <- wf_df_pred %>%
+  #   filter(!anomaly)
 
   # x <- wf_df_pred$pow_group %>% unique() %>% sort()
   # min_jump <- min(diff(sort(x))) / diff(range(x))
@@ -421,6 +424,136 @@ cat("Number of records in the dataset:", n, "\n")
 cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
+wf_df_pred %>%
+  filter(time %in% seq_hours) %>%
+  st_drop_geometry() %>%
+  group_by(time) %>%
+  summarise(
+    n = n(),
+    across(
+      c(norm_potential_orig, norm_potential, norm_power_est0),
+      ~ sum(. * capacity, na.rm = TRUE) / sum(capacity, na.rm = TRUE)
+    ),
+    across(
+      c(potential, power_est0, capacity),
+      sum
+    ),
+    .groups = "drop"
+  )
+## aggr models #####
+agg_df <- model_df %>% filter(grepl("agg", code))
+
+if (save_models) {
+  agg_df %>% pull(fname) %>% map(readRDS) -> mod_list
+  names(mod_list) <- agg_df %>% pull(code)
+} else {
+  agg_mods <- paste0(agg_df %>% pull(mode_code_prefix), d0_tag, ".rds")
+  mod_list <- model_list[agg_mods]
+}
+
+# create aggregated data for prediction
+agg_df_pred <- wf_df_pred %>%
+  filter(!is.na(norm_potential)) %>%
+  st_drop_geometry() %>%
+  group_by(tech_typ, time) %>%
+  summarise(
+    ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
+    across(
+      c(norm_potential, norm_potential_orig, norm_power_est0),
+      ~ sum(. * capacity, na.rm = TRUE) / sum(capacity, na.rm = TRUE)
+    ),
+    across(
+      c(potential, power_est0, capacity),
+      sum
+    ),
+    .groups = "drop"
+  ) %>%
+  mutate(date = as.Date(time))
+agg_df_pred %>%
+  filter(time %in% seq_hours)
+
+
+agg_pred <- lapply(
+  seq(mod_list),
+  function(mod) {
+    predict(
+      mod_list[[mod]],
+      newdata = agg_df_pred,
+      interval = "prediction"
+    ) %>%
+      as.data.frame() %>%
+      rename(
+        estimate = fit,
+        lwr = lwr,
+        upr = upr
+      ) %>%
+      bind_cols(
+        agg_df_pred %>%
+          dplyr::select(
+            time,
+            date,
+            norm_potential,
+            norm_potential_orig,
+            norm_power_est0,
+            capacity,
+            tech_typ
+          ),
+        .
+      ) %>%
+      mutate(
+        estimate = pmin(1, pmax(0, estimate)),
+        lwr = pmin(1, pmax(0, lwr)),
+        upr = pmin(1, pmax(0, upr)),
+        std_error = summary(mod_list[[mod]])$sigma,
+        model = agg_df$code[mod]
+      )
+  }
+) %>%
+  bind_rows()
+
+agg_pred_fig_df <- agg_pred %>%
+  group_by(time, model) %>%
+  summarise(
+    mean = sum(estimate * capacity) / sum(capacity),
+    std_error = if (first(model) == "lm") {
+      sqrt(sum((capacity / sum(capacity))^2 * std_error^2))
+    } else {
+      mean(std_error)
+    },
+    norm_potential = sum(norm_potential * capacity, na.rm = TRUE) /
+      sum(capacity),
+    norm_potential_orig = sum(norm_potential_orig * capacity, na.rm = TRUE) /
+      sum(capacity),
+    norm_power_est0 = sum(norm_power_est0 * capacity) / sum(capacity),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    lwr = mean - 1.96 * std_error,
+    upr = mean + 1.96 * std_error,
+    lwr = pmin(1, pmax(0, lwr)),
+    upr = pmin(1, pmax(0, upr))
+  )
+
+# agg_pred_fig_df %>%
+#   filter(time >= t1, time < t1 + hours(24)) %>%
+#   ggplot(aes(x = norm_potential, y = mean)) +
+#   geom_point() +
+#   geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.01, alpha = 0.5) +
+#   geom_abline(slope = 1, intercept = 0, color = "red")
+
+# agg_pred_fig_df %>%
+#   filter(time >= t1, time < t1 + hours(24)) %>%
+#   # filter(time >= t0 - hours(24), time <= t1 + hours(3)) %>%
+#   ggplot(aes(x = time, y = mean, color = model)) +
+#   geom_line() +
+#   geom_ribbon(
+#     aes(ymin = lwr, ymax = upr, fill = model),
+#     alpha = 0.2,
+#     color = NA
+#   ) +
+#   geom_point(aes(y = norm_potential), color = "black") +
+#   theme_minimal() +
+#   scale_x_datetime(date_labels = "%H:%M")
 
 ## linear models ####
 
@@ -437,7 +570,11 @@ if (save_models) {
 lm_pred <- lapply(
   seq(mod_list),
   function(mod) {
-    predict(mod_list[[mod]], newdata = wf_df_pred, interval = "prediction") %>%
+    predict(
+      mod_list[[mod]],
+      newdata = wf_df_pred,
+      interval = "prediction"
+    ) %>%
       as.data.frame() %>%
       rename(
         estimate = fit,
@@ -446,16 +583,19 @@ lm_pred <- lapply(
       ) %>%
       bind_cols(
         wf_df_pred %>%
+          # filter(!is.na(norm_potential)) %>%
           dplyr::select(
             coord_id,
             site_name,
             time,
             date,
             norm_potential,
+            norm_potential_orig,
             norm_power_est0,
             capacity,
             tech_typ,
-            p_group3
+            p_group3,
+            anomaly
           ),
         .
       ) %>%
@@ -471,6 +611,7 @@ lm_pred <- lapply(
   bind_rows()
 
 lm_pred_fig_df <- lm_pred %>%
+  filter(!is.na(norm_potential)) %>%
   st_drop_geometry() %>%
   group_by(time, model) %>%
   summarise(
@@ -482,6 +623,8 @@ lm_pred_fig_df <- lm_pred %>%
     },
     norm_potential = sum(norm_potential * capacity, na.rm = TRUE) /
       sum(capacity),
+    norm_potential_orig = sum(norm_potential_orig * capacity, na.rm = TRUE) /
+      sum(capacity),
     norm_power_est0 = sum(norm_power_est0 * capacity) / sum(capacity),
     .groups = "drop"
   ) %>%
@@ -491,6 +634,28 @@ lm_pred_fig_df <- lm_pred %>%
     lwr = pmin(1, pmax(0, lwr)),
     upr = pmin(1, pmax(0, upr))
   )
+
+# lm_pred_fig_df %>%
+#   filter(model == "lm", time >= t1, time < t1 + hours(24)) %>%
+#   ggplot(aes(x = norm_potential, y = mean)) +
+#   geom_point() +
+#   geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.01, alpha = 0.5) +
+#   geom_abline(slope = 1, intercept = 0, color = "red")
+
+# lm_pred_fig_df %>%
+#   filter(model == "lm") %>%
+#   filter(time >= t1, time < t1 + hours(24)) %>%
+#   # filter(time >= t0 - hours(24), time <= t1 + hours(3)) %>%
+#   ggplot(aes(x = time, y = mean, color = model)) +
+#   geom_line() +
+#   geom_ribbon(
+#     aes(ymin = lwr, ymax = upr, fill = model),
+#     alpha = 0.2,
+#     color = NA
+#   ) +
+#   geom_point(aes(y = norm_potential), color = "black") +
+#   theme_minimal() +
+#   scale_x_datetime(date_labels = "%H:%M")
 
 ## quantile mapping ####
 qm_df <- model_df %>% filter(type == "qm")
@@ -513,10 +678,12 @@ qm_pred_df <- lapply(
         time,
         date,
         norm_potential,
+        norm_potential_orig,
         norm_power_est0,
         capacity,
         tech_typ,
-        p_group3
+        p_group3,
+        anomaly
       ) %>%
       mutate(
         estimate = doQmapQUANT(
@@ -534,11 +701,14 @@ qm_pred_df <- lapply(
   bind_rows()
 
 qm_pred_fig_df <- qm_pred_df %>%
+  filter(!is.na(norm_potential)) %>%
   st_drop_geometry() %>%
   group_by(time, model) %>%
   summarise(
     mean = sum(estimate * capacity) / sum(capacity),
     norm_potential = sum(norm_potential * capacity, na.rm = TRUE) /
+      sum(capacity),
+    norm_potential_orig = sum(norm_potential_orig * capacity, na.rm = TRUE) /
       sum(capacity),
     norm_power_est0 = sum(norm_power_est0 * capacity) / sum(capacity),
     .groups = "drop"
@@ -582,6 +752,7 @@ scores_summary_fname <- sprintf(
   task_prefix0,
   d0_tag
 )
+source("aux_funct.R")
 if (!file.exists(pred_summary_fname) || rerun_samples) {
   if (!file.exists(pred_summary_fname)) {
     cat("Prediction band summary file not found, creating new summary\n")
@@ -715,7 +886,8 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
 ## Consolidated figures #####
 ### GB aggregation summary ####
 gb_fig_df <- bind_rows(
-  lm_pred_fig_df,
+  lm_pred_fig_df %>% filter(model == "lm"),
+  agg_pred_fig_df,
   qm_pred_fig_df,
   lapply(
     bru_df$code,
@@ -771,7 +943,7 @@ gb_fig_df %>%
     lwd = 1
   ) +
   geom_line(
-    aes(x = time, y = norm_potential, col = "observed"),
+    aes(x = time, y = norm_potential_orig, col = "observed"),
     # color = "darkred",
     lwd = 1
   ) +
@@ -814,11 +986,13 @@ wf_fig_df <- bind_rows(
       time,
       norm_potential,
       norm_power_est0,
+      norm_potential_orig,
       # capacity,
       model,
       estimate,
       lwr,
-      upr
+      upr,
+      anomaly
     ) %>%
     st_drop_geometry() %>%
     rename(fit = estimate),
@@ -829,9 +1003,11 @@ wf_fig_df <- bind_rows(
       time,
       norm_potential,
       norm_power_est0,
+      norm_potential_orig,
       # capacity,
       model,
-      estimate
+      estimate,
+      anomaly
     ) %>%
     st_drop_geometry() %>%
     rename(fit = estimate),
@@ -872,8 +1048,9 @@ saveRDS(
 
 for (mod in est_cols) {
   for (k in 0:2) {
+    # browser()
     # print(k)
-    wf_fig_df %>%
+    wf_fig <- wf_fig_df %>%
       filter(model == mod) %>%
       filter(coord_id %in% c(k * 40 + 1:40)) %>%
       filter(time >= t1 - hours(3), time <= t1 + hours(24)) %>%
@@ -899,6 +1076,11 @@ for (mod in est_cols) {
         lwd = 1
       ) +
       geom_line(
+        aes(x = time, y = norm_potential_orig, col = "anomalies"),
+        # color = "darkred",
+        lwd = 1
+      ) +
+      geom_line(
         aes(x = time, y = norm_potential, col = "observed"),
         # color = "darkred",
         lwd = 1
@@ -917,7 +1099,8 @@ for (mod in est_cols) {
         values = c(
           "fit" = blues9[9],
           "observed" = "darkred",
-          "PC(ERA5)" = "gray70"
+          "PC(ERA5)" = "gray70",
+          "anomalies" = "orange"
         )
       ) +
       scale_fill_manual(values = c("95% CI" = blues9[5])) +
@@ -932,6 +1115,7 @@ for (mod in est_cols) {
         d0_tag,
         k + 1
       ),
+      plot = wf_fig,
       width = 10,
       height = 6,
       create.dir = TRUE
@@ -954,7 +1138,7 @@ cov_bands_wf <- wf_fig_df %>%
   ) %>%
   group_by(model) %>%
   summarise(
-    mean_coverage = mean(coverage),
+    mean_coverage = mean(coverage, na.rm = TRUE),
     .groups = "drop"
   ) %>%
   arrange(desc(mean_coverage)) %>%
@@ -997,7 +1181,8 @@ cov_bands <- gb_fig_df %>%
   mutate(
     model = factor(model, levels = model)
   )
-# test <- gb_fig_df %>% filter(time >= t1, model == "ar1")
+# test <- gb_fig_df %>%
+#   filter(time >= t1, time < t1 + hours(24), model == "agg_lm")
 # test %>%
 #   ggplot(aes(x = time, y = norm_potential)) +
 #   geom_line() +
@@ -1052,6 +1237,10 @@ var_wf <- wf_fig_df %>%
     sd_res = sd(norm_potential - fit, na.rm = TRUE),
     .groups = "drop"
   )
+
+
+gb_fig_df %>%
+  filter(time %in% seq_hours)
 
 endtime <- Sys.time()
 
