@@ -1,11 +1,19 @@
 # update currently used figures in overleaf ####
 
+batch_name <- "batchY25d150_v6"
+
 path1 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power_main_doc/spfig"
-path2 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power/fig/batchY25d150_v5"
+path2 <- sprintf(
+  "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power/fig/%s",
+  batch_name
+)
 path_alt <- c(
-  "/home/s2441782/Documents/elexon/caloutput/batchY25d150_v5/fig/oos",
-  "/home/s2441782/Documents/elexon/caloutput/batchY25d150_v5/fig/fit",
-  "/home/s2441782/Documents/elexon/caloutput/batchY25d150_v5/fig/oos/by_model"
+  sprintf("/home/s2441782/Documents/elexon/caloutput/%s/fig/oos", batch_name),
+  sprintf("/home/s2441782/Documents/elexon/caloutput/%s/fig/fit", batch_name),
+  sprintf(
+    "/home/s2441782/Documents/elexon/caloutput/%s/fig/oos/by_model",
+    batch_name
+  )
 )
 
 # Files to update in overleaf
