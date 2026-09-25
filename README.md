@@ -307,11 +307,12 @@ CRPS
 - [ ] new batch
   - [ ] add R2 score to everything
 - [ ] new models: 
-  - [ ] aggregate consitent uncertainty
-  - [ ] LM beta with AR
+  - [ ] aggregate consitent uncertainty 
+    - [ ] extra uncertainty after aggregation - copy effect
+  - [x] LM beta with AR
   - [ ] LM beta with ST
   - [ ] Random effects region
-  - [ ] Anomalies
+  - [ ] Anomalies - extra regime for anomalies, depending on regions
   - [ ] regime switching
   - [ ] ensemble?
 
@@ -334,4 +335,5 @@ CRPS
  - [x] recreate GB_df
  - [x] check linear model df and qm df
  - [x] check oos space
- - [ ] check GB_summary
+ - [ ] check GB LM GB_summary in figure
+ - [ ] check QM in GB_summary
