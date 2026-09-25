@@ -1,17 +1,17 @@
 # model labels catalog
 mod_labels <- c(
   "Generic PC",
-  "Linear model",
+  "LM 0",
   "GB LM",
   "QM",
   "ST model fine",
   "ST model coarse",
-  "ST model coarser",
+  "ST model",
   # "LM+hour model",
-  "AR1 model",
+  "AR model",
   # "AR2 model",
-  "LM bru model",
-  "LM beta model"
+  "Linear model",
+  "LM Beta"
   # "LM t model"
 )
 est_cols <- c(
