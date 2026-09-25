@@ -1888,8 +1888,8 @@ if (!file.exists(file.path(model_path, qm_fname)) || override_objects) {
     "-------------------------------------------------------------------------------------------------\n"
   )
   qqmod <- fitQmap(
-    obs = wf_df_frag %>% pull(norm_potential),
-    mod = wf_df_frag %>% pull(norm_power_est0),
+    obs = wf_df_frag %>% filter(!anomaly) %>% pull(norm_potential),
+    mod = wf_df_frag %>% filter(!anomaly) %>% pull(norm_power_est0),
     method = "QUANT"
   )
 
@@ -2809,6 +2809,36 @@ fit_summary <- model_df0 %>%
     model = factor(model, levels = est_cols, labels = mod_labels)
   )
 fit_summary
+
+# diagnostic plot QM
+model_df0 %>%
+  filter(time %in% seq_hours) %>%
+  filter(coord_id %in% (10 + 1:9)) %>%
+  dplyr::select(site_name, coord_id, time, norm_potential, norm_power_est0, qm)
+
+model_df0 %>%
+  filter(!anomaly) %>%
+  rename(fit = qm) %>%
+  ggplot(
+    aes(x = norm_potential, y = fit)
+  ) +
+  geom_point(alpha = 0.3) +
+  # scale_fill_viridis_c() +
+  geom_abline(slope = 1, intercept = 0, col = "red") +
+  theme_minimal()
+
+model_df0 %>%
+  rename(fit = qm) %>%
+  filter(time >= d0 - hours(24) & time <= d0 + hours(12)) %>%
+  filter(coord_id %in% (10 + 1:9)) %>%
+  ggplot(aes(x = time)) +
+  geom_point(aes(y = norm_potential_orig), col = "darkorange") +
+  geom_point(aes(y = norm_potential), col = "gray70") +
+  geom_line(aes(y = fit), col = "darkblue") +
+  facet_wrap(~site_name, scales = "free_y") +
+  theme_minimal() +
+  scale_x_datetime(date_labels = "%H:%M")
+
 # GB_df %>%
 #   filter(time %in% seq_hours) %>%
 #   group_by(time) %>%
@@ -2966,29 +2996,29 @@ cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
 
-rm(
-  bru0,
-  bruar1,
-  bruar2,
-  bru1d,
-  brulm,
-  brulmbeta,
-  brulmt,
-  qqmod,
-  model_AIC0,
-  model_AIC0_agg,
-  pwr_curv_df,
-  wf_df_frag,
-  ppxl,
-  ppxl_all,
-  pow_est_st,
-  # model_df_ts,
-  # model_df_ts2,
-  df_long0,
-  samp_gb,
-  pit_list,
-  scores_df
-)
+# rm(
+#   bru0,
+#   bruar1,
+#   bruar2,
+#   bru1d,
+#   brulm,
+#   brulmbeta,
+#   brulmt,
+#   qqmod,
+#   model_AIC0,
+#   model_AIC0_agg,
+#   pwr_curv_df,
+#   wf_df_frag,
+#   ppxl,
+#   ppxl_all,
+#   pow_est_st,
+#   # model_df_ts,
+#   # model_df_ts2,
+#   df_long0,
+#   samp_gb,
+#   pit_list,
+#   scores_df
+# )
 gc()
 
 timediff <- difftime(endtime, starttime, units = "auto")
