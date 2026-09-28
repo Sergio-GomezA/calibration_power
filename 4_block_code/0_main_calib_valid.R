@@ -4,11 +4,12 @@ gbl_start_time <- Sys.time()
 # 0. Setup ####
 # Get task ID and others from command-line arguments
 args <- commandArgs(trailingOnly = TRUE)
+myecho <- FALSE
 source('4_block_code/0_setup.R')
 
 
 # model fitting ####
-source('4_block_code/1_models.R')
+source('4_block_code/1_models.R', echo = myecho)
 
 ## Lite models #####
 
@@ -18,7 +19,7 @@ source('4_block_code/1_models.R')
 
 ## OOS time ####
 # source('4_block_code/2_1_oos_time.R')
-source('4_block_code/2_1_oos_time.R')
+source('4_block_code/2_1_oos_time.R', echo = myecho)
 
 ## OOS space ####
 source('4_block_code/2_2_oos_space.R')
