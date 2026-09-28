@@ -5,7 +5,7 @@
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
 ## 0.1 global parameter #####
-day_id <- 102
+day_id <- 19
 mesh_edge_par <- 50 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- TRUE
 recalculate_gb <- FALSE
@@ -20,6 +20,7 @@ fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
 n.days.before.fit <- 3
 n.days.before.heavy <- 3
+n.days.before.light <- 15
 batch_name <- "batchY25d150_test"
 
 task_prefix <- "spaceoos"
