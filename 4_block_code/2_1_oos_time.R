@@ -469,9 +469,6 @@ agg_df_pred <- wf_df_pred %>%
     .groups = "drop"
   ) %>%
   mutate(date = as.Date(time))
-agg_df_pred %>%
-  filter(time %in% seq_hours)
-
 
 agg_pred <- lapply(
   seq(mod_list),
@@ -495,6 +492,7 @@ agg_pred <- lapply(
             norm_potential,
             norm_potential_orig,
             norm_power_est0,
+            ws_h_wmean,
             capacity,
             tech_typ
           ),
@@ -534,27 +532,29 @@ agg_pred_fig_df <- agg_pred %>%
     upr = pmin(1, pmax(0, upr))
   )
 
-# agg_pred_fig_df %>%
-#   filter(time >= t1, time < t1 + hours(24)) %>%
-#   ggplot(aes(x = norm_potential, y = mean)) +
-#   geom_point() +
-#   geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.01, alpha = 0.5) +
-#   geom_abline(slope = 1, intercept = 0, color = "red")
+if (local_run) {
+  agg_pred_fig_df %>%
+    filter(time >= t1, time < t1 + hours(24)) %>%
+    ggplot(aes(x = norm_potential, y = mean)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.01, alpha = 0.5) +
+    geom_abline(slope = 1, intercept = 0, color = "red")
 
-# agg_pred_fig_df %>%
-#   filter(time >= t1, time < t1 + hours(24)) %>%
-#   # filter(time >= t0 - hours(24), time <= t1 + hours(3)) %>%
-#   ggplot(aes(x = time, y = mean, color = model)) +
-#   geom_line() +
-#   geom_ribbon(
-#     aes(ymin = lwr, ymax = upr, fill = model),
-#     alpha = 0.2,
-#     color = NA
-#   ) +
-#   geom_point(aes(y = norm_potential), color = "black") +
-#   theme_minimal() +
-#   scale_x_datetime(date_labels = "%H:%M")
-
+  agg_pred_fig_df %>%
+    # filter(time >= t1, time < t1 + hours(72)) %>%
+    filter(time >= t0 - hours(24), time <= t1 + hours(72)) %>%
+    ggplot(aes(x = time, y = mean, color = model)) +
+    geom_line() +
+    geom_line(aes(time, y = norm_power_est0, col = "PC")) +
+    geom_ribbon(
+      aes(ymin = lwr, ymax = upr, fill = model),
+      alpha = 0.2,
+      color = NA
+    ) +
+    geom_point(aes(y = norm_potential), color = "black") +
+    theme_minimal() +
+    scale_x_datetime(date_labels = "%H:%M")
+}
 ## linear models ####
 
 lm_df <- model_df %>% filter(type == "lm")
@@ -634,29 +634,31 @@ lm_pred_fig_df <- lm_pred %>%
     lwr = pmin(1, pmax(0, lwr)),
     upr = pmin(1, pmax(0, upr))
   )
+if (local_run) {
+  lm_pred_fig_df %>%
+    filter(model == "lm", time >= t1, time < t1 + hours(24)) %>%
+    ggplot(aes(x = norm_potential, y = mean)) +
+    geom_point() +
+    geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.01, alpha = 0.5) +
+    geom_abline(slope = 1, intercept = 0, color = "red")
 
-# lm_pred_fig_df %>%
-#   filter(model == "lm", time >= t1, time < t1 + hours(24)) %>%
-#   ggplot(aes(x = norm_potential, y = mean)) +
-#   geom_point() +
-#   geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.01, alpha = 0.5) +
-#   geom_abline(slope = 1, intercept = 0, color = "red")
-
-# lm_pred_fig_df %>%
-#   filter(model == "lm") %>%
-#   filter(time >= t1, time < t1 + hours(24)) %>%
-#   # filter(time >= t0 - hours(24), time <= t1 + hours(3)) %>%
-#   ggplot(aes(x = time, y = mean, color = model)) +
-#   geom_line() +
-#   geom_ribbon(
-#     aes(ymin = lwr, ymax = upr, fill = model),
-#     alpha = 0.2,
-#     color = NA
-#   ) +
-#   geom_point(aes(y = norm_potential), color = "black") +
-#   theme_minimal() +
-#   scale_x_datetime(date_labels = "%H:%M")
-
+  lm_pred_fig_df %>%
+    filter(model == "lm") %>%
+    # filter(time >= t1, time < t1 + hours(24)) %>%
+    # filter(time >= t0 - hours(24), time <= t1 + hours(3)) %>%
+    filter(time >= t0 - hours(24), time <= t1 + hours(72)) %>%
+    ggplot(aes(x = time, y = mean, color = model)) +
+    geom_line() +
+    geom_line(aes(time, y = norm_power_est0, col = "PC")) +
+    geom_ribbon(
+      aes(ymin = lwr, ymax = upr, fill = model),
+      alpha = 0.2,
+      color = NA
+    ) +
+    geom_point(aes(y = norm_potential), color = "black") +
+    theme_minimal() +
+    scale_x_datetime(date_labels = "%H:%M")
+}
 ## quantile mapping ####
 qm_df <- model_df %>% filter(type == "qm")
 
@@ -752,7 +754,7 @@ scores_summary_fname <- sprintf(
   task_prefix0,
   d0_tag
 )
-source("aux_funct.R")
+# source("aux_funct.R")
 if (!file.exists(pred_summary_fname) || rerun_samples) {
   if (!file.exists(pred_summary_fname)) {
     cat("Prediction band summary file not found, creating new summary\n")
@@ -975,7 +977,33 @@ ggsave(
   height = 6,
   # dpi = 300
 )
-
+if (local_run) {
+  gb_fig_df %>%
+    filter(oos) %>%
+    filter(!model %in% excluded_models0) %>%
+    ggplot(aes(x = norm_potential, y = mean)) +
+    # geom_hex() +
+    geom_point(alpha = 0.5) +
+    geom_abline(
+      slope = 1,
+      intercept = 0,
+      linetype = "dashed",
+      color = "darkred"
+    ) +
+    facet_wrap(~model, labeller = as_labeller(mod_labels)) +
+    theme_bw() +
+    # scale_color_lancet() +
+    scale_fill_viridis_c(
+      trans = "log10",
+      name = "frequency",
+      limits = c(1, NA)
+    ) +
+    labs(
+      x = "Observed power",
+      y = "Predicted power",
+      # col = "regime"
+    )
+}
 ### WF level summary ####
 
 wf_fig_df <- bind_rows(

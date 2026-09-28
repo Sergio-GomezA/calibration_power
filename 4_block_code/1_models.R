@@ -441,7 +441,7 @@ cat("Number of records in the dataset:", n, "\n")
 dat_endtime <- Sys.time()
 cat(
   "Data preparation took: ",
-  round(difftime(dat_endtime, dat_starttime, units = "mins"), 2),
+  round(difftime(dat_endtime, dat_starttime, units = "auto"), 2),
   " minutes\n"
 )
 
@@ -763,7 +763,7 @@ ggsave(
 mod_endtime <- Sys.time()
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
   " minutes\n"
 )
 
@@ -903,7 +903,7 @@ ggsave(
 mod_endtime <- Sys.time()
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
   " minutes\n"
 )
 ## 2.01 bru t model ####
@@ -1183,7 +1183,7 @@ ggsave(
 mod_endtime <- Sys.time()
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
   " minutes\n"
 )
 ## 2.2 AR2 temporal model ####
@@ -1320,7 +1320,7 @@ cat(
 # mod_endtime <- Sys.time()
 # cat(
 #   "Model fitting took: ",
-#   round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+#   round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
 #   " minutes\n"
 # )
 
@@ -1599,7 +1599,7 @@ if (run_st) {
   mod_endtime <- Sys.time()
   cat(
     "Model fitting took: ",
-    round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+    round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
     " minutes\n"
   )
   ### plot intensity of spatial field ####
@@ -1715,7 +1715,7 @@ if (run_st) {
 mod_endtime <- Sys.time()
 cat(
   "Spatial field figures took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
   " minutes\n"
 )
 ## 2.3 lm wf version ####
@@ -1781,7 +1781,7 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
 mod_endtime <- Sys.time()
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
   " minutes\n"
 )
 
@@ -1798,23 +1798,24 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
     "-------------------------------------------------------------------------------------------------\n"
   )
 
-  samp_gb <- wf_df_frag %>%
-    filter(!is.na(norm_potential)) %>%
-    group_by(tech_typ, time) %>%
-    group_by(tech_typ, time) %>%
-    summarise(
-      ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
-      across(
-        c(norm_potential, norm_potential_orig, norm_power_est0),
-        ~ sum(. * capacity, na.rm = TRUE) / sum(capacity, na.rm = TRUE)
-      ),
-      across(
-        c(potential, power_est0, capacity),
-        sum
-      ),
-      .groups = "drop"
-    ) %>%
-    mutate(date = as.Date(time))
+  # samp_gb <- wf_df_frag %>%
+  #   filter(!is.na(norm_potential)) %>%
+  #   group_by(tech_typ, time) %>%
+  #   summarise(
+  #     ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
+  #     across(
+  #       c(norm_potential, norm_potential_orig, norm_power_est0),
+  #       ~ sum(. * capacity, na.rm = TRUE) / sum(capacity, na.rm = TRUE)
+  #     ),
+  #     across(
+  #       c(potential, power_est0, capacity),
+  #       sum
+  #     ),
+  #     .groups = "drop"
+  #   ) %>%
+  #   mutate(date = as.Date(time))
+
+  samp_gb <- GB_df
 
   base_model_agg <- lm(
     norm_potential ~ norm_power_est0,
@@ -1872,7 +1873,7 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
 mod_endtime <- Sys.time()
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
   " minutes\n"
 )
 ## 2.5 QM version ####
@@ -1916,7 +1917,7 @@ scores_df[[qm_fname]] <- data.frame(
 mod_endtime <- Sys.time()
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "mins"), 2),
+  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
   " minutes\n"
 )
 # 3. model comparison ####
@@ -2943,49 +2944,52 @@ model_df0 %>%
 # # samp_gb %>% rename(time = halfHourEndTime) %>% filter(time %in% seq_hours)
 # # GB_df %>% filter(time %in% seq_hours)
 
-# gb_df_temp <- samp_gb %>%
-#   # rename(time = halfHourEndTime) %>%
-#   bind_cols(predict(model_list[[5]], newdata = ., interval = "prediction"))
+if (local_run) {
+  gb_df_temp <- samp_gb %>%
+    # rename(time = halfHourEndTime) %>%
+    bind_cols(predict(model_list[[5]], newdata = ., interval = "prediction"))
 
-# ggplot(
-#   data = gb_df_temp,
-#   aes(x = norm_potential, y = fit)
-# ) +
-#   geom_point() +
-#   geom_errorbar(
-#     aes(ymin = lwr, ymax = upr),
-#     width = 0.01,
-#     alpha = 0.5
-#   ) +
-#   # scale_fill_viridis_c() +
-#   geom_abline(slope = 1, intercept = 0, col = "red") +
-#   theme_minimal()
+  ggplot(
+    data = gb_df_temp %>%
+      filter(time >= d0 - hours(12) & time <= d0 + hours(12)),
+    aes(x = norm_potential, y = fit)
+  ) +
+    geom_point() +
+    geom_errorbar(
+      aes(ymin = lwr, ymax = upr),
+      width = 0.01,
+      alpha = 0.5
+    ) +
+    # scale_fill_viridis_c() +
+    geom_abline(slope = 1, intercept = 0, col = "red") +
+    theme_minimal()
 
-# gb_df_temp %>%
-#   filter(time >= d0 - hours(12) & time <= d0 + hours(12)) %>%
-#   ggplot(aes(x = time)) +
-#   geom_point(aes(y = norm_potential)) +
-#   geom_line(aes(y = fit), col = "darkblue") +
-#   geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2, fill = "blue") +
-#   facet_wrap(~tech_typ, scales = "free_y") +
-#   theme_minimal() +
-#   scale_x_datetime(date_labels = "%H:%M")
+  gb_df_temp %>%
+    filter(time >= d0 - hours(12) & time <= d0 + hours(12)) %>%
+    ggplot(aes(x = time)) +
+    geom_point(aes(y = norm_potential)) +
+    geom_line(aes(y = fit), col = "darkblue") +
+    geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2, fill = "blue") +
+    facet_wrap(~tech_typ, scales = "free_y") +
+    theme_minimal() +
+    scale_x_datetime(date_labels = "%H:%M")
 
-# gb_df_temp %>%
-#   group_by(time) %>%
-#   summarise(
-#     norm_potential = sum(norm_potential * capacity) / sum(capacity),
-#     fit = sum(fit * capacity) / sum(capacity),
-#     lwr = sum(lwr * capacity) / sum(capacity),
-#     upr = sum(upr * capacity) / sum(capacity)
-#   ) %>%
-#   ggplot(aes(x = time)) +
-#   geom_point(aes(y = norm_potential)) +
-#   geom_line(aes(y = fit), col = "darkblue") +
-#   geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2, fill = "blue") +
-#   theme_minimal() +
-#   scale_x_datetime(date_labels = "%H:%M")
-
+  gb_df_temp %>%
+    filter(time >= d0 - hours(12) & time <= d0 + hours(12)) %>%
+    group_by(time) %>%
+    summarise(
+      norm_potential = sum(norm_potential * capacity) / sum(capacity),
+      fit = sum(fit * capacity) / sum(capacity),
+      lwr = sum(lwr * capacity) / sum(capacity),
+      upr = sum(upr * capacity) / sum(capacity)
+    ) %>%
+    ggplot(aes(x = time)) +
+    geom_point(aes(y = norm_potential)) +
+    geom_line(aes(y = fit), col = "darkblue") +
+    geom_ribbon(aes(ymin = lwr, ymax = upr), alpha = 0.2, fill = "blue") +
+    theme_minimal() +
+    scale_x_datetime(date_labels = "%H:%M")
+}
 endtime <- Sys.time()
 
 cat(
@@ -2996,29 +3000,31 @@ cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
 
-# rm(
-#   bru0,
-#   bruar1,
-#   bruar2,
-#   bru1d,
-#   brulm,
-#   brulmbeta,
-#   brulmt,
-#   qqmod,
-#   model_AIC0,
-#   model_AIC0_agg,
-#   pwr_curv_df,
-#   wf_df_frag,
-#   ppxl,
-#   ppxl_all,
-#   pow_est_st,
-#   # model_df_ts,
-#   # model_df_ts2,
-#   df_long0,
-#   samp_gb,
-#   pit_list,
-#   scores_df
-# )
+if (!local_run) {
+  rm(
+    bru0,
+    bruar1,
+    bruar2,
+    bru1d,
+    brulm,
+    brulmbeta,
+    brulmt,
+    qqmod,
+    model_AIC0,
+    model_AIC0_agg,
+    pwr_curv_df,
+    wf_df_frag,
+    ppxl,
+    ppxl_all,
+    pow_est_st,
+    # model_df_ts,
+    # model_df_ts2,
+    df_long0,
+    samp_gb,
+    pit_list,
+    scores_df
+  )
+}
 gc()
 
 timediff <- difftime(endtime, starttime, units = "auto")

@@ -635,3 +635,121 @@ ModelMetrics::rmse(
   model_df0$norm_potential,
   model_df0$lm_beta
 )
+
+
+# GB scatter in summary
+unusual <- which(month(sampled_days) == 4)
+cat("Reading summary tables for GB prediction bands\n")
+gb_fig_df_test <- lapply(
+  seq_along(sampled_days)[19],
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    # print(i)
+    d0_tag <- base::format(d0, "%y%m%d")
+
+    file_name <- sprintf(
+      "%s/%s/summaries/oos/GB_fig_band_summary_time_%s.rds",
+      output_path,
+      "batchY25d150_v6",
+      d0_tag
+    )
+    if (!file.exists(file_name)) {
+      cat("File not found:", file_name, "\n")
+      return(NULL)
+    }
+    readRDS(file_name) %>%
+      mutate(
+        date = as.Date(time)
+      )
+  }
+) %>%
+  bind_rows() %>%
+  left_join(
+    gb_day_df %>% dplyr::select(date, p_group3) %>% rename(pgroup3 = p_group3),
+    by = "date"
+  )
+
+
+gb_fig_df_test %>%
+  filter(oos) %>%
+  filter(!model %in% excluded_models0) %>%
+  ggplot(aes(x = norm_potential, y = mean)) +
+  # geom_hex() +
+  geom_point(alpha = 1) +
+  geom_abline(
+    slope = 1,
+    intercept = 0,
+    linetype = "dashed",
+    color = "darkred"
+  ) +
+  facet_wrap(~model, labeller = as_labeller(mod_labels)) +
+  theme_bw() +
+  # scale_color_lancet() +
+  scale_fill_viridis_c(
+    trans = "log10",
+    name = "frequency",
+    limits = c(1, NA)
+  ) +
+  labs(
+    x = "Observed power",
+    y = "Predicted power",
+    # col = "regime"
+  )
+
+dat_test <- agg_df_pred %>%
+  filter(time %in% (seq_hours + hours(24)), tech_typ == "Wind Offshore")
+P <- poly(agg_df_pred$ws_h_wmean, 3)
+ind <- which(agg_df_pred$time %in% (seq_hours + hours(24)))
+agg_df_pred %>% slice(ind[1])
+P[ind[1], ]
+predict(
+  mod_list[[1]],
+  newdata = dat_test,
+  interval = "prediction"
+)
+
+
+dat_test <- agg_df_pred %>%
+  filter(time %in% (seq_hours + hours(24)))
+P <- poly(agg_df_pred$ws_h_wmean, 3)
+ind <- which(agg_df_pred$time %in% (seq_hours + hours(24)))
+agg_df_pred %>% slice(ind)
+P[ind, ]
+predict(
+  mod_list[[1]],
+  newdata = dat_test,
+  interval = "prediction"
+)
+
+predict(
+  mod_list[[1]],
+  newdata = dat_test
+)
+predict(
+  mod_list[[1]],
+  newdata = dat_test,
+  type = "terms"
+)
+
+X_new <- model.matrix(mod_list[[1]], newdata = dat_test)
+
+X_new %>% str()
+
+xbeta <- as.numeric(X_new %*% coef(mod_list[[1]]))
+xbeta[ind[2]]
+?predict.lm
+
+dat_test_gb <- GB_df %>%
+  filter(time %in% (seq_hours + hours(24))) %>%
+  dplyr::select(any_of(names(dat_test)))
+
+predict(
+  mod_list[[1]],
+  newdata = dat_test_gb
+)
+
+
+predict(
+  full_model0_agg,
+  newdata = dat_test
+)
