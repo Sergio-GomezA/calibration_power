@@ -270,7 +270,7 @@ if (!override_objects && length(files_found) > 0) {
         trimws()
     ) %>%
     # filter(date %in% sampled_days) %>%
-    filter(date >= d0 - n.days.before.fit, date <= d0 + n.days - 1) %>%
+    filter(date >= d0 - n.days.before.light, date <= d0 + n.days - 1) %>%
     filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
     arrange(site_name) %>%
     group_by(lon, lat, time) %>%
@@ -434,6 +434,23 @@ if (!override_objects && length(files_found) > 0) {
     }
   }
 }
+samp_gb <- wf_df_frag %>%
+  filter(!is.na(norm_potential)) %>%
+  group_by(tech_typ, time) %>%
+  summarise(
+    ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
+    across(
+      c(norm_potential, norm_potential_orig, norm_power_est0),
+      ~ sum(. * capacity, na.rm = TRUE) / sum(capacity, na.rm = TRUE)
+    ),
+    across(
+      c(potential, power_est0, capacity),
+      sum
+    ),
+    .groups = "drop"
+  ) %>%
+  mutate(date = as.Date(time))
+wf_df_frag <- wf_df_frag %>% filter(date >= d0 - n.days.before.fit)
 cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
 n <- nrow(wf_df_frag)
 cat("Number of records in the dataset:", n, "\n")
@@ -1798,24 +1815,8 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
     "-------------------------------------------------------------------------------------------------\n"
   )
 
-  # samp_gb <- wf_df_frag %>%
-  #   filter(!is.na(norm_potential)) %>%
-  #   group_by(tech_typ, time) %>%
-  #   summarise(
-  #     ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
-  #     across(
-  #       c(norm_potential, norm_potential_orig, norm_power_est0),
-  #       ~ sum(. * capacity, na.rm = TRUE) / sum(capacity, na.rm = TRUE)
-  #     ),
-  #     across(
-  #       c(potential, power_est0, capacity),
-  #       sum
-  #     ),
-  #     .groups = "drop"
-  #   ) %>%
-  #   mutate(date = as.Date(time))
-
-  samp_gb <- GB_df
+  # samp_gb <- GB_df %>%
+  #   filter(date >= d0 - n.days.before.light, date <= d0 + n.days - 1)
 
   base_model_agg <- lm(
     norm_potential ~ norm_power_est0,

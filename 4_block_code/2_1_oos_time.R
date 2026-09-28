@@ -978,6 +978,8 @@ ggsave(
   # dpi = 300
 )
 if (local_run) {
+  excluded_models0 <- c("lm")
+  excluded_models <- c("lm", "qm")
   gb_fig_df %>%
     filter(oos) %>%
     filter(!model %in% excluded_models0) %>%
@@ -1267,8 +1269,8 @@ var_wf <- wf_fig_df %>%
   )
 
 
-gb_fig_df %>%
-  filter(time %in% seq_hours)
+# gb_fig_df %>%
+#   filter(time %in% seq_hours)
 
 endtime <- Sys.time()
 
