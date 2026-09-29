@@ -453,9 +453,41 @@ ggsave(
 )
 
 ## Error metrics #####
+
+### read from model fit ####
+err_fit <- lapply(
+  seq_along(sampled_days),
+  function(i) {
+    d0 <- sampled_days_df$date[i] %>% as.Date()
+    # print(i)
+    # browser()
+    d0_tag <- base::format(d0, "%y%m%d")
+    file_name <- sprintf(
+      "%s/%s/summaries/fit/calib_metrics_very_coarse_%s.csv",
+      output_path,
+      batch_name,
+      d0_tag
+    )
+    if (!file.exists(file_name)) {
+      cat("File not found:", file_name, "\n")
+      return(NULL)
+    }
+    read.csv(file_name)
+  }
+) %>%
+  bind_rows() %>%
+  group_by(model) %>%
+  summarise(
+    RMSE_IS = mean(RMSE, na.rm = TRUE),
+    MAE_IS = mean(MAE, na.rm = TRUE),
+    Bias_IS = mean(Bias, na.rm = TRUE),
+    .groups = "drop"
+  )
+### calculate from mean samples ####
 metrics_table_t <- wf_fig_df %>%
   filter(!anomaly) %>%
   filter(!model %in% excluded_models0) %>%
+  filter(t <= 48) %>%
   group_by(oos, model) %>%
   summarise(
     RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = fit),
@@ -484,12 +516,25 @@ metrics_table_t <- wf_fig_df %>%
   arrange(desc(RMSE_OOS))
 metrics_table_t
 tab_latex <- metrics_table_t %>%
+  # replace IS with summary from err_fit
+  dplyr::select(-c(RMSE_IS, MAE_IS, Bias_IS)) %>%
+  left_join(err_fit, by = "model") %>%
   mutate(
     across(
       c(RMSE_IS, RMSE_OOS, MAE_IS, MAE_OOS, Bias_IS, Bias_OOS),
       ~ round(., 3)
     ),
     # across(c(MDAPE_IS, MDAPE_OOS), ~ round(., 1))
+  ) %>%
+  # reorder columns
+  relocate(
+    RMSE_IS,
+    RMSE_OOS,
+    MAE_IS,
+    MAE_OOS,
+    Bias_IS,
+    Bias_OOS,
+    .after = model
   ) %>%
   kbl(
     format = "latex",
@@ -822,11 +867,6 @@ metrics_table <- wf_fig_df %>%
   summarise(
     RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = fit),
     MAE = ModelMetrics::mae(actual = norm_potential, predicted = fit),
-    # MDAPE = mdape(
-    #   actual = norm_potential,
-    #   predicted = fit,
-    #   pos_only = TRUE
-    # ),
     Bias = mean(fit - norm_potential, na.rm = TRUE),
     .groups = "drop"
   ) %>%
