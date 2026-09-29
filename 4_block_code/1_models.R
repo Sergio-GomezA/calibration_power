@@ -2812,15 +2812,24 @@ fit_summary <- model_df0 %>%
   )
 fit_summary
 
-# diagnostic plot QM
+# diagnostic plot for a model
+model_code <- c("ar1")
+
 model_df0 %>%
   filter(time %in% seq_hours) %>%
   filter(coord_id %in% (10 + 1:9)) %>%
-  dplyr::select(site_name, coord_id, time, norm_potential, norm_power_est0, qm)
+  dplyr::select(
+    site_name,
+    coord_id,
+    time,
+    norm_potential,
+    norm_power_est0,
+    any_of(model_code)
+  )
 
 model_df0 %>%
   filter(!anomaly) %>%
-  rename(fit = qm) %>%
+  rename(fit = !!sym(model_code)) %>%
   ggplot(
     aes(x = norm_potential, y = fit)
   ) +
@@ -2830,7 +2839,7 @@ model_df0 %>%
   theme_minimal()
 
 model_df0 %>%
-  rename(fit = qm) %>%
+  rename(fit = !!sym(model_code)) %>%
   filter(time >= d0 - hours(24) & time <= d0 + hours(12)) %>%
   filter(coord_id %in% (10 + 1:9)) %>%
   ggplot(aes(x = time)) +
@@ -2840,110 +2849,6 @@ model_df0 %>%
   facet_wrap(~site_name, scales = "free_y") +
   theme_minimal() +
   scale_x_datetime(date_labels = "%H:%M")
-
-# GB_df %>%
-#   filter(time %in% seq_hours) %>%
-#   group_by(time) %>%
-#   summarise(
-#     across(
-#       c(norm_potential, norm_power_est0),
-#       ~ sum(. * capacity) / sum(capacity)
-#     ),
-#     capacity = sum(capacity, na.rm = TRUE),
-#     across(c(potential, power_est0), ~ sum(., na.rm = TRUE)),
-#     .groups = "drop_last"
-#   )
-
-# test <- pwr_curv_df %>%
-#   rename(time = halfHourEndTime) %>%
-#   filter(time %in% seq_hours) %>%
-#   filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
-#   arrange(site_name) %>%
-#   group_by(lon, lat, time) %>%
-#   summarise(
-#     site_name = first(site_name),
-#     coord_id = first(coord_id),
-#     elevation = first(elevation),
-#     dist_coast = first(dist_coast),
-#     tech_typ = first(tech_typ),
-#     across(c(ws_h, wd10, wd100), mean),
-#     ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
-#     across(c(potential, power_est0, capacity, curtailment), sum),
-#     .groups = "drop"
-#   ) %>%
-#   mutate(
-#     norm_potential = pmin(1, potential / capacity),
-#     norm_power_est0 = power_est0 / capacity,
-#     anomaly = case_when(
-#       norm_potential <= tol & norm_power_est0 >= p_quant3[1] ~ TRUE,
-#       norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
-#       abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
-#       TRUE ~ FALSE
-#     )
-#   ) %>%
-#   # filter(!anomaly) %>%
-#   dplyr::select(
-#     time,
-#     coord_id,
-#     lon,
-#     lat,
-#     # bmUnit,
-#     site_name,
-#     potential,
-#     power_est0,
-#     norm_potential,
-#     norm_power_est0,
-#     capacity
-#   ) %>%
-#   group_by(time) %>%
-#   summarise(
-#     n = n(),
-#     across(
-#       c(norm_potential, norm_power_est0),
-#       ~ sum(. * capacity) / sum(capacity)
-#     ),
-#     across(
-#       c(potential, power_est0, capacity),
-#       sum
-#     )
-#   )
-# test
-# test <- wf_df_frag %>%
-#   filter(time %in% seq_hours)
-# test_summary <- test %>%
-#   st_drop_geometry() %>%
-#   group_by(time) %>%
-#   summarise(
-#     n = n(),
-#     across(
-#       c(norm_potential_orig, norm_potential, norm_power_est0),
-#       ~ sum(. * capacity, na.rm = TRUE) / sum(capacity, na.rm = TRUE)
-#     ),
-#     across(
-#       c(potential, power_est0, capacity),
-#       sum
-#     ),
-#     .groups = "drop"
-#   )
-# test_summary
-# GB_df %>%
-#   filter(time %in% seq_hours) %>%
-#   group_by(time) %>%
-#   summarise(
-#     n = n(),
-#     across(
-#       c(norm_potential, norm_power_est0),
-#       ~ sum(. * capacity, na.rm = TRUE) / sum(capacity, na.rm = TRUE)
-#     ),
-#     across(
-#       c(potential, power_est0, capacity),
-#       sum
-#     ),
-#     .groups = "drop"
-#   )
-
-# # samp_gb %>% rename(time = halfHourEndTime) %>% filter(time %in% seq_hours)
-# # GB_df %>% filter(time %in% seq_hours)
 
 if (local_run) {
   gb_df_temp <- samp_gb %>%

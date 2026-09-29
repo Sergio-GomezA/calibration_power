@@ -982,6 +982,7 @@ if (local_run) {
   excluded_models <- c("lm", "qm")
   gb_fig_df %>%
     filter(oos) %>%
+    filter(time >= t0, time <= t1 + hours(24)) %>%
     filter(!model %in% excluded_models0) %>%
     ggplot(aes(x = norm_potential, y = mean)) +
     # geom_hex() +
@@ -1005,6 +1006,22 @@ if (local_run) {
       y = "Predicted power",
       # col = "regime"
     )
+  gb_fig_df %>%
+    filter(model == "ar1") %>%
+    # filter(time >= t1, time < t1 + hours(24)) %>%
+    # filter(time >= t0 - hours(24), time <= t1 + hours(3)) %>%
+    filter(time >= t0 - hours(24), time <= t1 + hours(72)) %>%
+    ggplot(aes(x = time, y = mean, color = model)) +
+    geom_line() +
+    geom_line(aes(time, y = norm_power_est0, col = "PC")) +
+    geom_ribbon(
+      aes(ymin = lwr, ymax = upr, fill = model),
+      alpha = 0.2,
+      color = NA
+    ) +
+    geom_point(aes(y = norm_potential), color = "black") +
+    theme_minimal() +
+    scale_x_datetime(date_labels = "%H:%M")
 }
 ### WF level summary ####
 

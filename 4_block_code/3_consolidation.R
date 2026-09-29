@@ -249,7 +249,8 @@ gb_fig_df <- lapply(
     }
     readRDS(file_name) %>%
       mutate(
-        date = as.Date(time)
+        date = as.Date(time),
+        t = as.numeric(difftime(time, min(time), units = "hours"))
       )
   }
 ) %>%
@@ -277,7 +278,8 @@ wf_fig_df <- lapply(
     }
     readRDS(file_name) %>%
       mutate(
-        date = as.Date(time)
+        date = as.Date(time),
+        t = as.numeric(difftime(time, min(time), units = "hours"))
       )
   }
 ) %>%
@@ -291,6 +293,7 @@ wf_fig_df <- lapply(
 gb_fig_df %>%
   filter(oos) %>%
   filter(!model %in% excluded_models0) %>%
+  filter(t <= 48) %>%
   ggplot(aes(x = norm_potential, y = mean)) +
   geom_hex() +
   # geom_point(alpha = 0.5) +
@@ -324,6 +327,7 @@ ggsave(
 wf_fig_df %>%
   slice_sample(n = 1e6) %>%
   filter(!model %in% excluded_models0) %>%
+  filter(t <= 48) %>%
   mutate(hour = hour(time)) %>%
   group_by(date) %>%
   mutate(leadh = difftime(time, min(time), units = "hours")) %>%
@@ -543,7 +547,10 @@ gb_fig_df <- lapply(
       #   pgroup3 = sampled_days_df$p_group3[i] %>%
       #     factor(levels = c("low", "mid", "high"))
       # ) %>%
-      mutate(oos = time < as.POSIXct(d0))
+      mutate(
+        oos = time < as.POSIXct(d0),
+        t = as.numeric(difftime(time, min(time), units = "hours"))
+      )
   }
 ) %>%
   bind_rows() %>%
@@ -573,7 +580,10 @@ wf_fig_df <- lapply(
       #   pgroup3 = sampled_days_df$p_group3[i] %>%
       #     factor(levels = c("low", "mid", "high"))
       # ) %>%
-      mutate(oos = time < as.POSIXct(d0))
+      mutate(
+        oos = time < as.POSIXct(d0),
+        t = as.numeric(difftime(time, min(time), units = "hours"))
+      )
   }
 ) %>%
   bind_rows() %>%
@@ -587,6 +597,7 @@ wf_fig_df <- lapply(
 gb_fig_df %>%
   filter(oos) %>%
   filter(!model %in% excluded_models0) %>%
+  filter(t <= 48) %>%
   ggplot(
     # aes(x = norm_potential, y = mean, col = pgroup3)
   ) +
@@ -622,6 +633,7 @@ ggsave(
 
 wf_fig_df %>%
   filter(!anomaly) %>%
+  filter(t <= 48) %>%
   slice_sample(n = 2e6) %>%
   filter(oos) %>%
   filter(!model %in% excluded_models0) %>%
