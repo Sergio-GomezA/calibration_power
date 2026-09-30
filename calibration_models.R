@@ -58,6 +58,16 @@ model_path <- "~/Documents/elexon/model_objects"
 # gen_adj <- read_parquet(
 #   file.path(gen_path, "gen_adj_v2.parquet")
 # )
+# era5 <- read_parquet(
+#   file.path(data_path, "era5_combined.parquet")
+# ) %>%
+#   mutate(
+#     ws100 = sqrt(u100^2 + v100^2),
+#     ws10 = sqrt(u10^2 + v10^2),
+#     wd100 = (atan2(-u100, -v100) * 180 / pi) %% 360,
+#     wd10 = (atan2(-u10, -v10) * 180 / pi) %% 360
+#   )
+# era5 %>% distinct(longitude, latitude) %>% plot
 # wind farm catalog based on 2025 data
 ref_catalog_2025 <- fread(
   file.path("data/ref_catalog_wind_2025_era.csv.gz")
