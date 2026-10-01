@@ -198,6 +198,8 @@ if (
     )
 
   write_parquet(gb_day_df, gb_day_df_fname)
+  rm(pwr_curv_df)
+  gc()
 } else {
   cat("Loading existing GB daily summary\n")
   GB_df <- read_parquet(gb_df_fname)
