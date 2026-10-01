@@ -132,7 +132,7 @@ cat(
 model_catalog <- read.csv("data/model_catalog.csv") %>%
   na.omit()
 
-if (local_run) {
+if (!run_st) {
   model_catalog <- model_catalog %>%
     # filter(!grepl("fine", mod_labels)) %>%
     filter(!grepl("st0", est_cols))
@@ -197,7 +197,7 @@ if (length(missing_models) > 0) {
   est_cols <- model_df$code
   names(mod_labels) <- est_cols
 }
-if (local_run) {
+if (!run_st) {
   mod_labels <- mod_labels[!grepl("fine", mod_labels)]
   est_cols <- est_cols[!grepl("st0", est_cols)]
 }
@@ -394,7 +394,16 @@ if (!override_objects && length(files_found) > 0) {
       pow_groups = pow_groups,
       d_coast_groups = d_coast_groups,
       elev_groups = elev_groups
-    )
+    ) %>%
+    group_by(coord_id) %>%
+    mutate(
+      err_l1 = lag(error0, default = 0),
+      err_l2 = lag(error0, n = 2, default = 0),
+      dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
+      dest_l1 = lag(dest, default = 0),
+      dest_l2 = lag(dest, n = 2, default = 0)
+    ) %>%
+    ungroup()
 
   cat("Converting coordinates to km\n")
   wf_df_pred <- wf_df_pred %>%
@@ -468,7 +477,15 @@ agg_df_pred <- wf_df_pred %>%
     ),
     .groups = "drop"
   ) %>%
-  mutate(date = as.Date(time))
+  mutate(date = as.Date(time)) %>%
+  mutate(
+    error0 = norm_potential - norm_power_est0,
+    err_l1 = lag(error0, default = 0),
+    err_l2 = lag(error0, n = 2, default = 0),
+    dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
+    dest_l1 = lag(dest, default = 0),
+    dest_l2 = lag(dest, n = 2, default = 0)
+  )
 agg_df_pred %>%
   filter(time %in% seq_hours)
 
@@ -534,12 +551,12 @@ agg_pred_fig_df <- agg_pred %>%
     upr = pmin(1, pmax(0, upr))
   )
 
-# agg_pred_fig_df %>%
-#   filter(time >= t1, time < t1 + hours(24)) %>%
-#   ggplot(aes(x = norm_potential, y = mean)) +
-#   geom_point() +
-#   geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.01, alpha = 0.5) +
-#   geom_abline(slope = 1, intercept = 0, color = "red")
+agg_pred_fig_df %>%
+  filter(time >= t1, time < t1 + hours(24)) %>%
+  ggplot(aes(x = norm_potential, y = mean)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.01, alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red")
 
 # agg_pred_fig_df %>%
 #   filter(time >= t1, time < t1 + hours(24)) %>%

@@ -394,7 +394,16 @@ if (!override_objects && length(files_found) > 0) {
       pow_groups = pow_groups,
       d_coast_groups = d_coast_groups,
       elev_groups = elev_groups
-    )
+    ) %>%
+    group_by(coord_id) %>%
+    mutate(
+      err_l1 = lag(error0, default = 0),
+      err_l2 = lag(error0, n = 2, default = 0),
+      dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
+      dest_l1 = lag(dest, default = 0),
+      dest_l2 = lag(dest, n = 2, default = 0)
+    ) %>%
+    ungroup()
 
   cat("Converting coordinates to km\n")
   wf_df_pred <- wf_df_pred %>%
@@ -468,7 +477,15 @@ agg_df_pred <- wf_df_pred %>%
     ),
     .groups = "drop"
   ) %>%
-  mutate(date = as.Date(time))
+  mutate(date = as.Date(time)) %>%
+  mutate(
+    error0 = norm_potential - norm_power_est0,
+    err_l1 = lag(error0, default = 0),
+    err_l2 = lag(error0, n = 2, default = 0),
+    dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
+    dest_l1 = lag(dest, default = 0),
+    dest_l2 = lag(dest, n = 2, default = 0)
+  )
 
 agg_pred <- lapply(
   seq(mod_list),
@@ -1228,13 +1245,7 @@ cov_bands <- gb_fig_df %>%
   mutate(
     model = factor(model, levels = model)
   )
-# test <- gb_fig_df %>%
-#   filter(time >= t1, time < t1 + hours(24), model == "agg_lm")
-# test %>%
-#   ggplot(aes(x = time, y = norm_potential)) +
-#   geom_line() +
-#   geom_ribbon(aes(ymin = lwr, ymax = upr), fill = blues9[5], alpha = 0.5) +
-#   geom_line(aes(y = mean), color = "red")
+
 cov_bands %>%
   ggplot(aes(x = model, y = coverage)) +
   geom_col(fill = blues9[5]) +
@@ -1285,7 +1296,72 @@ var_wf <- wf_fig_df %>%
     .groups = "drop"
   )
 
+wf_fig_df %>%
+  filter(!anomaly) %>%
+  group_by(coord_id) %>%
+  mutate(t = difftime(time, min(t0), units = "hours") %>% as.numeric()) %>%
+  # filter(t < 48) %>%
+  # rename(fit = !!sym(model_code)) %>%
+  ggplot(
+    aes(x = norm_potential, y = fit)
+  ) +
+  geom_point(alpha = 0.3) +
+  # scale_fill_viridis_c() +
+  facet_wrap(~model) +
+  geom_abline(slope = 1, intercept = 0, col = "red") +
+  theme_minimal()
 
+
+# wf_fig_df %>%
+#   filter(model == "lm_beta") %>%
+#   # rename(fit = !!sym(model_code)) %>%
+#   filter(time >= d0 - hours(0) & time <= d0 + hours(12)) %>%
+#   ggplot() +
+#   geom_errorbar(
+#     aes(x = norm_potential_orig, ymin = lwr, ymax = upr),
+#     fill = "lightblue",
+#     alpha = 0.5
+#   ) +
+#   geom_point(
+#     aes(x = norm_potential_orig, y = norm_potential_orig),
+#     col = "darkorange"
+#   ) +
+#   geom_point(aes(x = norm_potential, y = norm_potential), col = "gray70") +
+#   geom_point(aes(x = norm_potential_orig, y = fit), col = "lightblue") +
+#   # facet_wrap(~site_name, scales = "free_y") +
+#   theme_minimal() +
+#   scale_x_datetime(date_labels = "%H:%M")
+wf_fig_df %>%
+  filter(model == "lm_beta") %>%
+  # rename(fit = !!sym(model_code)) %>%
+  filter(time >= d0 - hours(0) & time <= d0 + hours(72)) %>%
+  filter(coord_id %in% (0 + 1:27)) %>%
+  ggplot(aes(x = time)) +
+  geom_ribbon(
+    aes(ymin = lwr, ymax = upr),
+    fill = "lightblue",
+    alpha = 0.5
+  ) +
+  geom_point(aes(y = norm_potential_orig), col = "darkorange") +
+  geom_point(aes(y = norm_potential), col = "gray70") +
+  geom_line(aes(y = fit), col = "darkblue") +
+  geom_line(aes(y = norm_power_est0), col = "lightblue") +
+  facet_wrap(~site_name, scales = "free_y") +
+  theme_minimal() +
+  scale_x_datetime(date_labels = "%H:%M")
+
+# test <- wf_fig_df %>%
+#   filter(model == "st0_m2") %>%
+#   filter(site_name == "Robin Rigg West") %>%
+#   group_by(coord_id) %>%
+#   mutate(t = difftime(time, min(t0), units = "hours") %>% as.numeric()) %>%
+#   filter(t >= 48)
+# testpred <- wf_df_pred %>%
+#   # filter(model == "st0_m2") %>%
+#   filter(site_name == "Robin Rigg West") %>%
+#   group_by(coord_id) %>%
+#   mutate(t = difftime(time, min(t0), units = "hours") %>% as.numeric()) %>%
+#   filter(t >= 48)
 # gb_fig_df %>%
 #   filter(time %in% seq_hours)
 

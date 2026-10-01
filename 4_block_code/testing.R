@@ -273,12 +273,12 @@ model_df0 %>%
   geom_point(aes(norm_potential, st0_m2), alpha = 0.1) +
   geom_abline(slope = 1, intercept = 0, color = "darkred")
 
-ModelMetrics::rmse(model_df0$norm_potential, model_df0$st0_m2)
+ModelMetrics::rmse(model_df0$norm_potential, model_df0$st0_m2, na.rm = T)
 d0
 
 # source("aux_funct.R")
 
-model_name <- "st_bru0_very_coarse_250730.rds"
+model_name <- sprintf("st_bru0_very_coarse_%s.rds", d0_tag)
 
 get_bru_formula(model_list[[model_name]])
 # summary(model_list$ts_bru0_ar1_250730.rds)
@@ -325,8 +325,10 @@ pred_band$wf_summary %>%
   geom_abline(slope = 1, intercept = 0, color = "darkred")
 
 ModelMetrics::rmse(
-  pred_band$wf_summary$norm_potential,
-  pred_band$wf_summary$fit
+  pred_band$wf_summary$norm_potential[
+    !is.na(pred_band$wf_summary$norm_potential)
+  ],
+  pred_band$wf_summary$fit[!is.na(pred_band$wf_summary$norm_potential)]
 )
 
 

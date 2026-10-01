@@ -398,7 +398,16 @@ if (!override_objects && length(files_found) > 0) {
       pow_groups = pow_groups,
       d_coast_groups = d_coast_groups,
       elev_groups = elev_groups
-    )
+    ) %>%
+    group_by(coord_id) %>%
+    mutate(
+      err_l1 = lag(error0, default = 0),
+      err_l2 = lag(error0, n = 2, default = 0),
+      dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
+      dest_l1 = lag(dest, default = 0),
+      dest_l2 = lag(dest, n = 2, default = 0)
+    ) %>%
+    ungroup()
 
   cat("Converting coordinates to km\n")
   wf_df_frag <- wf_df_frag %>%
@@ -449,7 +458,14 @@ samp_gb <- wf_df_frag %>%
     ),
     .groups = "drop"
   ) %>%
-  mutate(date = as.Date(time))
+  mutate(date = as.Date(time), error0 = norm_potential - norm_power_est0) %>%
+  mutate(
+    err_l1 = lag(error0, default = 0),
+    err_l2 = lag(error0, n = 2, default = 0),
+    dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
+    dest_l1 = lag(dest, default = 0),
+    dest_l2 = lag(dest, n = 2, default = 0)
+  )
 wf_df_frag <- wf_df_frag %>% filter(date >= d0 - n.days.before.fit)
 cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
 n <- nrow(wf_df_frag)
@@ -784,12 +800,153 @@ cat(
   " minutes\n"
 )
 
+## 2.01 bru lm model lags diffs ####
+
+mod_starttime <- Sys.time()
+
+mod_tag <- "lm2"
+components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
+  techno(tech_typ, model = "iid") + # random intercept by tech_typ
+  # norm_power_est0 +
+  err_l1 +
+  err_l2 +
+  dest +
+  slope(
+    tech_typ,
+    model = "iid",
+    weights = norm_power_est0
+  ) +
+  d_coast(
+    d_coast_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction distance to coast
+  elev(
+    elev_group,
+    model = "rw2",
+    constr = TRUE
+  ) + # smooth correction elevation
+  wind(ws_group, model = "rw2", replicate = tech_typ, constr = TRUE) # smooth correction wind
+
+model_code <- sprintf("ts_bru0_%s_%s.rds", mod_tag, d0_tag)
+model_fname <- file.path(
+  model_path,
+  model_code
+)
+
+if (!file.exists(model_fname) || override_objects) {
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  cat("Fitting bru lm model\n")
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  brulm2 <- bru(
+    components = components0,
+    formula = norm_potential ~ Intercept +
+      techno +
+      slope +
+      err_l1 +
+      err_l2 +
+      dest +
+      # power_correction +
+      d_coast +
+      elev +
+      wind,
+    family = "gaussian",
+    control.family = list(
+      hyper = list(
+        prec = list(
+          prior = "pc.prec",
+          param = c(50, 0.05)
+        )
+      )
+    ),
+    data = wf_df_frag,
+    options = base_bru_options
+  )
+
+  scores_df[[model_code]] <- extract_score_model(brulm2)
+  pit_list[[model_code]] <- extract_pit_model(brulm2, wf_df_frag)
+
+  if (save_models) {
+    saveRDS(
+      brulm2,
+      file = model_fname
+    )
+  } else {
+    model_list[[model_code]] <- brulm2
+  }
+} else {
+  cat("Loading existing lm model\n")
+  brulm2 <- readRDS(model_fname)
+}
+
+summary(brulm2)
+
+effect_names <- names(brulm2$summary.random)
+excluded_effects <- c("u")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect %in% c("wind")) {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  # browser()
+  plot.effects(
+    brulm2,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf(
+      "%s/%s/fig/fit/%s_effect_%s_%s.pdf",
+      output_path,
+      batch_name,
+      effect,
+      mod_tag,
+      d0_tag
+    ),
+    width = 6,
+    height = 4
+  )
+}
+# lapply(brulm2$names.fixed, function(x) plot(brulm2, x))
+
+plot.hyper.dens(brulm2)
+ggsave(
+  sprintf(
+    "%s/%s/fig/fit/hyperparameters_%s_%s.pdf",
+    output_path,
+    batch_name,
+    mod_tag,
+    d0_tag
+  ),
+  width = 6,
+  height = 4
+)
+mod_endtime <- Sys.time()
+cat(
+  "Model fitting took: ",
+  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
+  " minutes\n"
+)
+
 ## 2.01 bru beta model ####
 mod_starttime <- Sys.time()
 mod_tag <- "lmbeta"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   techno(tech_typ, model = "iid") + # random intercept by tech_typ
   # norm_power_est0 +
+  err_l1 +
+  err_l2 +
+  dest +
   slope(
     tech_typ,
     model = "iid",
@@ -840,6 +997,9 @@ if (!file.exists(model_fname) || override_objects) {
     components = components0,
     formula = norm_potential ~ Intercept +
       techno +
+      err_l1 +
+      err_l2 +
+      dest +
       slope +
       # power_correction +
       d_coast +
@@ -1058,6 +1218,9 @@ ar_tag <- "ar1"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   techno(tech_typ, model = "iid") + # random intercept by tech_typ
   # norm_power_est0 +
+  err_l1 +
+  err_l2 +
+  dest +
   slope(
     tech_typ,
     model = "iid",
@@ -1116,6 +1279,9 @@ if (!file.exists(model_fname) || override_objects) {
     components = components0,
     formula = norm_potential ~ Intercept +
       techno +
+      err_l1 +
+      err_l2 +
+      dest +
       slope +
       # power_correction +
       d_coast +
@@ -1487,6 +1653,9 @@ if (run_st) {
   components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     # techno(tech_typ, model = "iid") + # random intercept by tech_typ
     # norm_power_est0 +
+    err_l1 +
+    err_l2 +
+    dest +
     slope(
       tech_typ,
       model = "iid",
@@ -1534,6 +1703,9 @@ if (run_st) {
       components = components0,
       formula = norm_potential ~ Intercept +
         # techno +
+        err_l1 +
+        err_l2 +
+        dest +
         slope +
         # power_correction +
         d_coast +
@@ -1749,7 +1921,15 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
   )
   base_model <- lm(
     norm_potential ~ norm_power_est0,
-    data = wf_df_frag
+    data = wf_df_frag %>%
+      group_by(coord_id) %>%
+      mutate(
+        err_l1 = lag(error0, default = 0),
+        err_l2 = lag(error0, n = 2, default = 0),
+        dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
+        dest_l1 = lag(dest, default = 0),
+        dest_l2 = lag(dest, n = 2, default = 0)
+      )
   )
 
   full_model0 <- lm(
@@ -1763,12 +1943,25 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
       # elevation * tech_typ +
       # dist_coast:tech_typ +
       # elevation:tech_typ +
+      err_l1 +
+      err_l2 +
+      dest +
+      dest_l1 +
+      dest_l2 +
       tech_typ * poly(dist_coast, 2) +
       tech_typ * poly(elevation, 3) +
       tech_typ * poly(ws_h_wmean, 3),
-    data = wf_df_frag
+    data = wf_df_frag %>%
+      group_by(coord_id) %>%
+      mutate(
+        err_l1 = lag(error0, default = 0),
+        err_l2 = lag(error0, n = 2, default = 0),
+        dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
+        dest_l1 = lag(dest, default = 0),
+        dest_l2 = lag(dest, n = 2, default = 0)
+      )
   )
-
+  summary(full_model0)
   model_AIC0 <- step(
     base_model,
     scope = list(lower = base_model, upper = full_model0),
@@ -1776,6 +1969,7 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
     k = 2,
     trace = 0
   )
+  summary(model_AIC0)
   scores_df[[model_code]] <- data.frame(
     AIC = AIC(model_AIC0),
     BIC = BIC(model_AIC0),
@@ -1828,6 +2022,11 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
       tech_typ +
       tech_typ *
         norm_power_est0 +
+      err_l1 +
+      err_l2 +
+      dest +
+      dest_l1 +
+      dest_l2 +
       # norm_power_est0 * month +
       # hour +
       # dist_coast * tech_typ +
@@ -1848,7 +2047,7 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
     k = 2,
     trace = 0
   )
-
+  summary(model_AIC0_agg)
   scores_df[[model_code]] <- data.frame(
     AIC = AIC(model_AIC0_agg),
     BIC = BIC(model_AIC0_agg),
@@ -1970,8 +2169,9 @@ n <- nrow(wf_df_frag)
 names(mod_labels) <- est_cols
 
 ## fitted values df ####
-
+predict(model_AIC0, newdata = wf_df_frag) %>% length()
 model_df0 <- wf_df_frag %>%
+  ungroup() %>%
   mutate(
     date = as.Date(time),
     lm = predict(model_AIC0, newdata = .),
@@ -1982,6 +2182,7 @@ model_df0 <- wf_df_frag %>%
     qm = wgen_qm,
     agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag),
     lm_bru = brulm$summary.fitted.values[1:n, "mean"],
+    lm2 = brulm2$summary.fitted.values[1:n, "mean"],
     lm_beta = brulmbeta$summary.fitted.values[1:n, "mean"]
     # lm_t = brulmt$summary.fitted.values[1:n, "mean"]
   ) %>%
@@ -2813,7 +3014,7 @@ fit_summary <- model_df0 %>%
 fit_summary
 
 # diagnostic plot for a model
-model_code <- c("ar1")
+model_code <- c("lm_beta")
 
 model_df0 %>%
   filter(time %in% seq_hours) %>%
@@ -2841,7 +3042,7 @@ model_df0 %>%
 model_df0 %>%
   rename(fit = !!sym(model_code)) %>%
   filter(time >= d0 - hours(24) & time <= d0 + hours(12)) %>%
-  filter(coord_id %in% (10 + 1:9)) %>%
+  filter(coord_id %in% (10 + 1:27)) %>%
   ggplot(aes(x = time)) +
   geom_point(aes(y = norm_potential_orig), col = "darkorange") +
   geom_point(aes(y = norm_potential), col = "gray70") +
@@ -2853,7 +3054,11 @@ model_df0 %>%
 if (local_run) {
   gb_df_temp <- samp_gb %>%
     # rename(time = halfHourEndTime) %>%
-    bind_cols(predict(model_list[[5]], newdata = ., interval = "prediction"))
+    bind_cols(predict(
+      model_list[[sprintf("gblm_model_aic0_%s.rds", d0_tag)]],
+      newdata = .,
+      interval = "prediction"
+    ))
 
   ggplot(
     data = gb_df_temp %>%
@@ -2913,6 +3118,7 @@ if (!local_run) {
     bruar2,
     bru1d,
     brulm,
+    brulm2,
     brulmbeta,
     brulmt,
     qqmod,
