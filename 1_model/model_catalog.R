@@ -11,6 +11,7 @@ mod_labels <- c(
   "AR model",
   # "AR2 model",
   "Linear model",
+  "LM 2",
   "LM Beta"
   # "LM t model"
 )
@@ -26,6 +27,7 @@ est_cols <- c(
   "ar1",
   # "ar2",
   "lm_bru",
+  "lm_2",
   "lm_beta"
   # "lm_t"
 )
@@ -42,6 +44,7 @@ mode_code_prefix <- c(
   "ts_bru0_ar1_",
   # "ts_bru0_ar2_",
   "ts_bru0_lm_",
+  "ts_bru0_lm2_",
   "ts_bru0_lmbeta_"
   # "ts_bru0_lmt_"
 )
