@@ -44,7 +44,7 @@ cluster_ext <- "rds" # "geojson" previously
 pow_threshold <- 0.05
 
 tol <- 0.01
-norm_dist_tol <- 0.3
+norm_dist_tol <- 0.5
 
 if (local_run) {
   cat("Running in local mode\n")
