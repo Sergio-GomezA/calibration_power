@@ -110,8 +110,8 @@ if (
       norm_potential = pmin(1, potential / capacity),
       norm_power_est0 = power_est0 / capacity,
       anomaly = case_when(
-        norm_potential <= tol & norm_power_est0 >= p_quant3[1] ~ TRUE,
-        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
+        norm_potential <= tol & norm_power_est0 >= 0.05 ~ TRUE,
+        norm_power_est0 >= 1 - tol & norm_potential <= 0.5 ~ TRUE,
         abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
         TRUE ~ FALSE
       )
