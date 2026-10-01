@@ -329,7 +329,7 @@ CRPS
   - [ ] GB
   - [ ] Regions
 - [x] Anomalies in LWE
-
+- [ ] wind cut-off
 
 - [ ] aggregation after anomaly removal
  - [x] recreate GB_df
