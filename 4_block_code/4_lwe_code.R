@@ -93,9 +93,9 @@ names(mod_labels) <- est_cols
 # excluded_models0 <- c("lm_bru")
 # excluded_models <- c("lm_bru", "qm")
 
-excluded_models0 <- c("lm", "spde1d", "lm_t")
-excluded_models <- c("lm", "spde1d", "lm_t", "qm")
-mod_labels["lm_bru"] <- "Linear Model"
+excluded_models0 <- c("lm", "lm_bru", "spde1d", "lm_t")
+excluded_models <- c("lm", "lm_bru", "spde1d", "lm_t", "qm")
+# mod_labels["lm_bru"] <- "Linear Model"
 
 model_df <- model_catalog %>%
   rename(code = est_cols, label = mod_labels) %>%
@@ -151,7 +151,8 @@ model_df0 <- lapply(
       st_drop_geometry()
   }
 ) %>%
-  bind_rows()
+  bind_rows() %>%
+  filter(!model %in% excluded_models0)
 
 # pos_breaks <- with(
 #   model_df0,

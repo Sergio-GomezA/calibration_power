@@ -208,9 +208,9 @@ names(mod_labels) <- est_cols
 # excluded_models0 <- c("lm_bru")
 # excluded_models <- c("lm_bru", "qm")
 
-excluded_models0 <- c("lm")
-excluded_models <- c("lm", "qm")
-mod_labels["lm_bru"] <- "Linear model"
+excluded_models0 <- c("lm", "lm_bru")
+excluded_models <- c("lm", "lm_bru", "qm")
+# mod_labels["lm_bru"] <- "Linear model"
 # model_catalog <- read.csv("data/model_catalog.csv") %>%
 #   na.omit()
 model_df <- model_catalog %>%
@@ -482,7 +482,8 @@ err_fit <- lapply(
     MAE_IS = mean(MAE, na.rm = TRUE),
     Bias_IS = mean(Bias, na.rm = TRUE),
     .groups = "drop"
-  )
+  ) %>%
+  filter(!model %in% mod_labels[excluded_models0])
 ### calculate from mean samples ####
 metrics_table_t <- wf_fig_df %>%
   filter(!anomaly) %>%
@@ -1000,7 +1001,8 @@ rel_df <- cov_gbl %>%
     model = factor(model, levels = names(mod_labels), labels = mod_labels)
   ) %>%
   group_by(model, nominal) %>%
-  summarise(empirical = mean(empirical, na.rm = TRUE), .groups = "drop")
+  summarise(empirical = mean(empirical, na.rm = TRUE), .groups = "drop") %>%
+  filter(!is.na(model))
 # rel_df$model %>% unique()
 
 nrel_mods <- rel_df$model %>% unique() %>% length()
@@ -1016,7 +1018,7 @@ rel_df %>%
   ) +
   scale_color_manual(values = cols) +
   # scale_color_aaas() +
-  guides(colour = guide_legend(nrow = 2)) +
+  guides(colour = guide_legend(nrow = 1)) +
   theme(
     legend.position = "bottom",
     legend.title = element_blank()
@@ -1071,7 +1073,8 @@ rel_df <- cov_gbl %>%
     model = factor(model, levels = names(mod_labels), labels = mod_labels)
   ) %>%
   group_by(model, nominal) %>%
-  summarise(empirical = mean(empirical, na.rm = TRUE), .groups = "drop")
+  summarise(empirical = mean(empirical, na.rm = TRUE), .groups = "drop") %>%
+  filter(!is.na(model))
 # rel_df$model %>% unique()
 rel_df %>%
   ggplot(aes(x = nominal, y = empirical, col = model)) +
@@ -1144,7 +1147,8 @@ cov_loc <- lapply(
     )
   }
 ) %>%
-  bind_rows()
+  bind_rows() %>%
+  filter(!model %in% excluded_models0)
 
 cov_loc_fig_time <- cov_loc %>%
   group_by(model, coord_id) %>%
@@ -1189,7 +1193,8 @@ cov_loc <- lapply(
     )
   }
 ) %>%
-  bind_rows()
+  bind_rows() %>%
+  filter(!model %in% excluded_models0)
 
 cov_loc_fig_space <- cov_loc %>%
   group_by(model, coord_id) %>%
@@ -1212,7 +1217,7 @@ cov_loc_fig <- cov_loc_fig %>%
 ggplot() +
   geom_sf(data = uk_map, fill = NA, color = "gray45", alpha = 0.5) +
   geom_sf(data = cov_loc_fig, aes(geometry = geometry, col = coverage_95)) +
-  facet_wrap(~model) +
+  facet_wrap(~model, labeller = as_labeller(mod_labels)) +
   scale_color_gradientn(
     colours = c("darkred", "yellow", "darkgreen")
   ) +
@@ -1252,7 +1257,8 @@ pit_df <- lapply(
   left_join(
     model_df %>% dplyr::select(mode_code_prefix, code),
     by = c("code" = "mode_code_prefix")
-  )
+  ) %>%
+  filter(!is.na(code.y))
 # mutate(
 #   code = model_df$code[model_df$mode_code_prefix == paste0(code, "_")],
 #   model = factor(code, levels = est_cols, labels = mod_labels)
@@ -1304,7 +1310,9 @@ scores_tbl_t <- lapply(
       cat("File not found:", file_name, "\n")
       return(NULL)
     }
+    # browser()
     read.csv(file_name) %>%
+      filter(!model %in% excluded_models0) %>%
       mutate(
         date = d0,
         # prefix = sub("\\d{6}\\.rds$", "", model),
@@ -1379,6 +1387,7 @@ scores_tbl <- lapply(
       return(NULL)
     }
     read.csv(file_name) %>%
+      filter(!model %in% excluded_models0) %>%
       mutate(date = d0, model = bru_df$label[which(bru_df$code == model)])
   }
 ) %>%
