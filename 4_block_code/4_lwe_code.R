@@ -3,13 +3,13 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 pow_threshold <- 0.05
 pow_threshold_label <- gsub("\\.", "_", as.character(pow_threshold))
 tol <- 0.01
-norm_dist_tol <- 0.3
+norm_dist_tol <- 0.5
 
 override_objects <- TRUE
 # rerun_samples <- FALSE
 # prec_init <- log(200)
 # batch_name <- "batch2025"
-batch_name <- "batchY25d150_v7"
+batch_name <- "batchY25d150_v8"
 
 
 if (local_run) {
