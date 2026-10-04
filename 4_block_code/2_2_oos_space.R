@@ -362,8 +362,8 @@ if (!override_objects && length(files_found) > 0) {
   wf_df_pred <- wf_df_pred %>%
     mutate(
       anomaly = case_when(
-        norm_potential <= tol & norm_power_est0 >= p_quant3[1] ~ TRUE,
-        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
+        # norm_potential <= tol & norm_power_est0 >= p_quant3[1] ~ TRUE,
+        # norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
         abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
         TRUE ~ FALSE
       )

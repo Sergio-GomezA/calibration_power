@@ -1,6 +1,6 @@
 # update currently used figures in overleaf ####
 
-batch_name <- "batchY25d150_v7"
+batch_name <- "batchY25d150_v9"
 
 path1 <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calibration_power_main_doc/spfig"
 path2 <- sprintf(
