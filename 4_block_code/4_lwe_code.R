@@ -3,7 +3,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 pow_threshold <- 0.05
 pow_threshold_label <- gsub("\\.", "_", as.character(pow_threshold))
 tol <- 0.01
-norm_dist_tol <- 0.99
+norm_dist_tol <- 1
 
 override_objects <- TRUE
 # rerun_samples <- FALSE
@@ -281,7 +281,7 @@ if (!file.exists(lwe_obs_pred_fname) | override_objects) {
         #   norm_power_est0 >= p_quant3[1] &
         #   lead(norm_power_est0, 1, default = last(norm_power_est0)) >=
         #     p_quant3[1] ~ TRUE,
-        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
+        # norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
         abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
         TRUE ~ FALSE
       )
@@ -412,7 +412,7 @@ if (!file.exists(lwe_obs_pred_fname) | override_objects) {
         #   norm_power_est0 >= p_quant3[1] &
         #   lead(norm_power_est0, 1, default = last(norm_power_est0)) >=
         #     p_quant3[1] ~ TRUE,
-        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
+        # norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
         abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
         TRUE ~ FALSE
       )

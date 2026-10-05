@@ -552,7 +552,9 @@ tab_latex <- metrics_table_t %>%
       "IS",
       "OOS"
     ),
-    caption = "Performance metrics for in-sample (IS) and out-of-sample (OOS) predictions."
+    caption = "Performance metrics for in-sample (IS) and out-of-sample (OOS) 24 hour ahead predictions at wind farm level.",
+    label = "err_metrics",
+    linesep = ""
   ) %>%
   add_header_above(c(
     " " = 1,
@@ -918,7 +920,9 @@ tab_latex <- metrics_table %>%
       "space",
       "space-time"
     ),
-    caption = "Performance metrics for in-sample (IS) and out-of-sample (OOS) predictions."
+    caption = "Performance metrics for new (unobserved) wind farm locations. The space columns give error metrics over the three days used to train the in-sample locations, evaluating the model's spatial extrapolation to new sites over the same period; the space-time columns give error metrics over the subsequent 24 hours at these new locations, evaluating joint spatial and temporal extrapolation.",
+    label = "err_metrics_space",
+    linesep = ""
   ) %>%
   add_header_above(c(
     " " = 1,
@@ -1358,7 +1362,8 @@ tab_latex <- scores_tbl_t %>%
       "5%",
       "10%"
     ),
-    caption = "Average scores for out-of-sample predictions across all sampled days."
+    caption = "Probabilistic scores across models. Lower values indicate better performance for all scores, sorted by CPRS.",
+    label = "prob_scores"
   ) %>%
   add_header_above(c(
     " " = 4,
@@ -1423,7 +1428,8 @@ tab_latex <- scores_tbl %>%
       "5%",
       "10%"
     ),
-    caption = "Average scores for out-of-sample predictions across all sampled days."
+    caption = "Probabilistic scores across models. Lower values indicate better performance for all scores, sorted by CPRS.",
+    label = "prob_scores_space"
   ) %>%
   add_header_above(c(
     " " = 4,
