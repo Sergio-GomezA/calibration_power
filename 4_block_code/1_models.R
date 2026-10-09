@@ -13,7 +13,6 @@ require(ggthemes)
 require(ggsci)
 require(arrow)
 
-
 spde1d_bru_opt <- as.bru_options(
   list(
     control.family = list(
@@ -840,7 +839,7 @@ if (!file.exists(model_fname) || override_objects) {
   cat(
     "-------------------------------------------------------------------------------------------------\n"
   )
-  cat("Fitting bru lm model\n")
+  cat("Fitting bru lm2 model\n")
   cat(
     "-------------------------------------------------------------------------------------------------\n"
   )
@@ -946,9 +945,9 @@ mod_tag <- "lmbeta"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   techno(tech_typ, model = "iid") + # random intercept by tech_typ
   # norm_power_est0 +
-  err_l1 +
-  err_l2 +
-  dest +
+  # err_l1 +
+  # err_l2 +
+  # dest +
   slope(
     tech_typ,
     model = "iid",
@@ -999,9 +998,9 @@ if (!file.exists(model_fname) || override_objects) {
     components = components0,
     formula = norm_potential ~ Intercept +
       techno +
-      err_l1 +
-      err_l2 +
-      dest +
+      # err_l1 +
+      # err_l2 +
+      # dest +
       slope +
       # power_correction +
       d_coast +
@@ -1220,9 +1219,9 @@ ar_tag <- "ar1"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   techno(tech_typ, model = "iid") + # random intercept by tech_typ
   # norm_power_est0 +
-  err_l1 +
-  err_l2 +
-  dest +
+  # err_l1 +
+  # err_l2 +
+  # dest +
   slope(
     tech_typ,
     model = "iid",
@@ -1281,9 +1280,9 @@ if (!file.exists(model_fname) || override_objects) {
     components = components0,
     formula = norm_potential ~ Intercept +
       techno +
-      err_l1 +
-      err_l2 +
-      dest +
+      # err_l1 +
+      # err_l2 +
+      # dest +
       slope +
       # power_correction +
       d_coast +
@@ -1655,9 +1654,9 @@ if (run_st) {
   components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     # techno(tech_typ, model = "iid") + # random intercept by tech_typ
     # norm_power_est0 +
-    err_l1 +
-    err_l2 +
-    dest +
+    # err_l1 +
+    # err_l2 +
+    # dest +
     slope(
       tech_typ,
       model = "iid",
@@ -1705,9 +1704,9 @@ if (run_st) {
       components = components0,
       formula = norm_potential ~ Intercept +
         # techno +
-        err_l1 +
-        err_l2 +
-        dest +
+        # err_l1 +
+        # err_l2 +
+        # dest +
         slope +
         # power_correction +
         d_coast +
@@ -1923,15 +1922,7 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
   )
   base_model <- lm(
     norm_potential ~ norm_power_est0,
-    data = wf_df_frag %>%
-      group_by(coord_id) %>%
-      mutate(
-        err_l1 = lag(error0, default = 0),
-        err_l2 = lag(error0, n = 2, default = 0),
-        dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
-        dest_l1 = lag(dest, default = 0),
-        dest_l2 = lag(dest, n = 2, default = 0)
-      )
+    data = wf_df_frag
   )
 
   full_model0 <- lm(
@@ -1945,23 +1936,15 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
       # elevation * tech_typ +
       # dist_coast:tech_typ +
       # elevation:tech_typ +
-      err_l1 +
-      err_l2 +
+      # err_l1 +
+      # err_l2 +
       dest +
       dest_l1 +
       dest_l2 +
       tech_typ * poly(dist_coast, 2) +
       tech_typ * poly(elevation, 3) +
       tech_typ * poly(ws_h_wmean, 3),
-    data = wf_df_frag %>%
-      group_by(coord_id) %>%
-      mutate(
-        err_l1 = lag(error0, default = 0),
-        err_l2 = lag(error0, n = 2, default = 0),
-        dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
-        dest_l1 = lag(dest, default = 0),
-        dest_l2 = lag(dest, n = 2, default = 0)
-      )
+    data = wf_df_frag
   )
   summary(full_model0)
   model_AIC0 <- step(
@@ -2024,8 +2007,8 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
       tech_typ +
       tech_typ *
         norm_power_est0 +
-      err_l1 +
-      err_l2 +
+      # err_l1 +
+      # err_l2 +
       dest +
       dest_l1 +
       dest_l2 +

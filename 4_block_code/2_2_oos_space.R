@@ -908,8 +908,9 @@ saveRDS(
     d0_tag
   )
 )
-
+excluded_models <- c("lm")
 gb_fig_df %>%
+  filter(!model %in% excluded_models) %>%
   filter(time >= t1 - hours(24), time <= t1 + hours(6)) %>%
   ggplot() +
   geom_ribbon(

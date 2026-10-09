@@ -938,7 +938,9 @@ saveRDS(
   )
 )
 # gb_fig_df$time %>% range()
+excluded_models0 <- c("lm")
 gb_fig_df %>%
+  filter(!model %in% excluded_models0) %>%
   filter(time >= t1 - hours(3), time <= t1 + hours(24)) %>%
   ggplot() +
   geom_ribbon(

@@ -3,13 +3,13 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 pow_threshold <- 0.05
 pow_threshold_label <- gsub("\\.", "_", as.character(pow_threshold))
 tol <- 0.01
-norm_dist_tol <- 1
+norm_dist_tol <- 0.3
 
 override_objects <- TRUE
 # rerun_samples <- FALSE
 # prec_init <- log(200)
 # batch_name <- "batch2025"
-batch_name <- "batchY25d150_v9"
+batch_name <- "batchY25d150_v6"
 
 
 if (local_run) {
@@ -93,8 +93,8 @@ names(mod_labels) <- est_cols
 # excluded_models0 <- c("lm_bru")
 # excluded_models <- c("lm_bru", "qm")
 
-excluded_models0 <- c("lm", "lm_bru", "spde1d", "lm_t")
-excluded_models <- c("lm", "lm_bru", "spde1d", "lm_t", "qm")
+excluded_models0 <- c("lm", "", "spde1d", "lm_t")
+excluded_models <- c("lm", "", "spde1d", "lm_t", "qm")
 # mod_labels["lm_bru"] <- "Linear Model"
 
 model_df <- model_catalog %>%

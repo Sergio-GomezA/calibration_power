@@ -9,8 +9,8 @@ override_objects <- FALSE
 # rerun_samples <- FALSE
 # prec_init <- log(200)
 # batch_name <- "batch2025"
-batch_name <- "batchY25d150_v9"
-
+batch_name <- "batchY25d150_v6"
+norm_dist_tol <- 0.3
 
 if (local_run) {
   cat("Running in local mode\n")
@@ -144,7 +144,7 @@ if (!file.exists(gb_day_df_fname) || override_objects) {
   cat("Loading existing GB daily summary\n")
   gb_day_df <- read_parquet(gb_day_df_fname)
 }
-norm_dist_tol <- 0.3
+
 gb_df_fname <- sprintf("GB_aggr_An-%0.1f.parquet", norm_dist_tol)
 GB_df <- read_parquet(file.path(gen_path, gb_df_fname)) %>%
   # rename(time = halfHourEndTime) %>%
@@ -208,8 +208,8 @@ names(mod_labels) <- est_cols
 # excluded_models0 <- c("lm_bru")
 # excluded_models <- c("lm_bru", "qm")
 
-excluded_models0 <- c("lm", "lm_bru")
-excluded_models <- c("lm", "lm_bru", "qm")
+excluded_models0 <- c("lm", "")
+excluded_models <- c("lm", "", "qm")
 # mod_labels["lm_bru"] <- "Linear model"
 # model_catalog <- read.csv("data/model_catalog.csv") %>%
 #   na.omit()
