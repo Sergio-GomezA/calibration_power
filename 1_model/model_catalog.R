@@ -10,8 +10,8 @@ mod_labels <- c(
   # "LM+hour model",
   "AR model",
   # "AR2 model",
-  # "Linear model",
   "Linear model",
+  # "Linear model",
   "LM Beta"
   # "LM t model"
 )
@@ -26,8 +26,8 @@ est_cols <- c(
   # "spde1d",
   "ar1",
   # "ar2",
-  # "lm_bru",
-  "lm_2",
+  "lm_bru",
+  # "lm_2",
   "lm_beta"
   # "lm_t"
 )
@@ -43,8 +43,8 @@ mode_code_prefix <- c(
   # "ts_bru0_1DSPDE_",
   "ts_bru0_ar1_",
   # "ts_bru0_ar2_",
-  # "ts_bru0_lm_",
-  "ts_bru0_lm2_",
+  "ts_bru0_lm_",
+  # "ts_bru0_lm2_",
   "ts_bru0_lmbeta_"
   # "ts_bru0_lmt_"
 )

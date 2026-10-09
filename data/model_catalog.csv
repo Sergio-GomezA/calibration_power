@@ -7,5 +7,5 @@
 "ST model coarse","st0_m1","st_bru0_coarse_","gaussian"
 "ST model","st0_m2","st_bru0_very_coarse_","gaussian"
 "AR model","ar1","ts_bru0_ar1_","gaussian"
-"Linear model","lm_2","ts_bru0_lm2_","gaussian"
+"Linear model","lm_bru","ts_bru0_lm_","gaussian"
 "LM Beta","lm_beta","ts_bru0_lmbeta_","beta"
