@@ -280,7 +280,11 @@ write.csv(
   gzfile("data/generic_powerCurves.csv.gz"),
   row.names = FALSE
 )
-
+write.csv(
+  generic_pc,
+  "data/generic_powerCurves.csv",
+  row.names = FALSE
+)
 ## adding GWA values to catalog ####
 wf_loc <- ref_catalog_2025 %>%
   st_as_sf(coords = c("x_coord", "y_coord"), crs = 27700) %>%
