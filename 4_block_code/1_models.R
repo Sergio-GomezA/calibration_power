@@ -476,10 +476,13 @@ n <- nrow(wf_df_frag)
 cat("Number of records in the dataset:", n, "\n")
 
 dat_endtime <- Sys.time()
+dat_time_taken <- difftime(dat_endtime, dat_starttime, units = "auto")
 cat(
   "Data preparation took: ",
-  round(difftime(dat_endtime, dat_starttime, units = "auto"), 2),
-  " minutes\n"
+  round(dat_time_taken, 2),
+  " ",
+  attr(dat_time_taken, "units"),
+  "\n"
 )
 
 ## 1.1 mesh building #####
@@ -798,10 +801,13 @@ ggsave(
   height = 4
 )
 mod_endtime <- Sys.time()
+f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
-  " minutes\n"
+  round(f_time, 2),
+  " ",
+  attr(f_time, "units"),
+  "\n"
 )
 
 ## 2.01 bru lm model lags diffs ####
@@ -936,10 +942,13 @@ ggsave(
   height = 4
 )
 mod_endtime <- Sys.time()
+f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
-  " minutes\n"
+  round(f_time, 2),
+  " ",
+  attr(f_time, "units"),
+  "\n"
 )
 
 ## 2.01 bru beta model ####
@@ -1082,11 +1091,15 @@ ggsave(
   height = 4
 )
 mod_endtime <- Sys.time()
+f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
-  " minutes\n"
+  round(f_time, 2),
+  " ",
+  attr(f_time, "units"),
+  "\n"
 )
+
 ## 2.01 bru t model ####
 # mod_tag <- "lmt"
 # components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
@@ -1368,10 +1381,13 @@ ggsave(
   height = 4
 )
 mod_endtime <- Sys.time()
+f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
-  " minutes\n"
+  round(f_time, 2),
+  " ",
+  attr(f_time, "units"),
+  "\n"
 )
 ## 2.2 AR2 temporal model ####
 # mod_starttime <- Sys.time()
@@ -1505,10 +1521,13 @@ cat(
 # )
 # plot(bruar2$summary.fitted.values$mean[1:n], wf_df_frag$norm_potential)
 # mod_endtime <- Sys.time()
+# f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
 # cat(
 #   "Model fitting took: ",
-#   round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
-#   " minutes\n"
+#   round(f_time, 2),
+#   " ",
+#   attr(f_time, "units"),
+#   "\n"
 # )
 
 ## 2.3 1D SPDE temporal model ####
@@ -1790,10 +1809,13 @@ if (run_st) {
   )
 
   mod_endtime <- Sys.time()
+  f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
   cat(
     "Model fitting took: ",
-    round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
-    " minutes\n"
+    round(f_time, 2),
+    " ",
+    attr(f_time, "units"),
+    "\n"
   )
   ### plot intensity of spatial field ####
 
@@ -1906,10 +1928,13 @@ if (run_st) {
     mutate(`0.025quant` = NA, `0.975quant` = NA)
 }
 mod_endtime <- Sys.time()
+f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
 cat(
   "Spatial field figures took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
-  " minutes\n"
+  round(f_time, 2),
+  " ",
+  attr(f_time, "units"),
+  "\n"
 )
 ## 2.3 lm wf version ####
 mod_starttime <- Sys.time()
@@ -1978,10 +2003,13 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
   model_AIC0 <- readRDS(file.path(model_path, model_code))
 }
 mod_endtime <- Sys.time()
+f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
-  " minutes\n"
+  round(f_time, 2),
+  " ",
+  attr(f_time, "units"),
+  "\n"
 )
 
 ## 2.4 GB lm version #####
@@ -2059,10 +2087,13 @@ if (!file.exists(file.path(model_path, model_code)) || override_objects) {
   ))
 }
 mod_endtime <- Sys.time()
+f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
-  " minutes\n"
+  round(f_time, 2),
+  " ",
+  attr(f_time, "units"),
+  "\n"
 )
 ## 2.5 QM version ####
 mod_starttime <- Sys.time()
@@ -2103,10 +2134,13 @@ scores_df[[qm_fname]] <- data.frame(
   R2 = cor(wgen_qm, wf_df_frag$norm_potential, use = "complete.obs")^2
 )
 mod_endtime <- Sys.time()
+f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
 cat(
   "Model fitting took: ",
-  round(difftime(mod_endtime, mod_starttime, units = "auto"), 2),
-  " minutes\n"
+  round(f_time, 2),
+  " ",
+  attr(f_time, "units"),
+  "\n"
 )
 # 3. model comparison ####
 
