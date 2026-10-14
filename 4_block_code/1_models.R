@@ -271,7 +271,10 @@ if (!override_objects && length(files_found) > 0) {
         trimws()
     ) %>%
     # filter(date %in% sampled_days) %>%
-    filter(date >= d0 - n.days.before.light, date <= d0 + n.days - 1) %>%
+    filter(
+      date >= d0 - max(n.days.before.fit, n.days.before.light),
+      date <= d0 + n.days - 1
+    ) %>%
     filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
     arrange(site_name) %>%
     group_by(lon, lat, time) %>%
