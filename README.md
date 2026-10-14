@@ -335,5 +335,10 @@ CRPS
  - [x] recreate GB_df
  - [x] check linear model df and qm df
  - [x] check oos space
- - [ ] check GB LM GB_summary in figure
- - [ ] check QM in GB_summary
+ - [x] check GB LM GB_summary in figure (cut-off)
+ - [x] check QM in GB_summary (cut-off)
+
+- [ ] draft with no anomaly exclusion
+- [ ] check anomaly temporal and regional distribution
+- [ ] Correlation of bias space and time
+
