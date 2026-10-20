@@ -341,4 +341,10 @@ CRPS
 - [ ] draft with no anomaly exclusion
 - [ ] check anomaly temporal and regional distribution
 - [ ] Correlation of bias space and time
+  - [ ] Seasonality
+  - [ ] Regional clusters
+  - [ ] Big events (site count / long durations)
 
+- [x] New calibration articles summary 
+- [ ] calibration test with longer times series LM model
+- [ ] programatically include or exclude models
