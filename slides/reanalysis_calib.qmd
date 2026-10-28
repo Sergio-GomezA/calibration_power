@@ -1,0 +1,47 @@
+---
+title: "ERA 5 calibration to Elexon power"
+author:
+  - "S. Gomez$^1$"
+institute:
+   - $^1$School of Mathematics, University of Edinburgh
+institute-short: "UoE"
+date: "2026-10-28"
+format: 
+  beamer:
+    theme: Rochester
+    colortheme: spruce
+    fonttheme: professionalfonts
+    fig-cap-location: top
+    toc: true
+    slide-level: 2
+    split-bib: true
+    output-file: "calibration_slides_26-10-28.pdf"
+header-includes:
+  - \usepackage{graphicx}
+  - \setbeamerfont{itemize/enumerate body}{size=\footnotesize}
+  - \setbeamerfont{itemize/enumerate subbody}{size=\footnotesize}
+  - \setbeamerfont{itemize/enumerate subsubbody}{size=\footnotesize}
+  - \usepackage{tikz}
+  - \usetikzlibrary{positioning, fit, arrows.meta, decorations.pathreplacing, backgrounds}
+fontsize: 12pt
+aspectratio: 169
+editor: source
+bibliography: calib_pow_ref.bib
+nocite: "@*"
+---
+
+
+## Bias
+
+## Low wind events
+
+ - Important at aggregate GB level for system operation and security of supply.
+ - We define low wind events as periods of time when the total GB wind power generation is below a certain threshold (e.g., 5% of installed capacity).
+ - We can analyze the distribution of these events in terms of their duration, frequency, and severity (e.g., cumulative shortfall).
+ - We can also compare the observed low wind events with those simulated by the ERA5 reanalysis data to assess the accuracy of the reanalysis in capturing these events.
+ - Ideally we'll model shortfall events, considering demand and other generation sources, but for now we focus on wind generation only.
+
+## Capacity Factor distribution
+
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/national_CF_distribution.png}
