@@ -26,14 +26,11 @@ header-includes:
 fontsize: 12pt
 aspectratio: 169
 editor: source
-bibliography: calib_pow_ref.bib
-nocite: "@*"
+# bibliography: calib_pow_ref.bib
+# nocite: "@*"
 ---
 
-
-## Bias
-
-## Low wind events
+# Low wind events EDA
 
  - Important at aggregate GB level for system operation and security of supply.
  - We define low wind events as periods of time when the total GB wind power generation is below a certain threshold (e.g., 5% of installed capacity).
@@ -44,4 +41,171 @@ nocite: "@*"
 ## Capacity Factor distribution
 
 
+::: {.columns}
+
+::: {.column width="40%"}
+- Historical distribution of national capacity factor (CF) for wind power in GB.
+- The CF is defined as the ratio of actual power output to the maximum possible output in one hour
+- Data spans from 2019 up to 2025 for 147 locations across GB.
+:::
+
+::: {.column width="60%"}
+\centering
+
 \includegraphics[width=0.8\textwidth]{../fig/lwe_eda/national_CF_distribution.png}
+:::
+
+:::
+
+## Seasonal variation of CF
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/national_CF_monthly_boxplot.png}
+:::
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/national_CF_monthly_density.png}
+:::
+
+:::
+
+
+## CF quantiles seasonality
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/national_CF_monthly_quantiles.png}
+:::
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/national_CF_quarterly_quantiles.png}
+:::
+
+:::
+
+## Frequency of events below 5% CF
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/annual_event_frequency.png}
+:::
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/seasonal_event_frequency.png}
+:::
+
+:::
+
+## Duration of events below 5% CF
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/event_duration_histogram.png}
+:::
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/event_duration_boxplot.png}
+:::
+
+:::
+
+
+## Interevent time of events below 5% CF
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/inter_event_time_histogram.png}
+:::
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/inter_event_time_histogram_log.png}
+:::
+
+:::
+
+
+## Severity of events below 5% CF
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/cumulative_shortfall_histogram.png}
+:::
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/cumulative_shortfall_histogram_log.png}
+:::
+
+:::
+
+
+## Severity of events below 5% CF, annual and seasonal variation
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/annual_shortfall.png}
+:::
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/seasonal_shortfall_boxplot_log.png}
+:::
+
+:::
+
+
+## Worst low wind events
+
+::: {.columns}
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/longest_events_duration.png}
+:::
+
+::: {.column width="50%"}
+\centering
+
+\includegraphics[width=0.8\textwidth]{../fig/lwe_eda/worst_events_shortfall.png}
+:::
+
+:::
+
+
+# Bias EDA
+

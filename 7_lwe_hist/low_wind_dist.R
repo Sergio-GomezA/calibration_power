@@ -299,8 +299,12 @@ print(national_quantiles)
 q01 <- unname(
   quantile(national$capacity_factor, q_low, na.rm = TRUE)
 )
+q05 <- unname(
+  quantile(national$capacity_factor, 0.05, na.rm = TRUE)
+)
 
 cat("National 1% capacity-factor threshold:", q01, "\n")
+cat("National 5% capacity-factor threshold:", q05, "\n")
 cat("Equivalent percentage of installed capacity:", 100 * q01, "%\n")
 
 # Distribution: histogram with 1% threshold
@@ -320,9 +324,19 @@ p_distribution <- ggplot(
     linetype = "dashed",
     linewidth = 1
   ) +
+  geom_vline(
+    xintercept = q05,
+    linetype = "dashed",
+    linewidth = 1,
+    colour = "red"
+  ) +
   labs(
     title = "Distribution of national wind capacity factor",
-    subtitle = sprintf("Dashed line: empirical 1st percentile = %.3f", q01),
+    subtitle = sprintf(
+      "Dashed line: empirical 1st percentile = %.3f\nDashed line (red): empirical 5th percentile = %.3f",
+      q01,
+      q05
+    ),
     x = "National capacity factor",
     y = "Density"
   ) +
@@ -523,15 +537,16 @@ p_annual <- ggplot(
   annual_quantiles,
   aes(x = year, y = q01)
 ) +
-  geom_line() +
-  geom_point() +
+  geom_line(col = blues9[7]) +
+  geom_line(aes(y = q05), colour = blues9[4]) +
+  # geom_point() +
   labs(
-    title = "Annual variation in the 1st percentile",
+    title = "Annual variation in the 1st and 5th percentiles",
     x = "Year",
-    y = "Annual 1st percentile of capacity factor"
+    y = "Annual 1st and 5th percentiles of capacity factor"
   ) +
   theme_minimal() +
-  coord_cartesian(ylim = c(0, 0.05))
+  coord_cartesian(ylim = c(0, 0.1))
 
 print(p_annual)
 ggsave(
@@ -564,15 +579,19 @@ p_annualq <- ggplot(
   annualquarter_quantiles,
   aes(x = quarter, y = q01)
 ) +
-  geom_line() +
-  geom_point() +
+  geom_line(col = blues9[7]) +
+  # geom_point() +
+  geom_line(
+    aes(y = q05),
+    colour = blues9[4]
+  ) +
   labs(
-    title = "Quarterly variation in the 1st percentile",
+    title = "Quarterly variation in the 1st and 5th percentiles",
     x = "Quarter (year + quarter)",
-    y = "Quarterly 1st percentile of capacity factor"
+    y = "Quarterly 1st and 5th percentiles of capacity factor"
   ) +
   theme_minimal() +
-  coord_cartesian(ylim = c(0, 0.1)) #+
+  coord_cartesian(ylim = c(0, 0.15)) #+
 # scale_x_date(
 #   date_breaks = "3 months",
 #   labels = function(x) {
