@@ -8,7 +8,7 @@ tables_path <- "~/ownCloud-s2441782@datasync.ed.ac.uk/projects/calibration/calib
 dir.exists(tables_path) || dir.create(tables_path, recursive = TRUE)
 
 override_objects <- FALSE
-batch_name <- "bias_eda"
+batch_name <- "bias_eda_test"
 norm_dist_tol <- 1
 
 if (local_run) {
@@ -284,98 +284,99 @@ GB_df <- GB_df %>%
   ) %>%
   ungroup()
 
-missing_hours <- GB_df %>%
-  filter(tech_typ == "Wind Onshore") %>%
-  distinct(time_index) %>%
-  anti_join(
-    tibble(
-      time_index = seq(
-        min(.$time_index, na.rm = TRUE),
-        max(.$time_index, na.rm = TRUE),
-        by = 1
-      )
-    ),
-    by = "time_index"
-  ) %>%
-  arrange(time_index)
+# missing_hours <- GB_df %>%
+#   filter(tech_typ == "Wind Onshore") %>%
+#   distinct(time_index) %>%
+#   anti_join(
+#     tibble(
+#       time_index = seq(
+#         min(.$time_index, na.rm = TRUE),
+#         max(.$time_index, na.rm = TRUE),
+#         by = 1
+#       )
+#     ),
+#     by = "time_index"
+#   ) %>%
+#   arrange(time_index)
 
-missing_hours
+# missing_hours
 
-all_hours <- with(
-  GB_df,
-  seq(
-    min(time_index, na.rm = TRUE),
-    max(time_index, na.rm = TRUE),
-    by = 1
-  )
-)
-missing_time_index <- which(!all_hours %in% GB_df$time_index)
+# all_hours <- with(
+#   GB_df,
+#   seq(
+#     min(time_index, na.rm = TRUE),
+#     max(time_index, na.rm = TRUE),
+#     by = 1
+#   )
+# )
+# missing_time_index <- which(!all_hours %in% GB_df$time_index)
 
-GB_df <- GB_df %>%
-  complete(
-    time_index = all_hours,
-    tech_typ,
-    fill = list(
-      norm_power_est0 = NA,
-      norm_potential = NA,
-      ws_h_wmean = NA,
-      capacity = NA,
-      err = NA,
-      error0 = NA,
-      date = as.Date(NA),
-      err_l1 = NA,
-      err_l2 = NA,
-      dest = NA,
-      dest_l1 = NA,
-      dest_l2 = NA
-    )
-  )
+# GB_df <- GB_df %>%
+#   complete(
+#     time_index = all_hours,
+#     tech_typ,
+#     fill = list(
+#       norm_power_est0 = NA,
+#       norm_potential = NA,
+#       ws_h_wmean = NA,
+#       capacity = NA,
+#       err = NA,
+#       error0 = NA,
+#       date = as.Date(NA),
+#       err_l1 = NA,
+#       err_l2 = NA,
+#       dest = NA,
+#       dest_l1 = NA,
+#       dest_l2 = NA
+#     )
+#   )
 
+# mf <- model.frame(
+#   formula(model_AIC0_agg),
+#   data = GB_df,
+#   na.action = na.omit
+# )
+# X_all <- model.matrix(
+#   terms(model_AIC0_agg),
+#   data = mf
+# )
+# y_all <- model.response(mf)
+# idx <- mf$tech_typ == "Wind Onshore"
 
-mf <- model.frame(
-  formula(model_AIC0_agg),
-  data = GB_df,
-  na.action = na.omit
-)
-X_all <- model.matrix(
-  terms(model_AIC0_agg),
-  data = mf
-)
-y_all <- model.response(mf)
-idx <- mf$tech_typ == "Wind Onshore"
+# dat_on <- GB_df[
+#   match(rownames(mf)[idx], rownames(GB_df)),
+# ]
+# y <- y_all[idx]
+# X <- X_all[idx, , drop = FALSE]
 
+# # Sort chronologically
+# ord <- order(dat_on$time_index)
+# dat_on <- dat_on[ord, ]
+# y <- y[ord]
+# X <- X[ord, , drop = FALSE]
+# stopifnot(!anyDuplicated(dat_on$time_index))
 
-dat_on <- GB_df[
-  match(rownames(mf)[idx], rownames(GB_df)),
-]
-y <- y_all[idx]
-X <- X_all[idx, , drop = FALSE]
+# table(diff(dat_on$time_index))
 
-# Sort chronologically
-ord <- order(dat_on$time_index)
-dat_on <- dat_on[ord, ]
-y <- y[ord]
-X <- X[ord, , drop = FALSE]
-stopifnot(!anyDuplicated(dat_on$time_index))
+# segment <- cumsum(c(
+#   TRUE,
+#   diff(dat_on$time_index) != 1
+# ))
 
-table(diff(dat_on$time_index))
-
-segment <- cumsum(c(
-  TRUE,
-  diff(dat_on$time_index) != 1
-))
-
-segment_sizes <- table(segment)
-longest_segment <- as.integer(names(segment_sizes)[
-  which.max(segment_sizes)
-])
+# segment_sizes <- table(segment)
+# longest_segment <- as.integer(names(segment_sizes)[
+#   which.max(segment_sizes)
+# ])
 
 # inla model
 mod_starttime <- Sys.time()
+# inidate <- "2019-01-01"
+inidate <- "2025-01-01"
 prec_init <- log(200) # for u
 ar_tag <- "ar1"
 components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
   techno(tech_typ, model = "iid") + # random intercept by tech_typ
+  month(month, model = "rw2", constr = TRUE, cyclic = TRUE) + # smooth correction month
   slope(
     tech_typ,
     model = "iid",
@@ -399,13 +400,12 @@ components0 <- ~ Intercept(1, prec.linear = exp(-7)) + # latent intercept
     )
   )
 
-
-model_code <- sprintf("ts_agg0_%s_%s.rds", ar_tag, "full")
+d0_tag <- "full"
+model_code <- sprintf("ts_agg0_%s_%s.rds", ar_tag, d0_tag)
 model_fname <- file.path(
   model_path,
   model_code
 )
-
 
 cat(
   "-------------------------------------------------------------------------------------------------\n"
@@ -418,6 +418,7 @@ bruar1 <- bru(
   components = components0,
   formula = norm_potential ~ Intercept +
     techno +
+    month +
     slope +
     wind +
     u,
@@ -430,12 +431,106 @@ bruar1 <- bru(
       )
     )
   ),
-  data = GB_df %>% filter(time >= "2024-01-01"),
+  data = GB_df %>% filter(time >= inidate),
   options = base_bru_options
 )
 
 summary(bruar1)
-# Feature engineering
-# Events
+end_time <- Sys.time()
+cat(
+  "Time taken for ar1 model fitting: ",
+  round(difftime(end_time, mod_starttime, units = "mins"), 2),
+  " minutes\n"
+)
+
+effect_names <- names(bruar1$summary.random)
+excluded_effects <- c("u")
+effect_names <- setdiff(effect_names, excluded_effects)
+for (effect in effect_names) {
+  if (effect == "wind") {
+    n_repl <- 2
+    repl_names <- c("Offshore", "Onshore")
+  } else {
+    n_repl <- 1
+    repl_names <- NULL
+  }
+  plot.effects(
+    bruar1,
+    effect,
+    n.replicate = n_repl,
+    replicate_names = repl_names,
+    show.plot = TRUE
+  )
+  ggsave(
+    sprintf(
+      "%s/%s/fig/fit/%s_effect_%s_%s.pdf",
+      output_path,
+      batch_name,
+      effect,
+      ar_tag,
+      d0_tag
+    ),
+    width = 6,
+    height = 4,
+    create.dir = TRUE
+  )
+}
+plot.hyper.dens(bruar1)
+ggsave(
+  sprintf(
+    "%s/%s/fig/fit/hyperparameters_%s_%s.pdf",
+    output_path,
+    batch_name,
+    ar_tag,
+    d0_tag
+  ),
+  width = 6,
+  height = 4
+)
+
+n <- nrow(GB_df %>% filter(time >= inidate))
+residuals_ar1 <- GB_df %>%
+  filter(time >= inidate) %>%
+  mutate(
+    res_ar1 = bruar1$summary.fitted.values$mean[1:n] - norm_potential,
+    res_ar1_std = scale(res_ar1)
+  )
+
+pacf_df <- residuals_ar1 %>%
+  arrange(tech_typ, time) %>%
+  group_by(tech_typ) %>%
+  summarise(
+    pacf = list(
+      pacf(res_ar1, plot = FALSE, na.action = na.pass)
+    ),
+    n = n(),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    lag = map(pacf, ~ .x$lag),
+    acf = map(pacf, ~ .x$acf),
+    ci = 1.96 / sqrt(n)
+  ) %>%
+  dplyr::select(-pacf) %>%
+  unnest(c(lag, acf))
+
+pacf_df %>%
+  ggplot(aes(x = lag, y = acf)) +
+  geom_hline(yintercept = 0, colour = "grey60") +
+  geom_segment(aes(xend = lag, yend = 0)) +
+  facet_wrap(~tech_typ, scales = "free_y") +
+  labs(
+    x = "Lag",
+    y = "Partial autocorrelation"
+  ) +
+  theme_bw() +
+  coord_cartesian(ylim = c(-0.4, 1)) +
+  scale_y_continuous(breaks = seq(-0.3, 1, by = 0.2))
+ggsave(
+  sprintf("fig/%s/GB_ar1_full_pacf.pdf", batch_name),
+  width = 10,
+  height = 6,
+  create.dir = TRUE
+)
 
 # Cluster
