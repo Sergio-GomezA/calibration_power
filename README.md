@@ -348,3 +348,9 @@ CRPS
 - [x] New calibration articles summary 
 - [ ] calibration test with longer times series LM model
 - [ ] programatically include or exclude models
+
+- [ ] job file for a single model all years
+  - [ ] print everything
+  - [ ] diagnostics
+  - [ ] plot predictions and 
+  - [ ] evaluate performance
