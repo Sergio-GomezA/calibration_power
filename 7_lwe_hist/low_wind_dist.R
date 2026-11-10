@@ -219,6 +219,14 @@ national <- pwr_curv_df %>%
           capacity > 0
       ]
     ),
+    power_est0_MW = sum(
+      power_est0[
+        !is.na(power_est0) &
+          !is.na(capacity) &
+          capacity > 0
+      ]
+    ),
+    ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
     .groups = "drop"
   ) %>%
   mutate(
