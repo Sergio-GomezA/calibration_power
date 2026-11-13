@@ -52,3 +52,7 @@ install.packages("geosphere", temp_lib, dependencies = TRUE)
 install.packages("terra", temp_lib, dependencies = TRUE)
 
 install.packages("scoringRules", temp_lib, dependencies = TRUE)
+
+install.packages(c("DBI", "duckdb"))
+
+install.packages(c("DBI", "duckdb"), temp_lib, dependencies = TRUE)
