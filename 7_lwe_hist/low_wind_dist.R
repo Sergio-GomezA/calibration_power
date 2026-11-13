@@ -666,7 +666,26 @@ write.csv(
 # p_monthly_quantiles, p_seasonal_box, p_annual
 
 # Wind events #######
-
+national <- fread(file.path(
+  lwe_output_tabpath,
+  "national_hourly_generation.csv"
+)) %>%
+  mutate(
+    time = as.POSIXct(time, tz = "UTC"),
+    # month = lubridate::month(time, label = TRUE, abbr = TRUE),
+    # month_num = month(time),
+    # year = year(time),
+    # season = case_when(
+    #   month_num %in% c(12, 1, 2) ~ "Winter",
+    #   month_num %in% 3:5 ~ "Spring",
+    #   month_num %in% 6:8 ~ "Summer",
+    #   month_num %in% 9:11 ~ "Autumn"
+    # ),
+    # season = factor(
+    #   season,
+    #   levels = c("Winter", "Spring", "Summer", "Autumn")
+    # )
+  )
 # 1. Calculate the global 1st-percentile threshold
 q01 <- quantile(
   national$capacity_factor,
@@ -1256,16 +1275,16 @@ print(
 
 write.csv(
   event_stats,
-  file.path(tables_path, "low_wind_event_stats.csv"),
+  file.path(lwe_output_tabpath, "low_wind_event_stats.csv"),
   row.names = FALSE
 )
 write.csv(
   annual_event_stats,
-  file.path(tables_path, "low_wind_annual_stats.csv"),
+  file.path(lwe_output_tabpath, "low_wind_annual_stats.csv"),
   row.names = FALSE
 )
 write.csv(
   seasonal_event_stats,
-  file.path(tables_path, "low_wind_seasonal_stats.csv"),
+  file.path(lwe_output_tabpath, "low_wind_seasonal_stats.csv"),
   row.names = FALSE
 )
