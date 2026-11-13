@@ -62,7 +62,14 @@ if (model_id == 1) {
       options = base_bru_options
     )
 
-    scores_df[[model_code]] <- extract_score_model(brulm)
+    scores_df[[model_code]] <- extract_score_model(brulm) %>%
+      mutate(
+        R2 = cor(
+          brulm$summary.fitted.values[1:n, "mean"],
+          wf_dt$norm_potential,
+          use = "complete.obs"
+        )^2
+      )
     pit_list[[model_code]] <- extract_pit_model(brulm, wf_dt)
 
     if (save_models) {
@@ -225,7 +232,15 @@ if (model_id == 2) {
       options = base_bru_options
     )
 
-    scores_df[[model_code]] <- extract_score_model(brulm)
+    n <- nrow(wf_dt)
+    scores_df[[model_code]] <- extract_score_model(brulm) %>%
+      mutate(
+        R2 = cor(
+          brulm$summary.fitted.values[1:n, "mean"],
+          wf_dt$norm_potential,
+          use = "complete.obs"
+        )^2
+      )
     pit_list[[model_code]] <- extract_pit_model(brulm)
 
     if (save_models) {
@@ -464,7 +479,7 @@ db_path <- file.path(
   output_path,
   batch_name,
   "summaries/fit",
-  sprintf("model_results_%s.duckdb", d0_tag)
+  sprintf("model_fscores_%s.duckdb", d0_tag)
 )
 
 dir.create(dirname(db_path), recursive = TRUE, showWarnings = FALSE)
@@ -489,9 +504,18 @@ dbWriteTable(
 
 dbDisconnect(con)
 
-## fitted values df ####
 
-model_df0 <- wf_df_frag %>%
+## 3.2 model labels and fitted values ####
+model_catalog <- read.csv("data/model_catalog.csv")
+mod_labels <- model_catalog$mod_labels
+est_cols <- model_catalog$est_cols
+
+n_models <- length(est_cols)
+n <- nrow(wf_dt)
+names(mod_labels) <- est_cols
+
+## fitted values df ####
+model_df0 <- wf_dt %>%
   ungroup() %>%
   mutate(
     # lm = predict(model_AIC0, newdata = .),
@@ -500,7 +524,7 @@ model_df0 <- wf_df_frag %>%
     # spde1d = bru1d$summary.fitted.values[1:n, "mean"],
     # st0_m2 = bru0$summary.fitted.values[1:n, "mean"],
     qm = wgen_qm,
-    agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag),
+    agg_lm = predict(model_AIC0_agg, newdata = wf_dt),
     lm_bru = brulm$summary.fitted.values[1:n, "mean"],
     # lm2 = brulm2$summary.fitted.values[1:n, "mean"],
     # lm_beta = brulmbeta$summary.fitted.values[1:n, "mean"]
@@ -535,6 +559,193 @@ if (extension != "rds") {
 }
 
 
+## 3.1 Exploring fitted values ####
+
+if (extension != "rds") {
+  model_df0 <- st_read(model_df_fname)
+} else {
+  model_df0 <- readRDS(model_df_fname)
+}
+
+pos_breaks <- with(
+  model_df0,
+  quantile(elevation[elevation > 0], probs = seq(0, 1, 1 / 3))
+)
+pos_levels <- levels(cut(
+  model_df0$elevation[model_df0$elevation > 0],
+  breaks = pos_breaks,
+  include.lowest = TRUE
+))
+
+
+## summary table for figures and tables #####
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+cat("Generating summary tables and figures\n")
+cat(
+  "-------------------------------------------------------------------------------------------------\n"
+)
+df_long0 <- model_df0 %>%
+  filter(!anomaly) %>%
+  dplyr::select(
+    date,
+    time,
+    site_name,
+    coord_id,
+    elevation,
+    dist_coast,
+    capacity,
+    tech_typ,
+    p_group3,
+    norm_potential,
+    any_of(est_cols)
+  ) %>%
+  mutate(
+    hour = hour(time),
+    elevation = pmax(0, elevation),
+    p_group3 = factor(p_group3, levels = c("low", "mid", "high")),
+    dist_coast_g4 = cut(
+      dist_coast,
+      breaks = quantile(dist_coast, probs = seq(0, 1, 0.25)),
+      include.lowest = TRUE
+    ),
+    elevation_g4 = ifelse(
+      elevation == 0,
+      "0",
+      as.character(
+        cut(
+          elevation,
+          breaks = pos_breaks,
+          include.lowest = TRUE,
+          # labels = c("Low", "Mid", "High")
+        )
+      )
+    ),
+    elevation_g4 = factor(
+      elevation_g4,
+      levels = c("0", pos_levels)
+    )
+  ) %>%
+  pivot_longer(
+    cols = any_of(est_cols),
+    names_to = "model",
+    values_to = "estimate"
+  ) %>%
+  mutate(
+    estimate = pmin(1, pmax(0, estimate)), # clipping estimates to [0, 1]
+    err = estimate - norm_potential,
+    p_group3 = forcats::fct_rev(p_group3),
+    model = factor(model, levels = est_cols, labels = mod_labels)
+  )
+
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    # MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    model = mod_labels[model]
+  ) %>%
+  arrange(desc(RMSE))
+metrics_table
+write.csv(
+  metrics_table,
+  sprintf(
+    "%s/%s/summaries/fit/calib_metrics_%s_%s.csv",
+    output_path,
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  row.names = FALSE
+)
+
+## 3.2 aggregated time series version ####
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(time, model) %>%
+  summarise(
+    across(
+      c(norm_potential, estimate),
+      ~ sum(. * capacity) / sum(capacity)
+    ),
+    .groups = "drop_last"
+  ) %>%
+  group_by(model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    model = mod_labels[model]
+  ) %>%
+  arrange(desc(RMSE))
+metrics_table
+write.csv(
+  metrics_table,
+  sprintf(
+    "%s/%s/summaries/fit/calib_metrics_%s_%s_gb.csv",
+    output_path,
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  row.names = FALSE
+)
+
+
+### 3.3.2 by regime #####
+metrics_table <- df_long0 %>%
+  st_drop_geometry() %>%
+  group_by(p_group3, model) %>%
+  summarise(
+    RMSE = ModelMetrics::rmse(actual = norm_potential, predicted = estimate),
+    MAE = ModelMetrics::mae(actual = norm_potential, predicted = estimate),
+    MAPE = mape(actual = norm_potential, predicted = estimate, pos_only = TRUE),
+    MDAPE = mdape(
+      actual = norm_potential,
+      predicted = estimate,
+      pos_only = TRUE
+    ),
+    Bias = mean(estimate - norm_potential, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(p_group3, desc(RMSE))
+metrics_table
+
+write.csv(
+  metrics_table,
+  sprintf(
+    "%s/%s/summaries/fit/calib_metrics_%s_%s_regime.csv",
+    output_path,
+    batch_name,
+    mesh_label,
+    d0_tag
+  ),
+  row.names = FALSE
+)
+
+
+endtime <- Sys.time()
 timediff <- difftime(endtime, starttime, units = "auto")
 
 cat(sprintf(
