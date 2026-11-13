@@ -299,6 +299,142 @@ if (model_id == 2) {
 
   endtime <- Sys.time()
 }
+
+# if (model_id == 3) {
+## 2.4 GB lm version #####
+mod_starttime <- Sys.time()
+model_code <- sprintf("gblm_model_aic0_%s.rds", d0_tag)
+
+if (!file.exists(file.path(model_path, model_code)) || override_objects) {
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  cat("Fitting GB aggregated LM\n")
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+
+  # samp_gb <- GB_df %>%
+  #   filter(date >= d0 - n.days.before.light, date <= d0 + n.days - 1)
+
+  base_model_agg <- lm(
+    norm_potential ~ norm_power_est0,
+    data = samp_gb
+  )
+
+  full_model0_agg <- lm(
+    norm_potential ~
+      tech_typ +
+      tech_typ *
+        norm_power_est0 +
+      # err_l1 +
+      # err_l2 +
+      dest +
+      dest_l1 +
+      dest_l2 +
+      # norm_power_est0 * month +
+      # hour +
+      # dist_coast * tech_typ +
+      # elevation * tech_typ +
+      # dist_coast:tech_typ +
+      # elevation:tech_typ +
+      # tech_typ * poly(dist_coast, 2) +
+      # tech_typ * poly(elevation, 3) +
+      tech_typ * poly(ws_h_wmean, 3),
+    data = samp_gb
+  )
+  summary(full_model0_agg)
+
+  model_AIC0_agg <- step(
+    base_model_agg,
+    scope = list(lower = base_model_agg, upper = full_model0_agg),
+    # steps = 5,
+    k = 2,
+    trace = 0
+  )
+  summary(model_AIC0_agg)
+  scores_df[[model_code]] <- data.frame(
+    AIC = AIC(model_AIC0_agg),
+    BIC = BIC(model_AIC0_agg),
+    logLik = as.numeric(logLik(model_AIC0_agg)),
+    deviance = deviance(model_AIC0_agg),
+    R2 = summary(model_AIC0_agg)$r.squared
+  )
+  if (save_models) {
+    saveRDS(
+      model_AIC0_agg,
+      file.path(model_path, model_code)
+    )
+  } else {
+    model_list[[model_code]] <- model_AIC0_agg
+  }
+} else {
+  cat("Loading existing GB aggregated LM\n")
+  model_AIC0_agg <- readRDS(file.path(
+    model_path,
+    model_code
+  ))
+}
+mod_endtime <- Sys.time()
+f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
+cat(
+  "Model fitting took: ",
+  round(f_time, 2),
+  " ",
+  attr(f_time, "units"),
+  "\n"
+)
+# }
+
+## 2.5 QM version ####
+# if (model_id == 4) {
+mod_starttime <- Sys.time()
+qm_fname <- sprintf("qm_model_%s.rds", d0_tag)
+
+if (!file.exists(file.path(model_path, qm_fname)) || override_objects) {
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  cat("Fitting quantile mapping model\n")
+  cat(
+    "-------------------------------------------------------------------------------------------------\n"
+  )
+  qqmod <- fitQmap(
+    obs = wf_dt %>% filter(!anomaly) %>% pull(norm_potential),
+    mod = wf_dt %>% filter(!anomaly) %>% pull(norm_power_est0),
+    method = "QUANT"
+  )
+
+  if (save_models) {
+    saveRDS(
+      qqmod,
+      file.path(model_path, qm_fname)
+    )
+  } else {
+    model_list[[qm_fname]] <- qqmod
+  }
+} else {
+  cat("Loading existing quantile mapping model\n")
+  qqmod <- readRDS(file.path(model_path, qm_fname))
+}
+
+wgen_qm <- with(
+  wf_dt,
+  doQmapQUANT(norm_power_est0, qqmod, type = "linear")
+)
+scores_df[[qm_fname]] <- data.frame(
+  R2 = cor(wgen_qm, wf_dt$norm_potential, use = "complete.obs")^2
+)
+mod_endtime <- Sys.time()
+f_time <- difftime(mod_endtime, mod_starttime, units = "auto")
+cat(
+  "Model fitting took: ",
+  round(f_time, 2),
+  " ",
+  attr(f_time, "units"),
+  "\n"
+)
+# }
 cat(
   "-------------------------------------------------------------------------------------------------\n"
 )
@@ -353,7 +489,51 @@ dbWriteTable(
 
 dbDisconnect(con)
 
-## save fitted values
+## fitted values df ####
+
+model_df0 <- wf_df_frag %>%
+  ungroup() %>%
+  mutate(
+    # lm = predict(model_AIC0, newdata = .),
+    # ar1 = bruar1$summary.fitted.values[1:n, "mean"],
+    # ar2 = bruar2$summary.fitted.values[1:n, "mean"],
+    # spde1d = bru1d$summary.fitted.values[1:n, "mean"],
+    # st0_m2 = bru0$summary.fitted.values[1:n, "mean"],
+    qm = wgen_qm,
+    agg_lm = predict(model_AIC0_agg, newdata = wf_df_frag),
+    lm_bru = brulm$summary.fitted.values[1:n, "mean"],
+    # lm2 = brulm2$summary.fitted.values[1:n, "mean"],
+    # lm_beta = brulmbeta$summary.fitted.values[1:n, "mean"]
+    # lm_t = brulmt$summary.fitted.values[1:n, "mean"]
+  )
+
+model_df_fname <- sprintf(
+  "%s/%s/data/fit/calibration_df_%s.%s",
+  output_path,
+  batch_name,
+  d0_tag,
+  extension
+)
+
+if (extension == "geojson" & file.exists(model_df_fname)) {
+  cat("GeoJSON file already exists. Overwriting...\n")
+  file.remove(model_df_fname)
+}
+
+if (extension != "rds") {
+  st_write(
+    model_df0,
+    model_df_fname,
+    driver = driver,
+    append = FALSE,
+  )
+} else {
+  saveRDS(
+    model_df0,
+    model_df_fname
+  )
+}
+
 
 timediff <- difftime(endtime, starttime, units = "auto")
 
