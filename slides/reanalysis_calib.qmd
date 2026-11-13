@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2026-10-28"
+date: "2026-11-13"
 format: 
   beamer:
     theme: Rochester
@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "calibration_slides_26-10-28.pdf"
+    output-file: "calibration_slides_26-11-13.pdf"
 header-includes:
   - \usepackage{graphicx}
   - \setbeamerfont{itemize/enumerate body}{size=\footnotesize}
@@ -29,6 +29,170 @@ editor: source
 # bibliography: calib_pow_ref.bib
 # nocite: "@*"
 ---
+
+# Calibration of long term series of wind power
+
+ - Using 6 years of hourly data (2019-2024) to fit models.
+ - Model are fitted and WF level and then aggregated to GB level.
+ - Model validation with year 2025 data.
+ - Also accuracy during low wind events is assessed.
+
+### Next
+ - Reconstruct long term series of wind power
+ - Options
+   - Iain: Fix fleet and use ERA5 since 80s
+   - Hannah: Use climate projections (daily series downscaled to hourly)
+   - From REPD we can get upcoming wind farms (Accepted and Awaiting Construction)
+
+## Models fitted
+
+
+
+::: {.columns}
+
+::: {.column width="40%"}
+ - Quantile mapping
+ - Bayesian model with smooth effects (terrain + temporal + turbine type + wind speed)
+ - Aggregated GB onshore/offshore models for benchmark
+:::
+
+::: {.column width="60%"}
+\centering
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+library(knitr)
+library(dplyr)
+
+metrics <- read.csv(
+  "/home/s2441782/Documents/elexon/caloutput/batchLT_test/summaries/fit/calib_metrics_250101.csv"
+) %>% select(-MDAPE)
+
+kable(
+  metrics,
+  format = "latex",
+  booktabs = TRUE,
+  digits = 3,
+  caption = NULL
+)
+```
+
+:::
+
+:::
+
+## Model vs observed in 2025
+
+::: {.columns}
+
+::: {.column width="40%"}
+- Coverage remains similar to ST exercise
+- GB model looks better on aggregated series
+- QM tends to have better accuracy in low regime than LM
+:::
+
+::: {.column width="60%"}
+\centering
+Calibrated estimates vs observed \
+
+\footnotesize Date: 2025-01-01\
+
+\includegraphics[width=0.8\textwidth,height=5cm,keepaspectratio]{/home/s2441782/Documents/elexon/caloutput/batchLT_test/fig/oos/GB_pred_band_time_250101.pdf}
+:::
+
+:::
+
+## Model vs observed in 2025
+
+\centering
+Calibrated estimates vs observed \
+
+\footnotesize LWE period 2025-07-28 22:00:00 \
+
+\includegraphics[width=0.8\textwidth,height=5cm,keepaspectratio]{/home/s2441782/Documents/elexon/caloutput/batchLT_test/fig/oos/GB_pred_band_tlwe_25082301.pdf}
+
+## Model vs observed in 2025
+
+\centering
+Calibrated estimates vs observed \
+
+\footnotesize LWE period 2025-07-28 22:00:00 \
+
+\includegraphics[width=0.8\textwidth,height=5cm,keepaspectratio]{/home/s2441782/Documents/elexon/caloutput/batchLT_test/fig/oos/GB_pred_band_tlwe_25072822.pdf}
+
+
+
+## Performance at aggregate GB level
+\centering
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+library(knitr)
+library(dplyr)
+
+metrics <- read.csv(
+  "/home/s2441782/Documents/elexon/caloutput/batchLT_test/summaries/fit/calib_metrics_250101_gb.csv"
+) %>% select(-MDAPE)
+
+kable(
+  metrics,
+  format = "latex",
+  booktabs = TRUE,
+  digits = 3,
+  caption = NULL
+)
+```
+
+## Performance by regime
+\centering
+\footnotesize
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+library(knitr)
+library(dplyr)
+
+metrics <- read.csv(
+  "/home/s2441782/Documents/elexon/caloutput/batchLT_test/summaries/fit/calib_metrics_250101_regime.csv"
+) %>% select(-MDAPE)
+
+kable(
+  metrics,
+  format = "latex",
+  booktabs = TRUE,
+  digits = 3,
+  caption = NULL
+)
+```
+
+## Performance during low wind events
+\centering
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+
+library(knitr)
+library(dplyr)
+
+metrics <- read.csv(
+  "/home/s2441782/Documents/elexon/caloutput/batchLT_test/summaries/fit/calib_metrics_250101_lwe.csv"
+) %>% select(-MDAPE)
+
+kable(
+  metrics,
+  format = "latex",
+  booktabs = TRUE,
+  digits = 3,
+  caption = NULL
+)
+```
 
 # Low wind events EDA
 
@@ -207,5 +371,4 @@ editor: source
 :::
 
 
-# Bias EDA
 
