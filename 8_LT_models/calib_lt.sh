@@ -18,6 +18,6 @@ source /etc/profile.d/modules.sh
 module load R/4.5
 
 # Run resolution code
-Rscript 8_LT_models/0_lt_main.R $SGE_TASK_ID TRUE 2190 batchLT_test FALSE 1
+Rscript 8_LT_models/0_lt_main.R 1 TRUE 365 batchLT_1Y FALSE 1
 # file name/ day id/ recreate files / 
 # days in traning samp / batch folder / save models / anomaly perc exclusion
