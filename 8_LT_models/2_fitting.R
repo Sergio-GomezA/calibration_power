@@ -492,14 +492,14 @@ dbWriteTable(
   con,
   "scores",
   scores_df,
-  append = dbExistsTable(con, "scores")
+  # append = dbExistsTable(con, "scores")
 )
 
 dbWriteTable(
   con,
   "pit",
   pit_df,
-  append = dbExistsTable(con, "pit")
+  # append = dbExistsTable(con, "pit")
 )
 
 dbDisconnect(con)

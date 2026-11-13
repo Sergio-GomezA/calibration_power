@@ -462,19 +462,19 @@ if (!override_objects && length(files_found) > 0) {
 
   wf_df_pred[,
     `:=`(
-      err_l1 = shift(error0, 1L, fill = 0),
-      err_l2 = shift(error0, 2L, fill = 0),
+      err_l1 = data.table::shift(error0, 1L, fill = 0),
+      err_l2 = data.table::shift(error0, 2L, fill = 0),
 
       dest = norm_power_est0 -
-        shift(norm_power_est0, 1L, fill = 0)
+        data.table::shift(norm_power_est0, 1L, fill = 0)
     ),
     by = coord_id
   ]
 
   wf_df_pred[,
     `:=`(
-      dest_l1 = shift(dest, 1L, fill = 0),
-      dest_l2 = shift(dest, 2L, fill = 0)
+      dest_l1 = data.table::shift(dest, 1L, fill = 0),
+      dest_l2 = data.table::shift(dest, 2L, fill = 0)
     ),
     by = coord_id
   ]
