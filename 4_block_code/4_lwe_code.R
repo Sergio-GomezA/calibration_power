@@ -10,7 +10,7 @@ override_objects <- TRUE
 # prec_init <- log(200)
 # batch_name <- "batch2025"
 batch_name <- "batchY25d150_v6"
-
+# batch_name <- "batchLT_test"
 
 if (local_run) {
   cat("Running in local mode\n")
