@@ -232,9 +232,13 @@ if (!override_objects && length(files_found) > 0) {
     wf_dt <- readRDS(files_found[1])
   }
 } else {
-  cat(
-    "No existing calibration data file found for this day. Preparing new data.\n"
-  )
+  if (override_objects) {
+    cat("File found but override option is active. Rebuilding.\n")
+  } else {
+    cat(
+      "No existing calibration data file found for this day. Preparing new data.\n"
+    )
+  }
 
   pwr_curv_dt <- as.data.table(
     read_parquet(file.path(
