@@ -2687,3 +2687,7 @@ cov_fig <- function(
     )
   }
 }
+
+sum_or_na <- function(x) {
+  if (all(is.na(x))) NA_real_ else sum(x, na.rm = TRUE)
+}
