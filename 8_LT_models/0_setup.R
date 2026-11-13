@@ -10,7 +10,7 @@ model_id <- 1
 mesh_edge_par <- 50 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
 override_objects <- TRUE
 recalculate_gb <- FALSE
-# save_daily_files <- FALSE
+save_daily_files <- TRUE
 # perform_mesh_assess <- FALSE
 # generate_old_figs <- FALSE
 # run_st <- !local_run
@@ -40,11 +40,12 @@ n.days.before.space <- 7
 n.hours.space <- 365 * 24
 
 cluster_ext <- "rds" # "geojson" previously
+local_ext <- "rds" # previously "gpkg"
 
 pow_threshold <- 0.05
 
 tol <- 0.01
-norm_dist_tol <- 0.5
+norm_dist_tol <- 1
 
 if (local_run) {
   cat("Running in local mode\n")
@@ -110,7 +111,6 @@ if (local_run) {
   sample_path <- "~/Documents/elexon/samples"
   pixel_dims <- c(150, 150)
   n_samp <- 200
-  local_ext <- "rds" # previously "gpkg"
   driver <- "GPKG"
 } else {
   data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
