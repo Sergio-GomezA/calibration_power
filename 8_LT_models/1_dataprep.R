@@ -68,37 +68,6 @@ if (!file.exists(coord_list_fname)) {
   coord_list <- read.csv(coord_list_fname)
 }
 
-# 1. data preparation ####
-
-dat_starttime <- Sys.time()
-cat("Preparing data for model fitting\n")
-
-cat("Creating coordinate list\n")
-coord_list_fname <- "data/coord_list.csv"
-if (!file.exists(coord_list_fname)) {
-  cat("Creating new coordinate list\n")
-  set.seed(1)
-  coord_list <- pwr_curv_df %>%
-    distinct(coord_id, tech_typ) %>%
-    arrange(coord_id)
-
-  coord_samp <- coord_list %>%
-    group_by(tech_typ) %>%
-    slice_sample(prop = 0.8)
-
-  coord_list <- coord_list %>%
-    mutate(
-      sampled = ifelse(coord_id %in% coord_samp$coord_id, TRUE, FALSE)
-    )
-  write.csv(
-    coord_list,
-    file = coord_list_fname,
-    row.names = FALSE
-  )
-} else {
-  cat("Loading existing coordinate list\n")
-  coord_list <- read.csv(coord_list_fname)
-}
 coord_list <- coord_list %>%
   mutate(
     sampled_old = sampled,
@@ -242,49 +211,25 @@ if (
   gb_day_df <- read_parquet(gb_day_df_fname)
 }
 
-# sample_days_fname <- "data/sample_days_df_25_n150.csv"
-
-# if (!file.exists(sample_days_fname)) {
-#   cat("List of days for validation not found, recreating...\n")
-#   # generating sample days for 3nd round of modelling
-#   set.seed(2)
-#   # sample 1 day per regime
-#   sampled_days_df <- gb_day_df %>%
-#     filter(date >= "2025-01-01") %>%
-#     group_by(p_group3) %>%
-#     slice_sample(n = 50)
-
-#   write.csv(
-#     sampled_days_df,
-#     file = "data/sample_days_df_25_n150.csv",
-#     row.names = FALSE
-#   )
-
-#   cat("List of days for validation saved.\n")
-# } else {
-#   cat("Loading list of days for validation\n")
-#   sampled_days_df <- read.csv(sample_days_fname)
-# }
-
-# sampled_days <- sampled_days_df %>%
-#   pull(date)
-
-# d0 <- sampled_days[day_id] %>% as.Date()
 d0 <- as.Date("2025-01-01")
 d0_tag <- base::format(d0, "%y%m%d")
 
 extension <- ifelse(local_run, local_ext, cluster_ext)
 df_pattern <- sprintf("^calibration_df_.*_%s\\.%s$", d0_tag, extension)
-files_found <- list.files("data", pattern = df_pattern, full.names = TRUE)
+files_found <- list.files(
+  file.path(output_path, batch_name, "data/fit"),
+  pattern = df_pattern,
+  full.names = TRUE
+)
 
 if (!override_objects && length(files_found) > 0) {
   cat(
     "Calibration data file already exists for this day. Loading existing data.\n"
   )
   if (extension != "rds") {
-    wf_df_frag <- st_read(files_found[1])
+    wf_dt <- st_read(files_found[1])
   } else {
-    wf_df_frag <- readRDS(files_found[1])
+    wf_dt <- readRDS(files_found[1])
   }
 } else {
   cat(
@@ -298,6 +243,7 @@ if (!override_objects && length(files_found) > 0) {
     ))
   )
   setnames(pwr_curv_dt, "halfHourEndTime", "time")
+  n.days <- 0
   wf_dt <- pwr_curv_dt[
     time >= as.POSIXct(d0 - max(n.days.before.fit, n.days.before.light)) &
       time < as.POSIXct(d0 + n.days) &
@@ -386,7 +332,7 @@ if (!override_objects && length(files_found) > 0) {
     )
   )]
   wf_dt[, `:=`(
-    time_id := as.integer(
+    time_id = as.integer(
       difftime(time, min(time), units = "hours")
     ) +
       1L,
@@ -422,93 +368,59 @@ if (!override_objects && length(files_found) > 0) {
     by = coord_id
   ]
 
-  cat("Filtering data for the selected day and nearby days\n")
-  # wf_df_frag <- pwr_curv_df %>%
-  #   rename(time = halfHourEndTime) %>%
-  #   mutate(
-  #     date = as.Date(time),
-  #     elevation = pmax(0, elevation),
-  #     site_name = site_name %>%
-  #       gsub("\\b(wind\\s*farm|wf)\\b", "", ., ignore.case = TRUE) %>%
-  #       trimws()
-  #   ) %>%
-  #   # filter(date %in% sampled_days) %>%
-  #   filter(
-  #     date >= d0 - max(n.days.before.fit, n.days.before.light),
-  #     date <= d0 + n.days - 1
-  #   ) %>%
-  #   filter(coord_id %in% coord_list$coord_id[coord_list$sampled]) %>%
-  #   arrange(site_name) %>%
-  #   group_by(lon, lat, time) %>%
-  #   summarise(
-  #     site_name = first(site_name),
-  #     coord_id = first(coord_id),
-  #     elevation = first(elevation),
-  #     dist_coast = first(dist_coast),
-  #     tech_typ = first(tech_typ),
-  #     across(c(ws_h, wd10, wd100), mean),
-  #     ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
-  #     across(c(potential, power_est0, capacity, curtailment), sum),
-  #     .groups = "drop"
-  #   ) %>%
-  #   mutate(t = difftime(time, min(time), units = "hours") %>% as.numeric()) %>%
-  #   mutate(
-  #     norm_potential = pmin(1, potential / capacity),
-  #     norm_power_est0 = power_est0 / capacity,
-  #     error0 = norm_potential - norm_power_est0
-  #   ) %>%
-  #   st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-  #   mutate(lon = st_coordinates(.)[, 1], lat = st_coordinates(.)[, 2]) %>%
-  #   st_transform(crs = 27700) %>%
-  #   mutate(
-  #     x = st_coordinates(.)[, 1] / 1000,
-  #     y = st_coordinates(.)[, 2] / 1000,
-  #   ) %>%
-  #   # st_drop_geometry() %>%
-  #   mutate(
-  #     # site_id = as.integer(factor(site_name)),
-  #     ws_group = inla.group(ws_h, n = 20, method = "quantile"),
-  #     pow_group = inla.group(norm_power_est0, n = 20, method = "quantile"),
-  #     d_coast_group = inla.group(dist_coast, n = 10, method = "quantile"),
-  #     elev_group = inla.group(elevation, n = 10, method = "quantile"),
-  #     time_id = as.integer(factor(time)),
-  #     date = as.Date(time)
-  #   ) %>%
-  #   left_join(
-  #     gb_day_df %>% dplyr::select(date, p_group3),
-  #     by = c("date" = "date")
-  #   )
-  # plot candidate anomalies, norm_potential == 0 and p_group3 == "mid"
-  cutprobs3 <- c(0.25, 0.75)
-  p_quant3 <- quantile(gb_day_df$norm_potential, probs = cutprobs3)
-
   cat("Identifying anomalies in the dataset\n")
-  wf_df_frag <- wf_df_frag %>%
-    mutate(
-      anomaly = case_when(
-        norm_potential <= tol & norm_power_est0 >= p_quant3[1] ~ TRUE,
-        norm_power_est0 >= 1 - tol & norm_potential <= p_quant3[2] ~ TRUE,
-        abs(norm_power_est0 - norm_potential) >= norm_dist_tol ~ TRUE,
-        TRUE ~ FALSE
-      )
-    )
-  wf_df_frag %>%
-    ggplot() +
-    geom_point(
-      aes(norm_potential, norm_power_est0, color = anomaly),
-      size = 0.5
-    ) +
+  cutprobs3 <- c(0.25, 0.75)
+  p_quant3 <- quantile(
+    gb_day_df$norm_potential,
+    probs = cutprobs3,
+    na.rm = TRUE
+  )
+
+  wf_dt[,
+    anomaly := (norm_potential <= tol &
+      norm_power_est0 >= p_quant3[1]) |
+      (norm_power_est0 >= 1 - tol &
+        norm_potential <= p_quant3[2]) |
+      (abs(norm_power_est0 - norm_potential) >= norm_dist_tol)
+  ]
+  anomaly_perc <- 100 *
+    wf_dt[,
+      mean(anomaly, na.rm = TRUE)
+    ]
+  cat(sprintf(
+    "Percentage of anomalies at %.1f%% tol in the dataset: %.2f%%\n",
+    norm_dist_tol * 100,
+    anomaly_perc
+  ))
+
+  set.seed(123)
+  plot_dt <- wf_dt[
+    sample.int(.N, min(.N, 100000L)),
+    .(norm_potential, norm_power_est0, anomaly)
+  ]
+
+  p <- ggplot(
+    plot_dt,
+    aes(norm_potential, norm_power_est0, color = anomaly)
+  ) +
+    geom_point(size = 0.5, alpha = 0.4) +
     scale_color_manual(values = c("grey50", "darkred")) +
     theme(legend.position = "bottom") +
     labs(
-      x = "Elexon CF (%)",
-      y = "Generic PC(ERA5) CF (%)",
+      x = "Elexon CF",
+      y = "Generic PC (ERA5) CF",
       color = "Anomaly"
     ) +
     coord_fixed(ratio = 1)
 
   ggsave(
-    sprintf("%s/%s/fig/fit/anomalies_%s.png", output_path, batch_name, d0_tag),
+    sprintf(
+      "%s/%s/fig/fit/anomalies_%s.png",
+      output_path,
+      batch_name,
+      d0_tag
+    ),
+    plot = p,
     width = 4,
     height = 4.5,
     dpi = 100
@@ -517,68 +429,34 @@ if (!override_objects && length(files_found) > 0) {
 
   # mask anomalies for model fitting
 
-  wf_df_frag <- wf_df_frag %>%
-    mutate(
-      norm_potential_orig = norm_potential,
-      norm_potential = ifelse(anomaly, NA, norm_potential)
-    )
+  # Preserve original values
+  wf_dt[, norm_potential_orig := norm_potential]
 
-  anomaly_perc <- mean(wf_df_frag$anomaly, na.rm = TRUE) * 100
-  cat(sprintf(
-    "Percentage of anomalies at %.1f%% tol in the dataset: %.2f%%\n",
-    norm_dist_tol * 100,
-    anomaly_perc
-  ))
+  # Mask only anomalous observations
+  wf_dt[anomaly == TRUE, norm_potential := NA_real_]
 
-  # wf_df_frag <- wf_df_frag %>%
-  #   filter(!anomaly)
+  # lwe events
+  lwe_output_tabpath <- file.path("tables", "lwe_eda")
+  lwe_fname <- file.path(lwe_output_tabpath, "low_wind_event_stats.csv")
+  event_dt <- fread(lwe_fname)
 
-  # x <- wf_df_frag$pow_group %>% unique() %>% sort()
-  # min_jump <- min(diff(sort(x))) / diff(range(x))
-  # if (min_jump <= 1e-4) {
-  #   wf_df_frag <- wf_df_frag %>%
-  #     mutate(pow_group = inla.group(norm_power_est0, n = 20, method = "cut"))
-  # }
+  time_dt <- unique(wf_dt[, .(time)])
 
-  # ws_groups <- make_group_breaks(wf_df_frag$ws_h, n = 20)
+  time_dt[
+    event_dt,
+    on = .(time >= start_time, time <= end_time),
+    event_id := i.event_id
+  ]
+  # event_ids <- unique(time_dt$event_id)
 
-  # pow_groups <- make_group_breaks(
-  #   wf_df_frag$norm_power_est0,
-  #   n = 20
-  # )
+  # missing_events <- event_dt[!event_id %in% event_ids]
+  # event_id_missing <- which(event_dt$event_id %in% event_ids)
 
-  # d_coast_groups <- make_group_breaks(
-  #   wf_df_frag$dist_coast,
-  #   n = 10
-  # )
-
-  # elev_groups <- make_group_breaks(
-  #   wf_df_frag$elevation,
-  #   n = 10
-  # )
-
-  # wf_df_frag <- wf_df_frag %>%
-  #   make_groups(
-  #     ws_groups = ws_groups,
-  #     pow_groups = pow_groups,
-  #     d_coast_groups = d_coast_groups,
-  #     elev_groups = elev_groups
-  #   ) %>%
-  #   group_by(coord_id) %>%
-  #   mutate(
-  #     err_l1 = lag(error0, default = 0),
-  #     err_l2 = lag(error0, n = 2, default = 0),
-  #     dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
-  #     dest_l1 = lag(dest, default = 0),
-  #     dest_l2 = lag(dest, n = 2, default = 0)
-  #   ) %>%
-  #   ungroup()
-
-  # cat("Converting coordinates to km\n")
-  # wf_df_frag <- wf_df_frag %>%
-  #   st_geometry() %>%
-  #   (\(g) g / 1000)() %>%
-  #   st_set_geometry(wf_df_frag, .)
+  wf_dt[
+    time_dt,
+    on = "time",
+    event_id := i.event_id
+  ]
 
   if (save_daily_files) {
     wf_df_fname <- sprintf(
@@ -594,7 +472,7 @@ if (!override_objects && length(files_found) > 0) {
     }
     if (extension != "rds") {
       st_write(
-        wf_df_frag,
+        wf_dt,
         wf_df_fname,
         driver = driver,
         append = FALSE,
@@ -602,38 +480,60 @@ if (!override_objects && length(files_found) > 0) {
       )
     } else {
       saveRDS(
-        wf_df_frag,
+        wf_dt,
         wf_df_fname
       )
     }
   }
 }
-samp_gb <- wf_df_frag %>%
-  filter(!is.na(norm_potential)) %>%
-  group_by(tech_typ, time) %>%
-  summarise(
+samp_gb <- wf_dt[
+  !is.na(norm_potential),
+  .(
     ws_h_wmean = sum(ws_h * capacity) / sum(capacity),
-    across(
-      c(norm_potential, norm_potential_orig, norm_power_est0),
-      ~ sum(. * capacity, na.rm = TRUE) / sum(capacity, na.rm = TRUE)
-    ),
-    across(
-      c(potential, power_est0, capacity),
-      sum
-    ),
-    .groups = "drop"
-  ) %>%
-  mutate(date = as.Date(time), error0 = norm_potential - norm_power_est0) %>%
-  mutate(
-    err_l1 = lag(error0, default = 0),
-    err_l2 = lag(error0, n = 2, default = 0),
-    dest = (norm_power_est0) - lag(norm_power_est0, default = 0),
-    dest_l1 = lag(dest, default = 0),
-    dest_l2 = lag(dest, n = 2, default = 0)
-  )
-wf_df_frag <- wf_df_frag %>% filter(date >= d0 - n.days.before.fit)
-cat("Number of unique locations:", nrow(wf_df_frag %>% distinct(x, y)), "\n")
-n <- nrow(wf_df_frag)
+
+    norm_potential = sum(norm_potential * capacity, na.rm = TRUE) /
+      sum(capacity, na.rm = TRUE),
+
+    norm_potential_orig = sum(norm_potential_orig * capacity, na.rm = TRUE) /
+      sum(capacity, na.rm = TRUE),
+
+    norm_power_est0 = sum(norm_power_est0 * capacity, na.rm = TRUE) /
+      sum(capacity, na.rm = TRUE),
+
+    potential = sum(potential),
+    power_est0 = sum(power_est0),
+    capacity = sum(capacity)
+  ),
+  by = .(tech_typ, time)
+]
+
+setorder(samp_gb, tech_typ, time)
+
+samp_gb[, `:=`(
+  date = as.Date(time),
+  error0 = norm_potential - norm_power_est0
+)]
+
+samp_gb[,
+  `:=`(
+    err_l1 = data.table::shift(error0, 1L, fill = 0),
+    err_l2 = data.table::shift(error0, 2L, fill = 0),
+    dest = norm_power_est0 -
+      data.table::shift(norm_power_est0, 1L, fill = 0)
+  ),
+  by = tech_typ
+]
+
+samp_gb[,
+  `:=`(
+    dest_l1 = data.table::shift(dest, 1L, fill = 0),
+    dest_l2 = data.table::shift(dest, 2L, fill = 0)
+  ),
+  by = tech_typ
+]
+
+cat("Number of unique locations:", nrow(wf_dt %>% distinct(x, y)), "\n")
+n <- nrow(wf_dt)
 cat("Number of records in the dataset:", n, "\n")
 
 dat_endtime <- Sys.time()
