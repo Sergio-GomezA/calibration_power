@@ -8,7 +8,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 model_id <- 1
 # day_id <- 125
 mesh_edge_par <- 50 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- TRUE
+override_objects <- FALSE
 recalculate_gb <- FALSE
 save_daily_files <- TRUE
 # perform_mesh_assess <- FALSE
@@ -19,7 +19,7 @@ save_daily_files <- TRUE
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
 # fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
-n.days.before.fit <- 365 * 6
+n.days.before.fit <- 100 #365 * 6
 n.days.before.heavy <- n.days.before.fit / 2
 n.days.before.light <- n.days.before.fit
 batch_name <- "batchLT_test"
