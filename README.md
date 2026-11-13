@@ -354,3 +354,18 @@ CRPS
   - [ ] diagnostics
   - [ ] plot predictions and 
   - [ ] evaluate performance
+
+- [ ] QM mapping
+- [ ] GB model (offshore / onshore)
+- [ ] WF level model and aggregation
+  - [ ] LM
+  - [ ] LM + AR
+  - [ ] QR
+- [ ] job code
+ - [ ] load data, train test split. (last year + identify relevant LWEs)
+ - [ ] create model matrix
+ - [ ] fit model
+ - [ ] fit scores
+ - [ ] predict
+ - [ ] prediction scores
+ - [ ] save output in db with run details
