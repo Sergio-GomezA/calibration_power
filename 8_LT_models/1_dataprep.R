@@ -231,6 +231,8 @@ if (!override_objects && length(files_found) > 0) {
   } else {
     wf_dt <- readRDS(files_found[1])
   }
+  setDT(wf_dt)
+  wf_dt <- wf_dt[date >= d0 - n.days.before.fit]
 } else {
   if (override_objects) {
     cat("File found but override option is active. Rebuilding.\n")
