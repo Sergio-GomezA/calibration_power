@@ -492,6 +492,7 @@ dbWriteTable(
   con,
   "scores",
   scores_df,
+  overwrite = TRUE
   # append = dbExistsTable(con, "scores")
 )
 
@@ -499,6 +500,7 @@ dbWriteTable(
   con,
   "pit",
   pit_df,
+  overwrite = TRUE
   # append = dbExistsTable(con, "pit")
 )
 
