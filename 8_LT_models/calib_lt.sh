@@ -1,15 +1,14 @@
 # Calibration model run for whole data 1 model
 #!/bin/bash
-#$ -N clt
+#$ -N clt1y
 #$ -wd /exports/eddie/scratch/s2441782/calibration_power/
 #$ -o /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
 #$ -e /exports/eddie/scratch/s2441782/calibration_power/jobfiles/
-#$ -l h_rt=24:00:0,h_vmem=32G
-##$ -l amd=true,intel=true
+#$ -l h_rt=24:00:0,h_vmem=16G
 #$ -pe sharedmem 48
 #$ -M s2441782@ed.ac.uk
 #$ -m bea
-##$ -t 25,75,125
+
 
 # Initialise modules
 source /etc/profile.d/modules.sh
