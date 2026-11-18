@@ -32,12 +32,12 @@ rerun_samples <- TRUE
 # time validation
 n.days.time <- 0
 n.days.before.time <- 7
-n.hours.time <- 365 * 24
+n.hours.time <- 90 * 24
 
 # space validation
 n.days.space <- 0
 n.days.before.space <- 7
-n.hours.space <- 365 * 24
+n.hours.space <- 90 * 24
 
 cluster_ext <- "rds" # "geojson" previously
 local_ext <- "rds" # previously "gpkg"
