@@ -369,3 +369,9 @@ CRPS
  - [ ] predict
  - [ ] prediction scores
  - [ ] save output in db with run details
+
+
+ - [ ] db save with details of run
+ - [ ] reconstruct data up to winter 25-26
+ - [ ] keep era5 data for all times and leave missing in power as necessary
+ - [ ] update REPD data
