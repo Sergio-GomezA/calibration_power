@@ -211,7 +211,7 @@ if (
   gb_day_df <- read_parquet(gb_day_df_fname)
 }
 
-d0 <- as.Date("2025-01-01")
+d0 <- as.Date("2025-06-01")
 d0_tag <- base::format(d0, "%y%m%d")
 
 extension <- ifelse(local_run, local_ext, cluster_ext)
