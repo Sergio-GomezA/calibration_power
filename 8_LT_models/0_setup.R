@@ -22,13 +22,15 @@ fixed_gaus_1DSPE <- FALSE
 n.days.before.fit <- 100 #365 * 6
 n.days.before.heavy <- n.days.before.fit / 2
 n.days.before.light <- n.days.before.fit
+
+n.days.after.fit <- 90
 batch_name <- "batchLT_test"
 
 save_models <- FALSE
 save_samples <- FALSE
 
 rerun_samples <- TRUE
-
+n_samp <- 100
 # time validation
 n.days.time <- 0
 n.days.before.time <- 7
@@ -64,13 +66,31 @@ if (length(args) >= 3) {
   n.days.before.fit <- as.numeric(args[3])
 }
 if (length(args) >= 4) {
-  batch_name <- as.character(args[4])
+  n_samp <- as.numeric(args[4])
 }
 if (length(args) >= 5) {
-  save_models <- as.logical(args[5])
+  n.days.after.fit <- as.numeric(args[5])
+  n.hours.time <- n.days.after.fit * 24
+  n.hours.space <- n.days.after.fit * 24
 }
 if (length(args) >= 6) {
-  norm_dist_tol <- as.numeric(args[6])
+  batch_name <- as.character(args[6])
+  batch_name <- paste0(
+    batch_name,
+    "_",
+    round(n.days.before.fit / 365, 0),
+    "Y_",
+    n.days.after.fit,
+    "d_",
+    n_samp,
+    "s"
+  )
+}
+if (length(args) >= 7) {
+  save_models <- as.logical(args[7])
+}
+if (length(args) >= 8) {
+  norm_dist_tol <- as.numeric(args[8])
 }
 
 #print arguments used
@@ -87,6 +107,18 @@ cat(
   "\n",
   "n.days.before.fit =",
   n.days.before.fit,
+  "\n",
+  "n.days.after.fit =",
+  n.days.after.fit,
+  "\n",
+  "n.hours.time =",
+  n.hours.time,
+  "\n",
+  "n.hours.space =",
+  n.hours.space,
+  "\n",
+  "n_samp =",
+  n_samp,
   "\n",
   "batch_name =",
   batch_name,
@@ -110,7 +142,6 @@ if (local_run) {
   output_path <- "~/Documents/elexon/caloutput"
   sample_path <- "~/Documents/elexon/samples"
   pixel_dims <- c(150, 150)
-  n_samp <- 100
   driver <- "GPKG"
 } else {
   data_path <- "/exports/eddie/scratch/s2441782/calibration/data"
@@ -121,7 +152,6 @@ if (local_run) {
   sample_path <- "/exports/eddie/scratch/s2441782/calibration/samples"
   temp_lib <- "/exports/eddie3_homes_local/s2441782/lib"
   pixel_dims <- c(300, 300)
-  n_samp <- 100
   driver <- "GeoJSON"
   .libPaths(temp_lib)
 }
