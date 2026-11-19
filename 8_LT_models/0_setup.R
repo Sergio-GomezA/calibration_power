@@ -83,15 +83,15 @@ if (length(args) >= 8) {
 
 n.hours.time <- n.days.after.fit * 24
 n.hours.space <- n.days.after.fit * 24
-batch_name <- paste0(
+batch_name <- sprintf(
+  "%s_%d%s_%dd_%ds",
   batch_name,
-  "_",
-  round(n.days.before.fit / 365, 0),
-  "Y_",
+  round(
+    if (n.days.before.fit >= 365) n.days.before.fit / 365 else n.days.before.fit
+  ),
+  if (n.days.before.fit >= 365) "Y" else "D",
   n.days.after.fit,
-  "d_",
-  n_samp,
-  "s"
+  n_samp
 )
 
 #print arguments used
