@@ -30,7 +30,7 @@ save_models <- FALSE
 save_samples <- FALSE
 
 rerun_samples <- TRUE
-n_samp <- 100
+n_samp <- 10
 # time validation
 n.days.time <- 0
 n.days.before.time <- 7
