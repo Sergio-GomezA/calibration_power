@@ -66,10 +66,10 @@ if (length(args) >= 3) {
   n.days.before.fit <- as.numeric(args[3])
 }
 if (length(args) >= 4) {
-  n_samp <- as.numeric(args[4])
+  n.days.after.fit <- as.numeric(args[4])
 }
 if (length(args) >= 5) {
-  n.days.after.fit <- as.numeric(args[5])
+  n_samp <- as.numeric(args[5])
 }
 if (length(args) >= 6) {
   batch_name <- as.character(args[6])
