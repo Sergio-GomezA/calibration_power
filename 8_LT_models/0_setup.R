@@ -19,7 +19,7 @@ save_daily_files <- TRUE
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
 # fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
-n.days.before.fit <- 365 * 6 #365 * 6
+n.days.before.fit <- 365 #365 * 6
 n.days.before.heavy <- n.days.before.fit / 2
 n.days.before.light <- n.days.before.fit
 
@@ -34,12 +34,12 @@ n_samp <- 100
 # time validation
 n.days.time <- 0
 n.days.before.time <- 7
-n.hours.time <- 90 * 24
+n.hours.time <- n.days.after.fit * 24
 
 # space validation
 n.days.space <- 0
 n.days.before.space <- 7
-n.hours.space <- 90 * 24
+n.hours.space <- n.days.after.fit * 24
 
 cluster_ext <- "rds" # "geojson" previously
 local_ext <- "rds" # previously "gpkg"
@@ -84,13 +84,16 @@ if (length(args) >= 8) {
 n.hours.time <- n.days.after.fit * 24
 n.hours.space <- n.days.after.fit * 24
 batch_name <- sprintf(
-  "%s_%d%s_%dd_%ds",
+  "%s_%d%s_%d%s_%ds",
   batch_name,
   round(
     if (n.days.before.fit >= 365) n.days.before.fit / 365 else n.days.before.fit
   ),
   if (n.days.before.fit >= 365) "Y" else "D",
-  n.days.after.fit,
+  round(
+    if (n.days.after.fit >= 365) n.days.after.fit / 365 else n.days.after.fit
+  ),
+  if (n.days.after.fit >= 365) "y" else "d",
   n_samp
 )
 
