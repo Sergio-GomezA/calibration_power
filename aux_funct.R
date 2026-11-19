@@ -1897,410 +1897,307 @@ bru_ci_plot <- function(
   family = "gaussian",
   t_start = NULL
 ) {
+  family <- match.arg(family, c("gaussian", "beta", "t"))
   n <- nrow(newdata)
+  stopifnot(
+    n > 0L,
+    length(n.samples) == 1L,
+    is.finite(n.samples),
+    n.samples >= 1L,
+    n.samples == floor(n.samples),
+    all(is.finite(alphas) & alphas > 0 & alphas < 1)
+  )
+
+  if (is.null(t_start)) {
+    t_start <- t1
+  }
+  end_24 <- t_start + 24 * 3600
+  end_12 <- t_start + 12 * 3600
+
   lin_pred <- get_bru_formula(bru_model)
-
-  prec_par_elements <- bru_model$.args$control.family[[1]]$hyper %>% names()
-
-  # check if prec is fixed
-  fix_prec <- bru_model$.args$control.family[[1]]$hyper[[prec_par_elements[
-    1
-  ]]]$fixed
-  if (fix_prec) {
-    prec_val <- bru_model$.args$control.family[[1]]$hyper[[prec_par_elements[
-      1
-    ]]]$initial
-  } else {
-    prec_val <- bru_model$.args$control.family[[1]]$hyper[[prec_par_elements[
-      1
-    ]]]$output.name %>%
-      gsub("[ -]+", "_", .) %>%
-      as.character()
-    cat(sprintf("Precision is not fixed. Using %s for sampling.\n", prec_val))
-    # print(bru_model$summary.hyperpar)
+  hyper <- bru_model$.args$control.family[[1L]]$hyper
+  hyper_name <- function(parameter) {
+    gsub("[ -]+", "_", parameter$output.name)
   }
-
-  # browser()
-
-  switch(
-    family,
-    t = {
-      rfun <- "rt"
-      qfun <- "qt"
-      dof <- bru_model$.args$control.family[[1]]$hyper[[prec_par_elements[
-        2
-      ]]]$output.name %>%
-        gsub("[ -]+", "_", .) %>%
-        as.character()
-      # args <- sprintf("df = (%s), ncp = (exp(%s))", dof, lin_pred)
-      args <- sprintf("df = (%s)", dof)
-    },
-    beta = {
-      rfun <- "rbeta"
-      qfun <- "qbeta"
-      shape1 <- sprintf("plogis((%s)) * (%s)", lin_pred, prec_val)
-      shape2 <- sprintf("(%s) - (%s)", prec_val, shape1)
-      args <- sprintf("shape1 = %s, shape2 = %s", shape1, shape2)
-    },
-    gaussian = {
-      rfun <- "rnorm"
-      qfun <- "qnorm"
-      args <- sprintf("mean = (%s), sd = 1 / sqrt((%s))", lin_pred, prec_val)
-    }
-  )
-
-  if (!is.null(alphas)) {
-    prob_points0 <- c(alphas / 2, 1 - alphas / 2)
-    prob_points <- c(0.025, 0.975, prob_points0)
-    quant_formula0 <- sprintf(
-      "%s(%s, %s)",
-      qfun,
-      prob_points,
-      args
-    )
-    if (family == "t") {
-      quant_formula <- sprintf(
-        "(%s) + (%s)/sqrt((%s))",
-        lin_pred,
-        quant_formula0,
-        prec_val
-      )
-    } else {
-      quant_formula <- quant_formula0
-    }
-    extra_quantiles <- paste(
-      c(
-        sprintf(
-          "lwr = %s,
-          upr = %s",
-          quant_formula[1],
-          quant_formula[2]
-        ),
-        sprintf(
-          "q_%s = %s",
-          gsub("\\.", "_", prob_points0),
-          quant_formula[-c(1:2)]
-        )
-      ),
-      collapse = ",\n       "
-    )
+  # Keep the original parameter convention for comparisons with existing runs.
+  prec_expr <- if (isTRUE(hyper[[1L]]$fixed)) {
+    as.character(hyper[[1L]]$initial)
   } else {
-    extra_quantiles <- "q = NULL"
+    hyper_name(hyper[[1L]])
   }
-
-  random_formula <- sprintf("%s(n = %d, %s)", rfun, n, args)
-  sample_w_noise <- case_when(
-    family == "t" ~ sprintf(
-      "(%s) + (%s)/sqrt((%s))",
+  dof_expr <- if (family == "t") {
+    paste0(", dof = ", hyper_name(hyper[[2L]]))
+  } else {
+    ""
+  }
+  formula_draw <- stats::as.formula(
+    sprintf(
+      "~ data.frame(lp = (%s), prec = (%s)%s)",
       lin_pred,
-      random_formula,
-      prec_val
-    ),
-    TRUE ~ random_formula
+      prec_expr,
+      dof_expr
+    )
   )
-  formula_temp <- as.formula(sprintf(
-    "~ data.frame(
-      coord_id = coord_id,
-      site_name = site_name,
-      time = time,
-      date = date,
-      lin_pred = (%s),
-      prec = (%s),
-      pow_st = %s,
-      %s
-  )",
-    lin_pred,
-    prec_val,
-    sample_w_noise,
-    extra_quantiles
-  ))
 
-  # browser()
-  samples <- inlabru::generate(
+  keys <- c("coord_id", "site_name", "time")
+  meta <- tibble::tibble(
+    coord_id = newdata$coord_id,
+    site_name = newdata$site_name,
+    time = newdata$time,
+    anomaly = newdata$anomaly,
+    norm_potential = newdata$norm_potential,
+    norm_potential_orig = newdata$norm_potential_orig
+  )
+  observed <- meta$norm_potential
+  valid <- which(!is.na(observed))
+  capacity <- newdata$capacity[valid]
+  gb_time <- sort(unique(meta$time[valid]), na.last = TRUE)
+  time_id <- match(meta$time[valid], gb_time)
+  sum_by_time <- function(x) {
+    if (!length(x)) {
+      return(numeric())
+    }
+    as.numeric(rowsum(
+      matrix(x, ncol = 1L),
+      time_id,
+      reorder = TRUE,
+      na.rm = TRUE
+    ))
+  }
+  gb_capacity <- sum_by_time(capacity)
+  gb_denominator <- gb_capacity
+  gb_denominator[sum_by_time(as.integer(is.na(capacity))) > 0L] <- NA_real_
+  potential <- sum_by_time(observed[valid] * capacity)
+  potential_orig <- sum_by_time(meta$norm_potential_orig[valid] * capacity)
+
+  probs <- c(0.025, 0.975)
+  alphas <- rev(alphas)
+  coverage_names <- paste0("coverage_", round(100 * (1 - alphas), 1))
+  if (anyDuplicated(coverage_names)) {
+    stop("Supply alphas with distinct coverage levels after rounding to 0.1%.")
+  }
+  hits <- matrix(0L, nrow = n, ncol = length(alphas))
+  cdf_count <- integer(n)
+  lp_sum <- numeric(n)
+  fits <- matrix(NA_real_, nrow = n, ncol = n.samples)
+  gb_mw <- matrix(NA_real_, nrow = length(gb_time), ncol = n.samples)
+
+  # One joint call keeps the posterior state aligned across sites and hours.
+  draws <- inlabru::generate(
     bru_model,
     newdata = newdata,
-    formula = formula_temp,
+    formula = formula_draw,
     n.samples = n.samples
   )
-  # samples <- inlabru::generate(
-  #   bru_model,
-  #   newdata = newdata,
-  #   # formula = formula_temp,
-  #   n.samples = 5
-  # )
+  for (s in seq_len(n.samples)) {
+    draw <- draws[[s]]
+    draws[s] <- list(NULL)
+    lp <- draw$lp
+    prec <- draw$prec
+    lp_sum <- lp_sum + lp
 
-  q_cols <- grepv("^q_", names(samples[[1]]))
-
-  # samples data frame
-  pred_df <- lapply(
-    seq_along(samples),
-    function(s) {
-      data.frame(
-        lp = samples[[s]]$lin_pred,
-        fit = samples[[s]]$pow_st,
-        lwr = samples[[s]]$lwr,
-        upr = samples[[s]]$upr,
-        samples[[s]][q_cols]
-      ) %>%
-        mutate(
-          # across(c(lp, fit, lwr, upr, all_of(q_cols)), ~ pmin(1, pmax(0, .))),
-          sim = s
-        ) %>%
-        bind_cols(
-          newdata %>%
-            dplyr::select(
-              coord_id,
-              site_name,
-              time,
-              date,
-              norm_potential,
-              norm_potential_orig,
-              capacity,
-              tech_typ,
-              p_group3,
-              anomaly
-            )
-        )
+    if (family == "beta") {
+      shape1 <- stats::plogis(lp) * prec
+      shape2 <- prec - shape1
+      fit <- stats::rbeta(n, shape1, shape2)
+      if (length(alphas)) {
+        cdf <- stats::pbeta(observed, shape1, shape2)
+      }
+    } else if (family == "t") {
+      sd <- 1 / sqrt(prec)
+      fit <- lp + stats::rt(n, draw$dof) * sd
+      if (length(alphas)) {
+        cdf <- stats::pt((observed - lp) / sd, draw$dof)
+      }
+    } else {
+      sd <- 1 / sqrt(prec)
+      fit <- stats::rnorm(n, lp, sd)
+      if (length(alphas)) {
+        cdf <- stats::pnorm(observed, lp, sd)
+      }
     }
-  ) %>%
-    bind_rows() %>%
-    sf::st_drop_geometry()
 
-  # summary by site and time
-  wf_summary_df <- pred_df %>%
-    group_by(coord_id, site_name, time) %>%
-    summarise(
-      lwr = quantile(fit, 0.025),
-      upr = quantile(fit, 0.975),
-      fit = mean(fit),
-      lp = mean(lp),
-      width = upr - lwr,
-      anomaly = first(anomaly, na.rm = TRUE),
-      norm_potential = mean(norm_potential, na.rm = TRUE),
-      norm_potential_orig = mean(norm_potential_orig, na.rm = TRUE),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      across(c(lwr, upr, fit, lp), ~ pmin(1, pmax(0, .)))
-    )
-  not_anomaly_ind <- (!is.na(newdata$norm_potential))
-  # browser()
-  if (is.null(t_start)) {
-    t_start <- t1 # global variable
+    fits[, s] <- fit
+    gb_mw[, s] <- sum_by_time(fit[valid] * capacity)
+    if (length(alphas)) {
+      usable <- !is.na(cdf)
+      cdf_count <- cdf_count + usable
+      for (j in seq_along(alphas)) {
+        inside <- usable & cdf >= alphas[j] / 2 & cdf <= 1 - alphas[j] / 2
+        hits[, j] <- hits[, j] + inside
+      }
+    }
   }
-  if (oos_type == "time") {
-    pred_ind <- which(newdata$time >= t_start & not_anomaly_ind)
-    pred_ind_24 <- which(
-      newdata$time >= t_start &
-        newdata$time < t_start + hours(24) &
-        not_anomaly_ind
-    )
-    pred_ind_12 <- which(
-      newdata$time >= t_start &
-        newdata$time < t_start + hours(12) &
-        not_anomaly_ind
-    )
-    observed_24 <- newdata$norm_potential[pred_ind_24]
-    observed_12 <- newdata$norm_potential[pred_ind_12]
-    samp_mat_24 <- samples %>%
-      lapply(function(x) x$pow_st[pred_ind_24]) %>%
-      setNames(paste0("samp_", seq_along(.))) %>%
-      bind_cols() %>%
-      as.matrix()
-    samp_mat_12 <- samples %>%
-      lapply(function(x) x$pow_st[pred_ind_12]) %>%
-      setNames(paste0("samp_", seq_along(.))) %>%
-      bind_cols() %>%
-      as.matrix()
-  } else if (oos_type == "space") {
-    pred_ind <- which(newdata$time < t_start & not_anomaly_ind)
-    samp_mat_24 <- samp_mat_12 <- NULL
-  } else {
-    pred_ind <- which(newdata$time >= t_start & not_anomaly_ind)
-    samp_mat_24 <- samp_mat_12 <- NULL
-  }
-  observed <- newdata$norm_potential[pred_ind]
+  rm(draws, draw)
 
-  samp_mat <- samples %>%
-    lapply(function(x) x$pow_st[pred_ind]) %>%
-    setNames(paste0("samp_", seq_along(.))) %>%
-    bind_cols() %>%
-    as.matrix()
-
-  # calculate scores
-  scores <- compute_scores(
-    observed = observed,
-    sample_mat = samp_mat
+  clip <- function(x) pmin(1, pmax(0, x))
+  # Leave predictions on their original scale until reporting the summaries.
+  gb_fits <- gb_mw / gb_denominator
+  gb_quant <- matrixStats::rowQuantiles(
+    gb_fits,
+    probs = probs,
+    useNames = FALSE
+  )
+  GB_summary <- tibble::tibble(
+    time = gb_time,
+    mean = clip(rowMeans(gb_fits)),
+    lwr = clip(gb_quant[, 1L]),
+    upr = clip(gb_quant[, 2L]),
+    width = gb_quant[, 2L] - gb_quant[, 1L],
+    norm_potential_orig = potential_orig / gb_denominator,
+    norm_potential = potential / gb_denominator,
+    capacity = gb_capacity,
+    potential = potential,
+    potential_orig = potential_orig,
+    est_mw = rowMeans(gb_mw)
   )
 
-  if (!is.null(samp_mat_24)) {
-    scores_24 <- compute_scores(
-      observed = observed_24,
-      sample_mat = samp_mat_24
-    )
-    scores_12 <- compute_scores(
-      observed = observed_12,
-      sample_mat = samp_mat_12
-    )
+  grouped <- dplyr::group_by(meta, coord_id, site_name, time)
+  groups <- dplyr::group_rows(grouped)
+  wf_summary <- dplyr::group_keys(grouped)
+  duplicate_groups <- which(lengths(groups) > 1L)
+  row_index <- if (length(duplicate_groups)) {
+    vapply(groups, function(rows) rows[1L], integer(1L))
   } else {
-    scores_24 <- NULL
-    scores_12 <- NULL
+    unlist(groups, use.names = FALSE)
   }
+  wf_quant <- matrixStats::rowQuantiles(
+    fits,
+    rows = row_index,
+    probs = probs,
+    useNames = FALSE
+  )
+  wf_summary$lwr <- wf_quant[, 1L]
+  wf_summary$upr <- wf_quant[, 2L]
+  wf_summary$fit <- rowMeans(fits)[row_index]
+  wf_summary$lp <- lp_sum[row_index] / n.samples
+  wf_summary$anomaly <- meta$anomaly[row_index]
+  wf_summary$norm_potential <- observed[row_index]
+  wf_summary$norm_potential_orig <- meta$norm_potential_orig[row_index]
 
-  # coverage check for all q_ columns
-  # browser()
-  if (length(q_cols) > 0) {
-    n_intervals <- length(q_cols) / 2
-
-    lower_probs <- rev(prob_points0[1:n_intervals])
-    upper_probs <- rev(prob_points0)[1:n_intervals]
-    lower_cols <- rev(q_cols[1:n_intervals])
-    upper_cols <- rev(q_cols)[1:n_intervals]
-
-    coverage_exprs <- setNames(
-      lapply(seq_len(n_intervals), function(i) {
-        expr(
-          mean(
-            norm_potential >= !!rlang::sym(lower_cols[i]) &
-              norm_potential <= !!rlang::sym(upper_cols[i]),
-            na.rm = TRUE
-          )
-        )
-      }),
-      paste0("coverage_", round(100 * (upper_probs - lower_probs), 1))
+  # Support inputs with multiple rows for the same site and time.
+  for (g in duplicate_groups) {
+    rows <- groups[[g]]
+    pooled <- fits[rows, , drop = FALSE]
+    limits <- stats::quantile(pooled, probs, names = FALSE)
+    wf_summary$lwr[g] <- limits[1L]
+    wf_summary$upr[g] <- limits[2L]
+    wf_summary$fit[g] <- mean(pooled)
+    wf_summary$lp[g] <- mean(lp_sum[rows]) / n.samples
+    wf_summary$anomaly[g] <- dplyr::first(meta$anomaly[rows], na_rm = TRUE)
+    wf_summary$norm_potential[g] <- mean(observed[rows], na.rm = TRUE)
+    wf_summary$norm_potential_orig[g] <- mean(
+      meta$norm_potential_orig[rows],
+      na.rm = TRUE
     )
-    coverage_df <- pred_df %>%
-      group_by(coord_id, site_name, time) %>%
-      summarise(
-        !!!coverage_exprs,
+  }
+  wf_summary$width <- wf_summary$upr - wf_summary$lwr
+  wf_summary <- dplyr::mutate(
+    wf_summary,
+    dplyr::across(c(lwr, upr, fit, lp), clip)
+  )
+  wf_summary <- wf_summary[, c(
+    keys,
+    "lwr",
+    "upr",
+    "fit",
+    "lp",
+    "width",
+    "anomaly",
+    "norm_potential",
+    "norm_potential_orig"
+  )]
+
+  hours_24 <- meta$time >= t_start & meta$time < end_24
+  hours_12 <- meta$time >= t_start & meta$time < end_12
+  score_rows <- function(rows) {
+    sample_mat <- fits[rows, , drop = FALSE]
+    colnames(sample_mat) <- paste0("samp_", seq_len(n.samples))
+    compute_scores(observed = observed[rows], sample_mat = sample_mat)
+  }
+  score_oos <- if (oos_type == "space") {
+    meta$time < t_start
+  } else {
+    meta$time >= t_start
+  }
+  scores_24 <- scores_12 <- NULL
+  score_indices <- which(score_oos & !is.na(observed))
+  if (identical(score_indices, seq_len(n))) {
+    colnames(fits) <- paste0("samp_", seq_len(n.samples))
+    scores <- compute_scores(observed = observed, sample_mat = fits)
+  } else {
+    scores <- score_rows(score_indices)
+  }
+  if (oos_type == "time") {
+    scores_24 <- score_rows(which(hours_24 & !is.na(observed)))
+    scores_12 <- score_rows(which(hours_12 & !is.na(observed)))
+  }
+  rm(fits, score_rows)
+
+  cov_24h <- cov_12h <- cov_gbl <- cov_time <- cov_loc <- NULL
+  if (length(alphas)) {
+    coverage <- hits[row_index, , drop = FALSE] / cdf_count[row_index]
+    for (g in duplicate_groups) {
+      rows <- groups[[g]]
+      coverage[g, ] <- colSums(hits[rows, , drop = FALSE]) /
+        sum(cdf_count[rows])
+    }
+    colnames(coverage) <- coverage_names
+    coverage_df <- dplyr::bind_cols(
+      wf_summary[, keys],
+      tibble::as_tibble(coverage)
+    )
+    summarize_coverage <- function(x) {
+      dplyr::summarise(
+        x,
+        dplyr::across(dplyr::all_of(coverage_names), ~ mean(.x, na.rm = TRUE)),
         .groups = "drop"
       )
-    # browser()
+    }
     if (oos_type == "time") {
-      ## oos for time
-      coverage_df <- coverage_df %>% mutate(oos = time >= t_start)
-      cov_24h <- coverage_df %>%
-        filter(time >= t_start & time < t_start + hours(24)) %>%
-        summarise(
-          across(matches("coverage"), ~ mean(., na.rm = TRUE)),
-          .groups = "drop"
-        )
-      cov_12h <- coverage_df %>%
-        filter(time >= t_start & time < t_start + hours(12)) %>%
-        summarise(
-          across(matches("coverage"), ~ mean(., na.rm = TRUE)),
-          .groups = "drop"
-        )
+      oos <- dplyr::filter(coverage_df, time >= t_start)
+      cov_24h <- summarize_coverage(dplyr::filter(oos, time < end_24))
+      cov_12h <- summarize_coverage(dplyr::filter(oos, time < end_12))
     } else {
-      coverage_df <- coverage_df %>% mutate(oos = time <= t_start)
-      cov_24h <- cov_12h <- NULL
-    } ## oos for space)
-
-    # drop qcols from pred df
-    pred_df <- pred_df %>% dplyr::select(-all_of(q_cols))
-
-    cov_time <- coverage_df %>%
-      filter(oos) %>%
-      group_by(time) %>%
-      summarise(
-        across(matches("coverage"), ~ mean(., na.rm = TRUE)),
-        .groups = "drop"
-      )
-    cov_loc <- coverage_df %>%
-      filter(oos) %>%
-      group_by(coord_id, site_name) %>%
-      summarise(
-        across(matches("coverage"), ~ mean(., na.rm = TRUE)),
-        .groups = "drop"
-      )
-    cov_gbl <- coverage_df %>%
-      filter(oos) %>%
-      summarise(
-        across(matches("coverage"), ~ mean(., na.rm = TRUE)),
-        .groups = "drop"
-      )
-  } else {
-    cov_time <- NULL
-    cov_loc <- NULL
-    cov_gbl <- NULL
+      oos <- dplyr::filter(coverage_df, time <= t_start)
+    }
+    cov_time <- summarize_coverage(dplyr::group_by(oos, time))
+    cov_loc <- summarize_coverage(dplyr::group_by(oos, coord_id, site_name))
+    cov_gbl <- summarize_coverage(oos)
   }
-  # browser()
-  # aggregated GB summary
-  pred_fig_df <- pred_df %>%
-    filter(!is.na(norm_potential)) %>%
-    mutate(
-      potential = norm_potential * capacity,
-      potential_orig = norm_potential_orig * capacity,
-      est_mw = fit * capacity
-    ) %>%
-    group_by(time, sim) %>%
-    # aggregate all sites keep samples
-    summarise(
-      across(
-        c(norm_potential, norm_potential_orig, fit),
-        ~ sum(. * capacity, na.rm = TRUE) / sum(capacity)
-      ),
-      capacity = sum(capacity, na.rm = TRUE),
-      across(c(potential:est_mw), ~ sum(., na.rm = TRUE)),
-      .groups = "drop_last"
-    ) %>%
-    # GB aggregation summary
-    summarise(
-      mean = mean(fit),
-      lwr = quantile(fit, 0.025),
-      upr = quantile(fit, 0.975),
-      width = upr - lwr,
-      # norm_potential = mean(norm_potential, na.rm = TRUE),
-      across(
-        c(norm_potential_orig, norm_potential, capacity, potential:est_mw),
-        ~ mean(., na.rm = TRUE)
-      ),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      across(c(mean, lwr, upr), ~ pmin(1, pmax(0, .)))
-    )
 
-  band_width <- pred_fig_df %>%
-    filter(time >= t_start, time < t_start + hours(24)) %>%
-    summarise(gbl = mean(width, na.rm = TRUE)) %>%
-    bind_cols(
-      wf_summary_df %>%
-        filter(time >= t_start, time < t_start + hours(24)) %>%
-        summarise(wf = mean(width, na.rm = TRUE))
-    )
-
-  p <- pred_fig_df %>%
-    ggplot() +
-    geom_ribbon(
-      aes(
-        x = time,
-        ymin = lwr,
-        ymax = upr
-      ),
-      fill = blues9[5],
-      alpha = 0.5
-    ) +
-    geom_line(
-      aes(x = time, y = mean),
-      color = blues9[9],
-      lwd = 1
-    ) +
-    geom_line(
-      aes(x = time, y = norm_potential_orig),
-      color = "darkred",
-      lwd = 1
-    ) #+
-  # coord_cartesian(ylim = c(0, 1))
+  mean_width <- function(x) {
+    rows <- which(x$time >= t_start & x$time < end_24)
+    mean(x$width[rows], na.rm = TRUE)
+  }
+  band_width <- tibble::tibble(
+    gbl = mean_width(GB_summary),
+    wf = mean_width(wf_summary)
+  )
 
   if (show.fig) {
-    print(p)
+    print(
+      ggplot2::ggplot(GB_summary, ggplot2::aes(x = time)) +
+        ggplot2::geom_ribbon(
+          ggplot2::aes(ymin = lwr, ymax = upr),
+          fill = blues9[5L],
+          alpha = 0.5
+        ) +
+        ggplot2::geom_line(
+          ggplot2::aes(y = mean),
+          colour = blues9[9L],
+          linewidth = 1
+        ) +
+        ggplot2::geom_line(
+          ggplot2::aes(y = norm_potential_orig),
+          colour = "darkred",
+          linewidth = 1
+        )
+    )
   }
   invisible(list(
-    # sample_df = pred_df,
-    wf_summary = wf_summary_df,
-    GB_summary = pred_fig_df,
-    # fig = p,
+    wf_summary = wf_summary,
+    GB_summary = GB_summary,
     formula = lin_pred,
     cov_gbl = cov_gbl,
     cov_time = cov_time,
@@ -2311,7 +2208,6 @@ bru_ci_plot <- function(
     scores_24 = scores_24,
     scores_12 = scores_12,
     band_width = band_width
-    # df_formula = formula_temp
   ))
 }
 
