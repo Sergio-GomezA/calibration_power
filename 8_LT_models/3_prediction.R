@@ -493,7 +493,7 @@ if (!override_objects && length(files_found) > 0) {
     wf_df_pred,
     wf_df_fname
   )
-  rm(pwr_curv_df)
+  rm(pwr_curv_dt)
   gc()
 }
 n_loc <- nrow(wf_df_pred %>% distinct(x, y))
