@@ -8,7 +8,7 @@ local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 model_id <- 1
 # day_id <- 125
 mesh_edge_par <- 50 # km, target edge length for the spatial mesh. 10 is fine, 20 is coarse but faster
-override_objects <- FALSE
+override_objects <- TRUE
 recalculate_gb <- FALSE
 save_daily_files <- TRUE
 # perform_mesh_assess <- FALSE
