@@ -1,0 +1,303 @@
+R version 4.5.3 (2026-03-11) -- "Reassured Reassurer"
+Copyright (C) 2026 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> gc()
+         used (Mb) gc trigger (Mb) max used (Mb)
+Ncells 300464 16.1     708000 37.9   493019 26.4
+Vcells 612321  4.7    8388608 64.0  1976299 15.1
+> # master code
+gbl_start_time <- Sys.time()
+
+# 0. Setup ####
+# Get task ID and others from command-line arguments
+args <- commandArgs(trailingOnly = TRUE)
+myecho <- FALSE
+source('8_LT_models/0_setup.R')
+
+# data preparation ####
+report_memory("Before training data prep")
+source('8_LT_models/1_dataprep.R', echo = myecho)
+
+# model fitting ####
+report_memory("Before fitting")
+source('8_LT_models/2_fitting.R', echo = myecho)
+report_memory("After fitting")
+
+## predictions ####
+source('8_LT_models/3_prediction.R', echo = myecho)
+report_memory("After prediction")
+gbl_end_time <- Sys.time()
+cat(
+  "Total time taken: ",
+  round(difftime(gbl_end_time, gbl_start_time, units = "mins"), 2),
+  " minutes\n"
+)
+Running in cluster mode
+Running with parameters:
+ model_id = 1 
+ mesh_edge_par = 50 
+ override_objects = FALSE 
+ n.days.before.fit = 100 
+ n.days.after.fit = 90 
+ n.hours.time = 2160 
+ n.hours.space = 2160 
+ n_samp = 100 
+ batch_name = batchLT_test_0Y_90d_100s 
+ save_models = FALSE 
+ norm_dist_tol = 1 
+Loading required package: parallel
+Loading required package: tidyverse
+── Attaching core tidyverse packages ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.2.0     ✔ readr     2.2.0
+✔ forcats   1.0.1     ✔ stringr   1.6.0
+✔ ggplot2   4.0.1     ✔ tibble    3.3.1
+✔ lubridate 1.9.5     ✔ tidyr     1.3.2
+✔ purrr     1.2.1     
+── Conflicts ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Loading required package: sf
+Linking to GEOS 3.13.1, GDAL 3.10.3, PROJ 9.6.0; sf_use_s2() is TRUE
+Loading required package: INLA
+Loading required package: Matrix
+
+Attaching package: ‘Matrix’
+
+The following objects are masked from ‘package:tidyr’:
+
+    expand, pack, unpack
+
+This is INLA_26.01.26-1 built 2026-01-26 15:40:50 UTC.
+ - See www.r-inla.org/contact-us for how to get help.
+ - List available models/likelihoods/etc with inla.list.models()
+ - Use inla.doc(<NAME>) to access documentation
+ - Consider upgrading R-INLA to testing[26.08.22] or stable[26.08.07] (require R-4.6)
+Loading required package: inlabru
+Loading required package: fmesher
+Loading required package: ggspatial
+Loading required package: ModelMetrics
+
+Attaching package: ‘ModelMetrics’
+
+The following object is masked from ‘package:base’:
+
+    kappa
+
+Loading required package: qmap
+Loading required package: fitdistrplus
+Loading required package: MASS
+
+Attaching package: ‘MASS’
+
+The following object is masked from ‘package:inlabru’:
+
+    shrimp
+
+The following object is masked from ‘package:dplyr’:
+
+    select
+
+Loading required package: survival
+
+Attaching package: ‘survival’
+
+The following object is masked from ‘package:ModelMetrics’:
+
+    brier
+
+Loading required package: ggridges
+Loading required package: ggthemes
+Loading required package: ggsci
+Loading required package: arrow
+
+Attaching package: ‘arrow’
+
+The following object is masked from ‘package:lubridate’:
+
+    duration
+
+The following object is masked from ‘package:utils’:
+
+    timestamp
+
+Loading required package: data.table
+data.table 1.18.0 using 12 threads (see ?getDTthreads).  Latest news: r-datatable.com
+
+Attaching package: ‘data.table’
+
+The following object is masked from ‘package:inlabru’:
+
+    like
+
+The following objects are masked from ‘package:lubridate’:
+
+    hour, isoweek, isoyear, mday, minute, month, quarter, second, wday,
+    week, yday, year
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+The following object is masked from ‘package:purrr’:
+
+    transpose
+
+Loading required package: terra
+Error: package or namespace load failed for ‘terra’ in dyn.load(file, DLLpath = DLLpath, ...):
+ unable to load shared object '/exports/eddie3_homes_local/s2441782/lib/terra/libs/terra.so':
+  libgdal.so.30: cannot open shared object file: No such file or directory
+Loading required package: fst
+fst package v0.9.8
+Loading required package: httr
+Loading required package: jsonlite
+
+Attaching package: ‘jsonlite’
+
+The following object is masked from ‘package:purrr’:
+
+    flatten
+
+Loading required package: geosphere
+Setting INLA to use 24 cores                                                  
+
+--- Memory report: Before training data prep ---
+          used  (Mb) gc trigger  (Mb) max used  (Mb)
+Ncells 2844200 151.9    4514334 241.1  4514334 241.1
+Vcells 5140573  39.3   10146329  77.5  8388551  64.0
+VmPeak:	 823712 kB
+VmSize:	 804764 kB
+VmHWM:	 417936 kB
+VmRSS:	 417936 kB
+
+-------------------------------------------------------------------------------------------------
+Preparing data for model fitting LT series
+-------------------------------------------------------------------------------------------------
+Preparing data for model fitting
+Creating coordinate list
+Loading existing coordinate list
+Loading existing GB daily summary
+No existing calibration data file found for this day. Preparing new data.
+Processed 342757 groups out of 342757. 100% done. Time elapsed: 27s. ETA: 0s.
+Identifying anomalies in the dataset
+Percentage of anomalies at 100.0% tol in the dataset: 4.85%
+Masking anomalies for model fitting
+Number of unique locations: 146 
+Number of records in the dataset: 342757 
+Data preparation took:  47.94   secs 
+
+--- Memory report: Before fitting ---
+            used   (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells   3170064  169.3    5916678  316.0   4514334  241.1
+Vcells 342829004 2615.6  735683741 5612.9 717658417 5475.3
+VmPeak:	14864728 kB
+VmSize:	7783260 kB
+VmHWM:	9411648 kB
+VmRSS:	3891584 kB
+
+-------------------------------------------------------------------------------------------------
+Fitting bru lm model
+-------------------------------------------------------------------------------------------------
+bru: Preprocessing
+Evaluate component inputs for each observation model
+iinla: Start
+iinla: Evaluate component linearisations
+Linearise components for each observation model
+iinla: Evaluate component simplifications
+Simplify component mappers for each observation model
+iinla: Evaluate predictor linearisation
+iinla: Construct inla stack
+iinla: Model initialisation completed
+iinla: Iteration 1 [max: 1]
+iinla: Computation completed
+Model fitting took:  3.45   mins 
+-------------------------------------------------------------------------------------------------
+Fitting GB aggregated LM
+-------------------------------------------------------------------------------------------------
+Model fitting took:  0.32   secs 
+-------------------------------------------------------------------------------------------------
+Fitting quantile mapping model
+-------------------------------------------------------------------------------------------------
+Model fitting took:  0.37   secs 
+-------------------------------------------------------------------------------------------------
+Finished model fitting process
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Generating summary tables and figures
+-------------------------------------------------------------------------------------------------
+Time taken for model fitting: 3.61 mins
+
+--- Memory report: After fitting ---
+            used   (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells   6271337  335.0    9901882  528.9   9901882  528.9
+Vcells 553341041 4221.7  882900489 6736.0 735625763 5612.4
+VmPeak:	33538688 kB
+VmSize:	30932392 kB
+VmHWM:	9411648 kB
+VmRSS:	6650268 kB
+
+-------------------------------------------------------------------------------------------------
+Running validation for out-of-sample temporal prediction
+-------------------------------------------------------------------------------------------------
+Running in cluster mode
+-------------------------------------------------------------------------------------------------
+ Running validation for day: 2025-06-01  (tag: 250601 )
+override_objects: FALSE 
+rerun_samples: TRUE 
+-------------------------------------------------------------------------------------------------
+Traning sample length for assessment and figures: 7 days before 2025-06-01 
+Prediction next 2160 hours after 2025-06-01 
+-------------------------------------------------------------------------------------------------
+Warning: The following models are missing from the model path:
+ st0_m2, st0_m1, lm_beta, lm, st0_m0, ar1 
+Loading existing coordinate list
+No existing calibration data file found for this day. Preparing new data.
+Reading and filtering prediction data
+Aggregating wind farm observations
+Processed 333145 groups out of 333145. 100% done. Time elapsed: 19s. ETA: 0s.
+Converting unique coordinates to km
+Creating INLA grouping variables
+Identifying anomalies in the dataset
+Percentage of anomalies at 100.0% tol in the dataset: 0.11%
+Masking anomalies for model fitting
+Applying model grouping breaks
+Calculating temporal lag variables
+Prediction dataset ready
+Number of unique locations: 146 
+Number of records in the dataset: 333145 
+-------------------------------------------------------------------------------------------------
+Prediction band summary file not found, creating new summary
+-------------------------------------------------------------------------------------------------
+Processing model: Linear model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using Precision_for_the_Gaussian_observations for sampling.
+Time taken for sampling model Linear model : 14.17 minutes
+Warning messages:
+1: In rm(pwr_curv_df) : object 'pwr_curv_df' not found
+2: Removed 28 rows containing missing values or values outside the scale range (`geom_ribbon()`). 
+3: Removed 28 rows containing missing values or values outside the scale range (`geom_ribbon()`). 
+4: Removed 49 rows containing missing values or values outside the scale range (`geom_ribbon()`). 
+
+--- Memory report: After prediction ---
+            used   (Mb) gc trigger    (Mb)   max used    (Mb)
+Ncells   6551233  349.9   38873614  2076.1   48592017  2595.1
+Vcells 574079369 4379.9 6447327455 49189.3 6417591574 48962.4
+VmPeak:	77774068 kB
+VmSize:	58218720 kB
+VmHWM:	53481148 kB
+VmRSS:	34037320 kB
+
+Total time taken:  19.74  minutes

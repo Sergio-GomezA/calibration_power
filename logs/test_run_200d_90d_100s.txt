@@ -1,0 +1,357 @@
+gbl_start_time <- Sys.time()
+
+# 0. Setup ####
+# Get task ID and others from command-line arguments
+args <- commandArgs(trailingOnly = TRUE)
+myecho <- FALSE
+source('8_LT_models/0_setup.R')
+
+# data preparation ####
+report_memory("Before training data prep")
+source('8_LT_models/1_dataprep.R', echo = myecho)
+
+# model fitting ####
+report_memory("Before fitting")
+source('8_LT_models/2_fitting.R', echo = myecho)
+report_memory("After fitting")
+
+## predictions ####
+source('8_LT_models/3_prediction.R', echo = myecho)
+report_memory("After prediction")
+gbl_end_time <- Sys.time()
+
+head(sort(sizes, decreasing = TRUE) / 1024^3, 15)
+cat(
+  "Total time taken: ",
+  round(difftime(gbl_end_time, gbl_start_time, units = "mins"), 2),
+  " minutes\n"
+)
+Running in cluster mode
+Running with parameters:
+ model_id = 1 
+ mesh_edge_par = 50 
+ override_objects = FALSE 
+ n.days.before.fit = 200 
+ n.days.after.fit = 90 
+ n.hours.time = 2160 
+ n.hours.space = 2160 
+ n_samp = 100 
+ batch_name = batchLT_test_1Y_90d_100s 
+ save_models = FALSE 
+ norm_dist_tol = 1 
+Loading required package: parallel
+Loading required package: tidyverse
+── Attaching core tidyverse packages ──────────────────────────────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.2.0     ✔ readr     2.2.0
+✔ forcats   1.0.1     ✔ stringr   1.6.0
+✔ ggplot2   4.0.1     ✔ tibble    3.3.1
+✔ lubridate 1.9.5     ✔ tidyr     1.3.2
+✔ purrr     1.2.1     
+── Conflicts ────────────────────────────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (<http://conflicted.r-lib.org/>) to force all conflicts to become errors
+Loading required package: sf
+Linking to GEOS 3.13.1, GDAL 3.10.3, PROJ 9.6.0; sf_use_s2() is TRUE
+Loading required package: INLA
+Loading required package: Matrix
+
+Attaching package: ‘Matrix’
+
+The following objects are masked from ‘package:tidyr’:
+
+    expand, pack, unpack
+
+This is INLA_26.01.26-1 built 2026-01-26 15:40:50 UTC.
+ - See www.r-inla.org/contact-us for how to get help.
+ - List available models/likelihoods/etc with inla.list.models()
+ - Use inla.doc(<NAME>) to access documentation
+ - Consider upgrading R-INLA to testing[26.08.22] or stable[26.08.07] (require R-4.6)
+Loading required package: inlabru
+Loading required package: fmesher
+Loading required package: ggspatial
+Loading required package: ModelMetrics
+
+Attaching package: ‘ModelMetrics’
+
+The following object is masked from ‘package:base’:
+
+    kappa
+
+Loading required package: qmap
+Loading required package: fitdistrplus
+Loading required package: MASS
+
+Attaching package: ‘MASS’
+
+The following object is masked from ‘package:inlabru’:
+
+    shrimp
+
+The following object is masked from ‘package:dplyr’:
+
+    select
+
+Loading required package: survival
+
+Attaching package: ‘survival’
+
+The following object is masked from ‘package:ModelMetrics’:
+
+    brier
+
+Loading required package: ggridges
+Loading required package: ggthemes
+Loading required package: ggsci
+Loading required package: arrow
+
+Attaching package: ‘arrow’
+
+The following object is masked from ‘package:lubridate’:
+
+    duration
+
+The following object is masked from ‘package:utils’:
+
+    timestamp
+
+Loading required package: data.table
+data.table 1.18.0 using 12 threads (see ?getDTthreads).  Latest news: r-datatable.com
+
+Attaching package: ‘data.table’
+
+The following object is masked from ‘package:inlabru’:
+
+    like
+
+The following objects are masked from ‘package:lubridate’:
+
+    hour, isoweek, isoyear, mday, minute, month, quarter, second, wday,
+    week, yday, year
+
+The following objects are masked from ‘package:dplyr’:
+
+    between, first, last
+
+The following object is masked from ‘package:purrr’:
+
+    transpose
+
+Loading required package: terra
+terra 1.9.27
+
+Attaching package: ‘terra’
+
+The following object is masked from ‘package:data.table’:
+
+    shift
+
+The following object is masked from ‘package:arrow’:
+
+    buffer
+
+The following object is masked from ‘package:MASS’:
+
+    area
+
+The following object is masked from ‘package:tidyr’:
+
+    extract
+
+Loading required package: fst
+fst package v0.9.8
+Loading required package: httr
+Loading required package: jsonlite
+
+Attaching package: ‘jsonlite’
+
+The following object is masked from ‘package:purrr’:
+
+    flatten
+
+Loading required package: geosphere
+Setting INLA to use 24 cores                                                  
+
+--- Memory report: Before training data prep ---
+          used  (Mb) gc trigger  (Mb) max used (Mb)
+Ncells 3461089 184.9    6843118 365.5  4324614  231
+Vcells 5690975  43.5   10146329  77.5  8388593   64
+VmPeak:	9343844 kB
+VmSize:	9337972 kB
+VmHWM:	 437676 kB
+VmRSS:	 437676 kB
+
+-------------------------------------------------------------------------------------------------
+Preparing data for model fitting LT series
+-------------------------------------------------------------------------------------------------
+Preparing data for model fitting
+Creating coordinate list
+Loading existing coordinate list
+Loading existing GB daily summary
+No existing calibration data file found for this day. Preparing new data.
+Processed 682857 groups out of 682857. 100% done. Time elapsed: 88s. ETA: 0s.
+Identifying anomalies in the dataset
+Percentage of anomalies at 100.0% tol in the dataset: 6.18%
+Masking anomalies for model fitting
+Number of unique locations: 146 
+Number of records in the dataset: 682857 
+Data preparation took:  2.67   mins 
+
+--- Memory report: Before fitting ---
+            used   (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells   3784105  202.1    6843118  365.5   6843118  365.5
+Vcells 354675833 2706.0  736343147 5617.9 735788322 5613.7
+VmPeak:	23395972 kB
+VmSize:	17155556 kB
+VmHWM:	9318304 kB
+VmRSS:	4591956 kB
+
+-------------------------------------------------------------------------------------------------
+Fitting bru lm model
+-------------------------------------------------------------------------------------------------
+bru: Preprocessing
+Evaluate component inputs for each observation model
+iinla: Start
+iinla: Evaluate component linearisations
+Linearise components for each observation model
+iinla: Evaluate component simplifications
+Simplify component mappers for each observation model
+iinla: Evaluate predictor linearisation
+iinla: Construct inla stack
+iinla: Model initialisation completed
+iinla: Iteration 1 [max: 1]
+iinla: Computation completed
+Model fitting took:  19.79   mins 
+-------------------------------------------------------------------------------------------------
+Fitting GB aggregated LM
+-------------------------------------------------------------------------------------------------
+Model fitting took:  0.93   secs 
+-------------------------------------------------------------------------------------------------
+Fitting quantile mapping model
+-------------------------------------------------------------------------------------------------
+Model fitting took:  0.92   secs 
+-------------------------------------------------------------------------------------------------
+Finished model fitting process
+-------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
+Generating summary tables and figures
+-------------------------------------------------------------------------------------------------
+Time taken for model fitting: 20.30 mins
+
+--- Memory report: After fitting ---
+            used   (Mb) gc trigger   (Mb)  max used   (Mb)
+Ncells   9216903  492.3   17652830  942.8  17652830  942.8
+Vcells 623233569 4754.9 1060510131 8091.1 882444757 6732.6
+VmPeak:	42343196 kB
+VmSize:	41095980 kB
+VmHWM:	9318304 kB
+VmRSS:	8241264 kB
+
+-------------------------------------------------------------------------------------------------
+Running validation for out-of-sample temporal prediction
+-------------------------------------------------------------------------------------------------
+Running in cluster mode
+-------------------------------------------------------------------------------------------------
+ Running validation for day: 2025-06-01  (tag: 250601 )
+override_objects: FALSE 
+rerun_samples: TRUE 
+-------------------------------------------------------------------------------------------------
+Traning sample length for assessment and figures: 7 days before 2025-06-01 
+Prediction next 2160 hours after 2025-06-01 
+-------------------------------------------------------------------------------------------------
+Warning: The following models are missing from the model path:
+ st0_m2, st0_m1, lm_beta, lm, st0_m0, ar1 
+Loading existing coordinate list
+No existing calibration data file found for this day. Preparing new data.
+Reading and filtering prediction data
+Aggregating wind farm observations
+Processed 333145 groups out of 333145. 100% done. Time elapsed: 29s. ETA: 0s.
+Converting unique coordinates to km
+Creating INLA grouping variables
+Identifying anomalies in the dataset
+Percentage of anomalies at 100.0% tol in the dataset: 0.11%
+Masking anomalies for model fitting
+Applying model grouping breaks
+Calculating temporal lag variables
+Prediction dataset ready
+Number of unique locations: 146 
+Number of records in the dataset: 333145 
+-------------------------------------------------------------------------------------------------
+
+--- Memory report: After prediction data prep ---
+            used   (Mb) gc trigger   (Mb)   max used   (Mb)
+Ncells   9226877  492.8   17652830  942.8   17652830  942.8
+Vcells 634785736 4843.1 1284541764 9800.3 1282514276 9784.9
+VmPeak:	51279316 kB
+VmSize:	40783676 kB
+VmHWM:	16092840 kB
+VmRSS:	8040308 kB
+
+
+--- Memory report: After light models ---
+            used   (Mb) gc trigger   (Mb)   max used   (Mb)
+Ncells   9233454  493.2   17652830  942.8   17652830  942.8
+Vcells 638802744 4873.7 1284541764 9800.3 1282514276 9784.9
+VmPeak:	51279316 kB
+VmSize:	40882028 kB
+VmHWM:	16092840 kB
+VmRSS:	8040832 kB
+
+Prediction band summary file not found, creating new summary
+-------------------------------------------------------------------------------------------------
+Processing model: Linear model 
+-------------------------------------------------------------------------------------------------
+Precision is not fixed. Using Precision_for_the_Gaussian_observations for sampling.
+Time taken for sampling model Linear model : 21.44 minutes
+
+--- Memory report: After prediction band summary ---
+             used    (Mb) gc trigger    (Mb)   max used    (Mb)
+Ncells    9485769   506.6   41170552  2198.8   51463190  2748.5
+Vcells 2682905873 20469.0 8067014910 61546.5 6513535609 49694.4
+VmPeak:	87305412 kB
+VmSize:	71347720 kB
+VmHWM:	54455044 kB
+VmRSS:	38506520 kB
+
+
+--- Memory report: After LWE figures ---
+            used   (Mb) gc trigger    (Mb)   max used    (Mb)
+Ncells   9501195  507.5   32936442  1759.0   51463190  2748.5
+Vcells 644495480 4917.2 6453611928 49237.2 6513535609 49694.4
+VmPeak:	87305412 kB
+VmSize:	67624784 kB
+VmHWM:	54455044 kB
+VmRSS:	34884352 kB
+
+Warning messages:
+1: In rm(pwr_curv_df) : object 'pwr_curv_df' not found
+2: Removed 28 rows containing missing values or values outside the scale range (`geom_ribbon()`). 
+3: Removed 28 rows containing missing values or values outside the scale range (`geom_ribbon()`). 
+4: Removed 49 rows containing missing values or values outside the scale range (`geom_ribbon()`). 
+
+--- Memory report: After prediction ---
+            used   (Mb) gc trigger    (Mb)   max used    (Mb)
+Ncells   9496998  507.2   26349154  1407.2   51463190  2748.5
+Vcells 644493086 4917.1 5162889543 39389.8 6513535609 49694.4
+VmPeak:	87305412 kB
+VmSize:	67624784 kB
+VmHWM:	54455044 kB
+VmRSS:	34884360 kB
+
+                  bru_ci_plot                 wind.bmus.alt 
+                 2.634451e-04                  1.178682e-04 
+                    wind.bmus                  plot.effects 
+                 1.120791e-04                  1.012981e-04 
+spatial_corr_by_distance_fast      spatial_corr_by_distance 
+                 8.132309e-05                  8.089095e-05 
+spatial_corr_by_distance_time                    get_bmugen 
+                 8.063018e-05                  7.401407e-05 
+                      get_boa                       get_bod 
+                 7.401407e-05                  7.401407e-05 
+                       get_pn           extract_score_model 
+                 7.401407e-05                  7.224828e-05 
+                  get_outturn               get_curtailment 
+                 6.817281e-05                  6.564707e-05 
+                    get_remit 
+                 6.148964e-05 
+Total time taken:  46.57  minutes
