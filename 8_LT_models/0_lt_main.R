@@ -20,6 +20,8 @@ report_memory("After fitting")
 source('8_LT_models/3_prediction.R', echo = myecho)
 report_memory("After prediction")
 gbl_end_time <- Sys.time()
+
+head(sort(sizes, decreasing = TRUE) / 1024^3, 15)
 cat(
   "Total time taken: ",
   round(difftime(gbl_end_time, gbl_start_time, units = "mins"), 2),

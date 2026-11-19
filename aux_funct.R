@@ -2711,3 +2711,12 @@ report_memory <- function(label = "") {
 
   cat("\n")
 }
+
+sizes <- sapply(
+  ls(envir = .GlobalEnv),
+  function(x) {
+    as.numeric(
+      object.size(get(x, envir = .GlobalEnv))
+    )
+  }
+)

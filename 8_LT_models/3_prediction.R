@@ -519,6 +519,7 @@ cat(
 #     ),
 #     .groups = "drop"
 #   )
+report_memory("After prediction data prep")
 
 ## aggr models #####
 agg_df <- model_df %>% filter(grepl("agg", code))
@@ -741,6 +742,7 @@ scores_summary_fname <- sprintf(
   task_prefix0,
   d0_tag
 )
+report_memory("After light models")
 # source("aux_funct.R")
 if (!file.exists(pred_summary_fname) || rerun_samples) {
   if (!file.exists(pred_summary_fname)) {
@@ -870,6 +872,7 @@ if (!file.exists(pred_summary_fname) || rerun_samples) {
   summary_only <- readRDS(pred_summary_fname)
 }
 
+report_memory("After prediction band summary")
 
 gb_fig_df <- bind_rows(
   # lm_pred_fig_df %>% filter(model == "lm"),
@@ -1106,3 +1109,5 @@ ggsave(
   height = 6,
   # dpi = 300
 )
+
+report_memory("After LWE figures")
