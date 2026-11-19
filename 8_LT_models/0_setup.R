@@ -70,21 +70,9 @@ if (length(args) >= 4) {
 }
 if (length(args) >= 5) {
   n.days.after.fit <- as.numeric(args[5])
-  n.hours.time <- n.days.after.fit * 24
-  n.hours.space <- n.days.after.fit * 24
 }
 if (length(args) >= 6) {
   batch_name <- as.character(args[6])
-  batch_name <- paste0(
-    batch_name,
-    "_",
-    round(n.days.before.fit / 365, 0),
-    "Y_",
-    n.days.after.fit,
-    "d_",
-    n_samp,
-    "s"
-  )
 }
 if (length(args) >= 7) {
   save_models <- as.logical(args[7])
@@ -92,6 +80,19 @@ if (length(args) >= 7) {
 if (length(args) >= 8) {
   norm_dist_tol <- as.numeric(args[8])
 }
+
+n.hours.time <- n.days.after.fit * 24
+n.hours.space <- n.days.after.fit * 24
+batch_name <- paste0(
+  batch_name,
+  "_",
+  round(n.days.before.fit / 365, 0),
+  "Y_",
+  n.days.after.fit,
+  "d_",
+  n_samp,
+  "s"
+)
 
 #print arguments used
 cat(
