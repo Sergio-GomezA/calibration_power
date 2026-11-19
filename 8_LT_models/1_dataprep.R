@@ -234,7 +234,7 @@ if (!override_objects && length(files_found) > 0) {
   setDT(wf_dt)
   wf_dt <- wf_dt[date >= d0 - n.days.before.fit]
 } else {
-  if (override_objects) {
+  if (length(files_found) > 0) {
     cat("File found but override option is active. Rebuilding.\n")
   } else {
     cat(
