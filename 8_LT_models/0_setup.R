@@ -19,7 +19,7 @@ save_daily_files <- TRUE
 prec_init_gau <- log(30) # for gaussian family 1DSPDE
 # fixed_ucomp <- FALSE
 fixed_gaus_1DSPE <- FALSE
-n.days.before.fit <- 200 #365 * 6
+n.days.before.fit <- 100 #365 * 6
 n.days.before.heavy <- n.days.before.fit / 2
 n.days.before.light <- n.days.before.fit
 
