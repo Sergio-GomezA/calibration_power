@@ -1682,63 +1682,66 @@ spatial_corr_by_distance_fast <- function(
 plot.hyper.dens <- function(
   inla_model,
   facet.cols = 2,
-  logx = FALSE,
-  ...
+  logx = "smart",
+  ...,
+  positive = NULL
 ) {
-  # Extract the hyperparameter densities into a data frame for plotting
-  # browser()
+  if (identical(logx, TRUE)) {
+    logx <- "all"
+  } else if (identical(logx, FALSE)) {
+    logx <- "none"
+  }
+  logx <- match.arg(logx, c("smart", "none", "all"))
 
-  # if(inherits(inla_model,"bru")){
-  #   marginals <- inla_model$internal.margina
-  # }
+  marginals <- inla_model$marginals.hyperpar
+  if (!length(marginals)) {
+    stop("The model has no hyperparameter marginals to plot.")
+  }
 
-  hyperpar_densities <- do.call(
-    rbind,
-    lapply(names(inla_model$marginals.hyperpar), function(param) {
-      data.frame(
-        x = inla_model$marginals.hyperpar[[param]][, "x"],
-        y = inla_model$marginals.hyperpar[[param]][, "y"],
-        parameter = param
-      )
-    })
-    # mapply(function(param, logtrans) {
-    #   data.frame(
-    #     x = inla_model$marginals.hyperpar[[param]][, "x"],
-    #     y = inla_model$marginals.hyperpar[[param]][, "y"],
-    #     parameter = param
-    #   ) #%>%
-    #     # mutate(logx = ifelse(logtrans, log(x), x))
-    # },
-    # names(inla_model$marginals.hyperpar),
-    # logx,
-    # SIMPLIFY = FALSE
-    # )
-  )
-  # browser()
-  # hyperpar_densities <- hyperpar_densities %>%
-  #   mutate(
-  #     x = ifelse(logx, log(x), x)
-  #   )
+  params <- names(marginals)
+  if (!is.null(positive) && !all(positive %in% params)) {
+    stop(
+      "`positive` must contain names from names(inla_model$marginals.hyperpar)."
+    )
+  }
 
-  # Plot the densities using ggplot2
-  p.dens <- ggplot(hyperpar_densities, aes(x = x, y = y)) +
-    geom_line() +
-    facet_wrap(~parameter, scales = "free", ncol = facet.cols) +
-    {
-      if (logx) {
-        scale_x_log10() # Apply log scale to the x-axis
-      } else {
-        NULL
-      }
-    } +
-    labs(
-      title = "Density of Hyperparameters",
-      x = "Value",
-      y = "Density"
-    ) +
-    theme_minimal()
+  plots <- lapply(seq_along(marginals), function(i) {
+    marginal <- marginals[[i]]
+    param <- params[i]
+    density <- data.frame(x = marginal[, "x"], y = marginal[, "y"])
+
+    finite_x <- density$x[is.finite(density$x)]
+    positive_grid <- length(finite_x) > 0L && all(finite_x > 0)
+
+    # In smart mode, use known support when supplied and the grid otherwise.
+    use_log <- switch(
+      logx,
+      smart = positive_grid && (is.null(positive) || param %in% positive),
+      none = FALSE,
+      all = TRUE
+    )
+
+    p <- ggplot2::ggplot(density, ggplot2::aes(x = x, y = y)) +
+      ggplot2::geom_line() +
+      ggplot2::labs(title = param, x = "Value", y = "Density") +
+      ggplot2::theme_minimal()
+
+    if (use_log) {
+      p <- p + ggplot2::scale_x_log10()
+    }
+
+    p
+  })
+
+  p.dens <- patchwork::wrap_plots(
+    plots,
+    ncol = facet.cols,
+    axis_titles = "collect"
+  ) +
+    patchwork::plot_annotation(title = "Density of Hyperparameters")
 
   print(p.dens)
+  invisible(p.dens)
 }
 
 
