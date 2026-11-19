@@ -2691,3 +2691,23 @@ cov_fig <- function(
 sum_or_na <- function(x) {
   if (all(is.na(x))) NA_real_ else sum(x, na.rm = TRUE)
 }
+
+
+report_memory <- function(label = "") {
+  cat("\n--- Memory report:", label, "---\n")
+
+  print(gc())
+
+  status <- readLines("/proc/self/status")
+
+  cat(
+    grep(
+      "^(VmRSS|VmHWM|VmSize|VmPeak):",
+      status,
+      value = TRUE
+    ),
+    sep = "\n"
+  )
+
+  cat("\n")
+}
