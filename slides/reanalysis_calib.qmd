@@ -5,7 +5,7 @@ author:
 institute:
    - $^1$School of Mathematics, University of Edinburgh
 institute-short: "UoE"
-date: "2026-11-13"
+date: "2026-11-20"
 format: 
   beamer:
     theme: Rochester
@@ -15,7 +15,7 @@ format:
     toc: true
     slide-level: 2
     split-bib: true
-    output-file: "calibration_slides_26-11-13.pdf"
+    output-file: "calibration_slides_26-11-20.pdf"
 header-includes:
   - \usepackage{graphicx}
   - \setbeamerfont{itemize/enumerate body}{size=\footnotesize}

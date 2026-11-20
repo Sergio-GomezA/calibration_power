@@ -5,13 +5,13 @@
 
 local_run <- if (startsWith(getwd(), "/home/s2441782")) TRUE else FALSE
 
-pow_threshold <- 0.05
+pow_threshold <- 0.1
 pow_threshold_label <- gsub("\\.", "_", as.character(pow_threshold))
 tables_path <- "~/ownCloud-s2441782@pwr_curv_dfasync.ed.ac.uk/projects/calibration/calibration_power_main_doc/tables"
 dir.exists(tables_path) || dir.create(tables_path, recursive = TRUE)
 
 override_objects <- FALSE
-batch_name <- "bias_eda_test"
+batch_name <- "bias_eda_roll"
 norm_dist_tol <- 1
 
 if (local_run) {
@@ -73,7 +73,7 @@ dir.exists(lwe_output_tabpath) ||
 # pwr_curv_dfa
 
 extension <- "rds"
-coord_list_fname <- "pwr_curv_dfa/coord_list.csv"
+coord_list_fname <- "data/coord_list.csv"
 
 cat("Loading existing coordinate list\n")
 coord_list <- read.csv(coord_list_fname)
